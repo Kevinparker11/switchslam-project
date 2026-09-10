@@ -126,7 +126,7 @@ def sync_cb(h_msg,v_msg,l_msg,vo_msg):
         Htt_l=H_l[3:6,3:6]
         Htt_safe=zero_degenerate(Htt_l, lb, thr)
         dp=np.linalg.pinv(Htt_safe, rcond=1e-3) @ (Htt_l@d_l_p)
-        if np.linalg.norm(dp) > 2.0:
+        if np.linalg.norm(dp) > 0.3:
             dp=d_l_p
         drv=d_l_rv
     else:
@@ -153,7 +153,7 @@ def sync_cb(h_msg,v_msg,l_msg,vo_msg):
             except np.linalg.LinAlgError:
                 delta6=d_v6
             dp=delta6[0:3]; drv=delta6[3:6]
-            if np.linalg.norm(dp) > 2.0:
+            if np.linalg.norm(dp) > 0.3:
                 dp=d_l_p; drv=d_l_rv
         else:
             mode="TRANSITION"

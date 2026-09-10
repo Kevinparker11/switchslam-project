@@ -246,6 +246,14 @@ void process()
 				break;
 			}
 
+			while (!cornerLastBuf.empty() && cornerLastBuf.front()->header.stamp.toSec() < odometryBuf.front()->header.stamp.toSec() - 0.02)
+				cornerLastBuf.pop();
+			if (cornerLastBuf.empty())
+			{
+				mBuf.unlock();
+				break;
+			}
+
 			while (!surfLastBuf.empty() && surfLastBuf.front()->header.stamp.toSec() < cornerLastBuf.front()->header.stamp.toSec())
 				surfLastBuf.pop();
 			if (surfLastBuf.empty())
