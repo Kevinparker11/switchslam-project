@@ -197,8 +197,8 @@ void laserCloudFullResHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloud
 void laserOdometryHandler(const nav_msgs::Odometry::ConstPtr &laserOdometry)
 {
 	mBuf.lock();
-	while (!odometryBuf.empty()) odometryBuf.pop();  // keep only latest, avoid cross-process latency stalls
 	odometryBuf.push(laserOdometry);
+	while (odometryBuf.size() > 50) odometryBuf.pop();
 	mBuf.unlock();
 
 	// high frequence publish
