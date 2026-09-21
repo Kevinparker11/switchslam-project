@@ -43,7 +43,12 @@ w.writerow(["time","mode","fused_x","fused_y","fused_z","fused_qx","fused_qy","f
             "feat_count","aft_x","aft_y","aft_z",
             "chanR_degen","chanT_degen","bingham_l1","bingham_l2","bingham_l3",
             "schur_t1","schur_t2","schur_t3",
-            "orig_semicircle_degen","orig_l1","orig_l2","orig_l3"])
+            "orig_semicircle_degen","orig_l1","orig_l2","orig_l3",
+            "chanR_r_degen","chanR_t_degen","lever_arm","chanT_streak","chanT_time_decay",
+            "l_px","l_py","l_pz","l_qx","l_qy","l_qz","l_qw",
+            "v_px","v_py","v_pz","v_qx","v_qy","v_qz","v_qw"]
+           +["Hl_%d%d"%(i,j) for i in range(6) for j in range(6)]
+           +["Hv_%d%d"%(i,j) for i in range(6) for j in range(6)])
 cnt=[0]
 
 def aft_cb(msg):
@@ -259,7 +264,12 @@ def sync_cb(h_msg,v_msg,l_msg,vo_msg):
                 latest_aft["x"],latest_aft["y"],latest_aft["z"],
                 int(degen_R),int(degen_T),bingham_lam[0],bingham_lam[1],bingham_lam[2],
                 lb[0],lb[1],lb[2],
-                int(degen_orig),lb_orig[0],lb_orig[1],lb_orig[2]])
+                int(degen_orig),lb_orig[0],lb_orig[1],lb_orig[2],
+                int(chanR_r),int(chanR_t),lever_arm,chanT_streak[0],chanT_time_decay,
+                l_p[0],l_p[1],l_p[2],l_q[0],l_q[1],l_q[2],l_q[3],
+                v_p[0],v_p[1],v_p[2],v_q[0],v_q[1],v_q[2],v_q[3]]
+               +list(H_l.flatten())
+               +list(Hv.flatten()))
     log.flush()
 
     latest_fused["p"]=T_p; latest_fused["q"]=T_q
