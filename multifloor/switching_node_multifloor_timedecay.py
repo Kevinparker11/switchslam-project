@@ -125,7 +125,13 @@ def estimate_normals_pca(points, k=BINGHAM_KNN):
         neigh = points[nn_idx]
         cov = np.cov((neigh - neigh.mean(axis=0)).T)
         eigval, eigvec = np.linalg.eigh(cov)
-        normals.append(eigvec[:,0])
+        normal = eigvec[:,0]
+        # REAL FIX (same as applied to Farm world): filter out
+        # near-horizontal (ground/floor-plane) normals before they
+        # contaminate the orientation tensor.
+        if abs(normal[2]) > 0.94:
+            continue
+        normals.append(normal)
     return np.array(normals)
 
 def surf_cloud_cb(msg):
