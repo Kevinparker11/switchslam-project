@@ -39,27 +39,27 @@ Node: `VIO_CHECK=1` (G18), `VIO_CHECK=1 VIO_SCALE_T=10` (G19); defaults off, so 
 
 Front end = the fused output; + loops = the same output through the offline loop-closure back end (iso loop weights, 1 round, odometry noise 1.46°, 0.054 m as used for all earlier loop results).
 
-| Sequence (recordings) | GenZ alone | G17 | **G18** | **G19** | SAH only (W = I) | G18 + loops | **G19 + loops** | SAH only + loops |
-|---|---|---|---|---|---|---|---|---|
-| Multi Floor (4) | 0.584 | 0.363 | 0.367 | 0.388 | 0.523 | 0.374 | **0.330** | 0.683 |
-| Corridor02 (1) | 2.696 | 1.881 | 1.967 | 2.484 | 2.284 | **1.005** | 2.345 | 1.859 |
-| Cave02 (1) | 0.283 | 3.655 | 0.457 | 0.294 | 0.283 | 0.415 | **0.270** | 0.273 |
-| GEODE α (4) | 0.412 | 22.11 | 0.987 | 0.526 | 0.385 | 0.802 | **0.393** | 0.308 |
+| Sequence (recordings) | GenZ alone | G17 | **G18** | **G19** | SAH only (W = I) | G17 + loops | G18 + loops | **G19 + loops** | SAH only + loops |
+|---|---|---|---|---|---|---|---|---|---|
+| Multi Floor (4) | 0.584 | 0.363 | 0.367 | 0.388 | 0.523 | 0.324 | 0.374 | **0.330** | 0.683 |
+| Corridor02 (1) | 2.696 | 1.881 | 1.967 | 2.484 | 2.284 | 1.024 | **1.005** | 2.345 | 1.859 |
+| Cave02 (1) | 0.283 | 3.655 | 0.457 | 0.294 | 0.283 | 3.683 | 0.415 | **0.270** | 0.273 |
+| GEODE α (4) | 0.412 | 22.11 | 0.987 | 0.526 | 0.385 | 22.11 | 0.802 | **0.393** | 0.308 |
 
 Per recording:
 
-| Recording | GenZ | G17 | G18 | G19 | SAH only | G18 + L | G19 + L | SAH only + L |
-|---|---|---|---|---|---|---|---|---|
-| MF G17 run 1 | 0.626 | 0.287 | 0.289 | 0.361 | 0.529 | 0.276 | 0.250 | 0.238 |
-| MF G0 run 1 | 0.876 | 0.551 | 0.554 | 0.487 | 0.808 | 0.515 | 0.341 | 1.144 |
-| MF G0 run 2 | 0.525 | 0.359 | 0.366 | 0.346 | 0.512 | 0.487 | 0.441 | 1.009 |
-| MF G0 run 3 | 0.307 | 0.256 | 0.258 | 0.357 | 0.242 | 0.218 | 0.287 | 0.343 |
-| Corridor02 G17 | 2.696 | 1.881 | 1.967 | 2.484 | 2.284 | 1.005 | 2.345 | 1.859 |
-| Cave02 G17 | 0.283 | 3.655 | 0.457 | 0.294 | 0.283 | 0.415 | 0.270 | 0.273 |
-| GEODE G17 run 1 | 0.345 | 19.75 | 1.172 | 0.555 | 0.354 | 0.763 | 0.360 | 0.267 |
-| GEODE G17 run 2 | 0.467 | 24.62 | 0.487 | 0.439 | 0.390 | 0.539 | 0.509 | 0.453 |
-| GEODE G0 run 1 | 0.489 | 18.49 | 1.147 | 0.584 | 0.461 | 1.147 | 0.345 | 0.244 |
-| GEODE G0 run 2 | 0.345 | 25.60 | 1.143 | 0.526 | 0.336 | 0.761 | 0.359 | 0.267 |
+| Recording | GenZ | G17 | G18 | G19 | SAH only | G17 + L | G18 + L | G19 + L | SAH only + L |
+|---|---|---|---|---|---|---|---|---|---|
+| MF G17 run 1 | 0.626 | 0.287 | 0.289 | 0.361 | 0.529 | 0.284 | 0.276 | 0.250 | 0.238 |
+| MF G0 run 1 | 0.876 | 0.551 | 0.554 | 0.487 | 0.808 | 0.353 | 0.515 | 0.341 | 1.144 |
+| MF G0 run 2 | 0.525 | 0.359 | 0.366 | 0.346 | 0.512 | 0.449 | 0.487 | 0.441 | 1.009 |
+| MF G0 run 3 | 0.307 | 0.256 | 0.258 | 0.357 | 0.242 | 0.209 | 0.218 | 0.287 | 0.343 |
+| Corridor02 G17 | 2.696 | 1.881 | 1.967 | 2.484 | 2.284 | 1.024 | 1.005 | 2.345 | 1.859 |
+| Cave02 G17 | 0.283 | 3.655 | 0.457 | 0.294 | 0.283 | 3.683 | 0.415 | 0.270 | 0.273 |
+| GEODE G17 run 1 | 0.345 | 19.75 | 1.172 | 0.555 | 0.354 | 19.75 | 0.763 | 0.360 | 0.267 |
+| GEODE G17 run 2 | 0.467 | 24.62 | 0.487 | 0.439 | 0.390 | 24.62 | 0.539 | 0.509 | 0.453 |
+| GEODE G0 run 1 | 0.489 | 18.49 | 1.147 | 0.584 | 0.461 | 18.49 | 1.147 | 0.345 | 0.244 |
+| GEODE G0 run 2 | 0.345 | 25.60 | 1.143 | 0.526 | 0.336 | 25.60 | 0.761 | 0.359 | 0.267 |
 
 ## 5. Against the published values
 
@@ -77,7 +77,7 @@ Metric caveat (unchanged): papers rarely state alignment and span; differences u
 
 ## 6. Which configuration, and what is honest to claim
 
-- **Recommended single configuration: G19** (with loops for the final numbers). It is the only fused setting that is never clearly worse than its own LiDAR input: better on Multi Floor (0.388 vs 0.584) and Corridor02 (2.48 vs 2.70), tied on Cave02 (0.294 vs 0.283), +0.11 on GEODE (within GenZ-LIO's own run-to-run spread of 0.35-0.49); with loops it is the best of all fused settings on three of four sequences.
+- **Recommended single configuration: G19** (with loops for the final numbers). It is the only fused setting that is never clearly worse than its own LiDAR input: better on Multi Floor (0.388 vs 0.584) and Corridor02 (2.48 vs 2.70), tied on Cave02 (0.294 vs 0.283), +0.11 on GEODE (within GenZ-LIO's own run-to-run spread of 0.35-0.49); with loops it is the best fused setting on Cave02 and GEODE and within 0.01 of the best on Multi Floor (G17 + loops 0.324).
 - **Its weak point is Corridor02.** The scale correction removes VINS information that is genuinely useful in a corridor, where the LiDAR is degenerate along the axis and its path length is not a reliable scale reference (projecting the scale estimate through W_t did not fix it: 2.45). G18 keeps the gain there (1.005 with loops) but fails on GEODE (0.99). No single rule tried here wins on all four sequences.
 - **Development, not test.** The check was designed after the Cave02 and GEODE failures were seen, and several variants were compared on those logs (variance-ratio weighting, 10 s gates, a fast 2-5 s gate, scale correction with and without projection: see `analysis/improve/vio_consistency/`). The threshold comes from Multi Floor only, but the choice of statistic and of n_min = 200 was made with the held-out logs in view. Cave02, GEODE and Corridor02 are therefore development sequences for G18/G19. **The clean test is Long Corridor, which has never been run on the GenZ stack.**
 - **Sample size.** Corridor02 and Cave02 have one recording each; Multi Floor and GEODE four each, replayed. Live G19 runs are needed to confirm replay = live for the new options.
