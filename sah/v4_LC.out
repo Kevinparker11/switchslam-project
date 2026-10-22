@@ -1,0 +1,8 @@
+F8 no SAH                            4.745 4.853 3.947 mean 4.515 | log1 {}
+SAH                                  1.679 2.190 2.221 mean 2.030 | log1 {'acc': 287, 'rej_struct': 188, 'rej_gate': 35, 'init': 5, 'rej_align': 188}
+SAH unstructured (random normals)    4.745 4.853 3.947 mean 4.515 | log1 {'acc': 0, 'rej_struct': 0, 'rej_gate': 0, 'init': 0}
+SAH structure lost after 40%         3.385 4.366 3.510 mean 3.754 | log1 {'acc': 120, 'rej_struct': 372, 'rej_gate': 18, 'init': 5, 'rej_align': 55}
+SAH structure only after 40%         4.129 4.372 3.503 mean 4.001 | log1 {'acc': 118, 'rej_struct': 179, 'rej_gate': 11, 'init': 7, 'init_reset': 2, 'rej_align': 179}
+SAH 30% outlier normals              1.680 1.953 2.225 mean 1.953 | log1 {'acc': 287, 'rej_struct': 188, 'rej_gate': 35, 'init': 5, 'rej_align': 188}
+SAH 20% of points                    1.586 2.137 2.254 mean 1.992 | log1 {'acc': 191, 'rej_struct': 301, 'rej_gate': 18, 'init': 5, 'rej_align': 155}
+SAH strong spurious direction        4.024 4.169 13.431 mean 7.208 | log1 {'acc': 235, 'rej_struct': 238, 'rej_gate': 37, 'init': 5, 'rej_modes': 232, 'rej_align': 6}
