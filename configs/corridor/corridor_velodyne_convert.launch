@@ -1,0 +1,11 @@
+<launch>
+  <node pkg="nodelet" type="nodelet" name="corridor_nodelet_manager" args="manager" output="screen"/>
+  <node pkg="nodelet" type="nodelet" name="corridor_transform_nodelet"
+        args="load velodyne_pointcloud/TransformNodelet corridor_nodelet_manager" output="screen">
+    <param name="calibration" value="$(find velodyne_pointcloud)/params/VLP16db.yaml"/>
+    <param name="min_range" value="0.4"/>
+    <param name="max_range" value="130.0"/>
+    <remap from="velodyne_packets" to="/velodyne_packets"/>
+    <remap from="velodyne_points" to="/corridor/velodyne_points"/>
+  </node>
+</launch>
