@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+# bags, recordings and bulky run outputs stay out of git (they live on the external drive / run folders)
+*.bag
+*.npz
+*.pkl
+*.zip
+harness_out/
+nrm_cache*/
