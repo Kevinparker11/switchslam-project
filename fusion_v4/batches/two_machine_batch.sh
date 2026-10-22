@@ -2,7 +2,11 @@
 # Two-machine batch of 22 Oct 2026 (plan: docs/planning/Two_Machine_Plan_2026-10-22.md).
 # Run the SAME script on both machines; MACHINE only names the output folders and picks the control run.
 #   MACHINE=L  laptop (Ryzen 5 5600H)      MACHINE=P  PC (i7-12700)
-#   STAGES="smoke geode control extra"   default: "smoke geode control"
+#   Work split (no run is duplicated across machines):
+#     P (PC):     GEODE, all configurations (F16, G17, G0, F5)  -> stages "smoke geode"
+#     L (laptop): replay-rate controls on the two held-out bags (Corridor02 0.33x, Cave02 0.5x) -> stages "smoke control"
+#   STAGES="smoke geode control extra"   default depends on MACHINE (see above)
+#   REPS        GEODE replicates of F16, G17, G0 (default 3; F5 once)
 #   GEODE_DIR   local copy of the GEODE folder           (default ~/bags/GEODE)
 #   CTRL_ROOT   folder holding Corridor02/ or Cave/      (default: L = the external drive, P = ~/bags)
 # Detach it from the terminal:
@@ -10,7 +14,8 @@
 set -u
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd); FV4=$(dirname "$HERE"); REPO=$(dirname "$FV4")
 M=${MACHINE:?set MACHINE=L (laptop) or MACHINE=P (PC)}
-STAGES=${STAGES:-"smoke geode control"}
+if [ "$M" = L ]; then STAGES=${STAGES:-"smoke control"}; else STAGES=${STAGES:-"smoke geode"}; fi
+REPS=${REPS:-3}
 GEODE_DIR=${GEODE_DIR:-$HOME/bags/GEODE}
 if [ "$M" = L ]; then CTRL_ROOT=${CTRL_ROOT:-"/media/$USER/One Touch1/laptop_bags"}; else CTRL_ROOT=${CTRL_ROOT:-$HOME/bags}; fi
 LOG=$HOME/batch_$M.log
@@ -46,33 +51,31 @@ geode_run() {  # front rep config [rate]
 
 for stage in $STAGES; do case $stage in
 smoke)
-  step "SMOKE A-LOAM stack (60 s)"; SEQ_ENV=$GEODE_ENV SMOKE=1 SMOKE_SECS=60 FRONT=aloam ./run_fusion_study.sh F16 >> "$LOG" 2>&1
+  SM=$HOME/smoke_$M.txt; : > "$SM"; echo "machine $M  $(lscpu | sed -n 's/^Model name: *//p')  commit $(git -C "$REPO" rev-parse --short HEAD)" >> "$SM"
+  step "SMOKE A-LOAM stack (60 s)"; SEQ_ENV=$GEODE_ENV SMOKE=1 SMOKE_SECS=60 FRONT=aloam ./run_fusion_study.sh F16 >> "$LOG" 2>&1; tail -12 "$LOG" >> "$SM"
   a=$(grep -o 'bag: [0-9]*' "$LOG" | tail -1 | tr -dc 0-9)
-  step "SMOKE GenZ stack (60 s)";    SEQ_ENV=$GEODE_ENV SMOKE=1 SMOKE_SECS=60 FRONT=genz  ./run_fusion_study.sh G17 >> "$LOG" 2>&1
+  step "SMOKE GenZ stack (60 s)";    SEQ_ENV=$GEODE_ENV SMOKE=1 SMOKE_SECS=60 FRONT=genz  ./run_fusion_study.sh G17 >> "$LOG" 2>&1; tail -12 "$LOG" >> "$SM"
   g=$(grep -o 'bag: [0-9]*' "$LOG" | tail -1 | tr -dc 0-9)
-  say "smoke rows: A-LOAM stack ${a:-0}, GenZ stack ${g:-0} (a healthy 60 s smoke gives roughly 400-600 each)"
+  say "smoke rows: A-LOAM stack ${a:-0}, GenZ stack ${g:-0} (a healthy 60 s smoke gives roughly 400-600 each; summary in $SM)"
   if [ "${a:-0}" -lt 250 ] || [ "${g:-0}" -lt 250 ]; then say "SMOKE FAILED - stopping before the long runs. Send the last 60 lines of $LOG"; exit 1; fi ;;
 geode)
-  for rep in 1 2; do
+  for rep in $(seq 1 $REPS); do
     step "GEODE pass $rep: F16 (master, A-LOAM)";  geode_run aloam $rep F16
     step "GEODE pass $rep: G17 (GenZ + fusion)";   geode_run genz  $rep G17
     step "GEODE pass $rep: G0 (GenZ alone)";       geode_run genz  $rep G0
     [ $rep = 1 ] && { step "GEODE pass 1: F5 (A-LOAM alone)"; geode_run aloam 1 F5; }
   done ;;
-control)
-  if [ "$M" = L ]; then   # Corridor02, G17 at the master's rate 0.33x (one run)
-    D="$CTRL_ROOT/Corridor02"
-    if need "$D/corridor02.bag" && need "$D/corridor02_gt.txt"; then
-      O=$HOME/runs_corridor2_rate033_L; mk_env corridor2 "$O" "$D" "$D/corridor02_gt.txt" "$REPO/configs/corridor2/corridor2_extrinsics.yaml"
-      step "CONTROL Corridor02 G17 at 0.33x"; SEQ_ENV=$O/seq.env REPEAT=1 RECORD_KF=1 PLAY_RATE=0.33 FRONT=genz ./run_fusion_study.sh G17 >> "$LOG" 2>&1
-    else say "control skipped (external drive with Corridor02 not attached)"; fi
-  else                    # Cave02, G17 at the master's rate 0.5x (one run)
-    D="$CTRL_ROOT/Cave/cave02_bag"
-    if need "$D/cave02.bag" && need "$CTRL_ROOT/Cave/cave02_gt.txt"; then
-      O=$HOME/runs_cave02_rate05_P; mk_env cave02 "$O" "$D" "$CTRL_ROOT/Cave/cave02_gt.txt" "$REPO/configs/cave02/cave02_extrinsics.yaml"
-      step "CONTROL Cave02 G17 at 0.5x"; SEQ_ENV=$O/seq.env REPEAT=1 RECORD_KF=1 PLAY_RATE=0.5 FRONT=genz ./run_fusion_study.sh G17 >> "$LOG" 2>&1
-    else say "control skipped (Cave02 bag not found under $CTRL_ROOT)"; fi
-  fi ;;
+control)   # laptop: both held-out controls with G17 at the master's replay rates (one run each)
+  D="$CTRL_ROOT/Corridor02"
+  if need "$D/corridor02.bag" && need "$D/corridor02_gt.txt"; then
+    O=$HOME/runs_corridor2_rate033_$M; mk_env corridor2 "$O" "$D" "$D/corridor02_gt.txt" "$REPO/configs/corridor2/corridor2_extrinsics.yaml"
+    step "CONTROL Corridor02 G17 at 0.33x"; SEQ_ENV=$O/seq.env REPEAT=1 RECORD_KF=1 PLAY_RATE=0.33 FRONT=genz ./run_fusion_study.sh G17 >> "$LOG" 2>&1
+  else say "Corridor02 control skipped (external drive not attached?)"; fi
+  D="$CTRL_ROOT/Cave/cave02_bag"
+  if need "$D/cave02.bag" && need "$CTRL_ROOT/Cave/cave02_gt.txt"; then
+    O=$HOME/runs_cave02_rate05_$M; mk_env cave02 "$O" "$D" "$CTRL_ROOT/Cave/cave02_gt.txt" "$REPO/configs/cave02/cave02_extrinsics.yaml"
+    step "CONTROL Cave02 G17 at 0.5x"; SEQ_ENV=$O/seq.env REPEAT=1 RECORD_KF=1 PLAY_RATE=0.5 FRONT=genz ./run_fusion_study.sh G17 >> "$LOG" 2>&1
+  else say "Cave02 control skipped (external drive not attached?)"; fi ;;
 extra)   # a third replicate of the three main configurations (only if time is left)
   step "EXTRA F16 run 3"; geode_run aloam 3 F16
   step "EXTRA G17 run 3"; geode_run genz  3 G17
