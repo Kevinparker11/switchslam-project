@@ -43,7 +43,12 @@ cd "$FV4" || exit 1
 GEODE_ENV=$HOME/runs_geode_$M/seq.env
 case " $STAGES " in *" smoke "*|*" geode "*|*" extra "*)
   need "$GEODE_DIR/stairs_alpha.bag" && need "$GEODE_DIR/stairs_alpha.txt" || exit 1
-  mk_env geode "$HOME/runs_geode_$M" "$GEODE_DIR" "$GEODE_DIR/stairs_alpha.txt" "$FV4/geode/geode_extrinsics.yaml" ;; esac
+  mk_env geode "$HOME/runs_geode_$M" "$GEODE_DIR" "$GEODE_DIR/stairs_alpha.txt" "$FV4/geode/geode_extrinsics.yaml"
+  # install the GEODE files in the containers (a moved environment may lack them; the copies are byte-identical to the laptop's)
+  docker exec vinsmono_test mkdir -p /root/vins_output_geode/pose_graph /root/thr
+  docker cp "$FV4/geode/geode_config.yaml" vinsmono_test:/root/catkin_ws/src/VINS-Mono/config/geode_config.yaml || { say "could not install geode_config.yaml"; exit 1; }
+  docker cp "$REPO/configs/geode/geode_aloam.launch" switchslam_gpu_v2:/root/geode_aloam.launch || { say "could not install geode_aloam.launch"; exit 1; }
+  docker exec vinsmono_test test -f /root/catkin_ws/src/VINS-Mono/config/geode_config.yaml || { say "geode_config.yaml still missing in vinsmono_test"; exit 1; } ;; esac
 
 step() { say "##### $*   $(date +%T)"; }
 geode_run() {  # front rep config [rate]
@@ -58,6 +63,7 @@ smoke)
   step "SMOKE GenZ stack (60 s)";    SEQ_ENV=$GEODE_ENV SMOKE=1 SMOKE_SECS=60 FRONT=genz  ./run_fusion_study.sh G17 >> "$LOG" 2>&1; tail -12 "$LOG" >> "$SM"
   g=$(grep -o 'bag: [0-9]*' "$LOG" | tail -1 | tr -dc 0-9)
   say "smoke rows: A-LOAM stack ${a:-0}, GenZ stack ${g:-0} (a healthy 60 s smoke gives roughly 400-600 each; summary in $SM)"
+  if ! grep -q "first VINS-Mono pose [0-9]" "$SM"; then say "SMOKE FAILED: VINS-Mono produced no pose (see ft_/vins_SMOKE_*.out in the runs folder)"; exit 1; fi
   if [ "${a:-0}" -lt 250 ] || [ "${g:-0}" -lt 250 ]; then say "SMOKE FAILED - stopping before the long runs. Send the last 60 lines of $LOG"; exit 1; fi ;;
 geode)
   for rep in $(seq 1 $REPS); do
