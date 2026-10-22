@@ -4,6 +4,7 @@
 | If you want to... | Read |
 |---|---|
 | set up a new PC | [setup/INSTALL.md](setup/INSTALL.md) |
+| see exactly what the original machine had (versions, revisions, mounts) | [setup/ENVIRONMENT.md](setup/ENVIRONMENT.md) |
 | find / place the bags and ground truth | [setup/DATASETS.md](setup/DATASETS.md) |
 | repeat a run or a table | [setup/REPRODUCE.md](setup/REPRODUCE.md) |
 | understand F0...F16 and G0...G17 and see all numbers | [results/Configurations_Explained_and_Results_To_Date.md](results/Configurations_Explained_and_Results_To_Date.md) |
