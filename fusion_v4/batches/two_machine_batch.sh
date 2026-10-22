@@ -16,8 +16,8 @@ HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd); FV4=$(dirname "$HERE"); REPO
 M=${MACHINE:?set MACHINE=L (laptop) or MACHINE=P (PC)}
 if [ "$M" = L ]; then STAGES=${STAGES:-"smoke control"}; else STAGES=${STAGES:-"smoke geode"}; fi
 REPS=${REPS:-3}
-GEODE_DIR=${GEODE_DIR:-$HOME/bags/GEODE}
 if [ "$M" = L ]; then CTRL_ROOT=${CTRL_ROOT:-"/media/$USER/One Touch1/laptop_bags"}; else CTRL_ROOT=${CTRL_ROOT:-$HOME/bags}; fi
+GEODE_DIR=${GEODE_DIR:-$CTRL_ROOT/GEODE}   # PC: ~/bags/GEODE (local copy); laptop: the external drive
 LOG=$HOME/batch_$M.log
 say() { echo "$*" | tee -a "$LOG"; }
 trap 'say "!! batch received a signal at $(date) - stopped"; exit 143' HUP TERM INT
@@ -38,11 +38,12 @@ need() { [ -e "$1" ] || { say "MISSING: $1"; return 1; }; }
 # ---- pre-flight (abort early, with a message) ----
 for c in switchslam_gpu_v2 vinsmono_test; do docker inspect "$c" >/dev/null 2>&1 || { say "container $c does not exist - run tools/import_images.sh first"; exit 1; }; docker start "$c" >/dev/null 2>&1; done
 python3 -c "import numpy, scipy, pandas" 2>/dev/null || { say "host python needs: pip3 install -r $REPO/requirements.txt"; exit 1; }
-need "$GEODE_DIR/stairs_alpha.bag" && need "$GEODE_DIR/stairs_alpha.txt" || exit 1
 avail=$(df -BG --output=avail "$HOME" | tail -1 | tr -dc 0-9); [ "$avail" -ge 15 ] || { say "only ${avail} GB free in $HOME (need >= 15)"; exit 1; }
 cd "$FV4" || exit 1
 GEODE_ENV=$HOME/runs_geode_$M/seq.env
-mk_env geode "$HOME/runs_geode_$M" "$GEODE_DIR" "$GEODE_DIR/stairs_alpha.txt" "$FV4/geode/geode_extrinsics.yaml"
+case " $STAGES " in *" smoke "*|*" geode "*|*" extra "*)
+  need "$GEODE_DIR/stairs_alpha.bag" && need "$GEODE_DIR/stairs_alpha.txt" || exit 1
+  mk_env geode "$HOME/runs_geode_$M" "$GEODE_DIR" "$GEODE_DIR/stairs_alpha.txt" "$FV4/geode/geode_extrinsics.yaml" ;; esac
 
 step() { say "##### $*   $(date +%T)"; }
 geode_run() {  # front rep config [rate]
