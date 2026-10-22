@@ -108,3 +108,17 @@ GenZ-LIO Table 4: ATE RMSE (m), LiDAR-inertial odometry, no loop closure, × = d
 Reading: current LiDAR-inertial odometries (iG-LIO, GenZ-LIO) beat all our results on Multi Floor, Long Corridor and Cave02 without loop closure. Our front end beats Switch-SLAM and the LVIO baselines, not the best LIO methods. Cave 02 is very likely our sequence (same name, VLP-16 handheld caves from the SuperLoc release); Corridor 02 identity is unconfirmed.
 
 Publication status of sources (checked 21 Oct): peer reviewed: Switch-SLAM (RA-L 2024), SubT-MRS (CVPR 2024), DCReg (IJRR 2026 per project notes), GenZ-LIO (IEEE T-FR 2026 per repository; uploaded v3 in T-FR template). No peer-reviewed version found: SuperLoc, LODESTAR, D²-LIO, LP-ICP (arXiv preprints). Lee et al. journal extension: venue not stated.
+
+## Update 22 Oct (night): GEODE stairs α and the GenZ stack with the VINS consistency check (G19)
+
+GEODE Table 6 (ATE, m), stairs, device α (Velodyne VLP-16, the bag we run): LIO-SAM 6.30, FAST-LIO2 4.69, DLIO 4.89, R3LIVE 4.54, RELEAD **0.57**, LVI-SAM failed, COIN-LIO not run on α. (The earlier note "COIN-LIO 0.45 on α" was wrong: 0.45 is device β, Ouster OS1-64.) Source: https://arxiv.org/pdf/2409.04961
+
+| Sequence | Best published | G19 front end | G19 + loops | GenZ-LIO alone (ours) |
+|---|---|---|---|---|
+| Multi Floor | 0.25 iG-LIO / 0.26 GenZ-LIO | 0.388 | 0.330 (best recording 0.250) | 0.584 |
+| Corridor02 | 0.69 GenZ-LIO (sequence identity unconfirmed) | 2.484 | 2.345 (G18 + loops 1.005) | 2.696 |
+| Cave02 | 0.43 iG-LIO / PV-LIO | 0.294 | **0.270** | 0.283 |
+| GEODE stairs α | 0.57 RELEAD | 0.526 | **0.393** | 0.412 |
+| Long Corridor | 0.817 SuperLoc, 1.55 iG-LIO | not run | not run | not run |
+
+Replays of recorded runs (4 recordings on Multi Floor and GEODE, 1 on Corridor02 and Cave02). G19 was designed after the Cave02/GEODE failures were seen, so these two are development results; Long Corridor is the clean test. Details: `GenZ_fusion_v4_VIO_Consistency_Results.md`.
