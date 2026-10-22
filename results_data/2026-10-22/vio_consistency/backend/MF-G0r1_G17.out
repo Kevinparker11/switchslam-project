@@ -1,0 +1,3 @@
+run /tmp/claude-0/-home-claude/3f90fe9f-923e-500d-a688-dedb31fbfbe6/scratchpad/adapt/bk/MF-G0r1_G17.csv: 4136 scans, 534 keyframes (534 matched to the log), median 1738 points per keyframe
+odometry noise per keyframe step (given): rotation 1.460 deg, translation 0.054 m
+none        loops   0 | full 0.551 / 1.29 | bag0 nan / nan | bags1-2 0.551 / 1.29   (0 s)

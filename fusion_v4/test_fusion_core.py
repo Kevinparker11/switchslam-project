@@ -190,6 +190,43 @@ def test_weight_modes():
     assert core.w_mode == "schur"
 
 
+def _straight_run(scale_v, n=400, dt=0.1, v=1.0, adapt=None, vio_scale_T=0.0):
+    """walk along x at v m/s; VINS reports scale_v times the true motion; LiDAR is exact and well constrained"""
+    core = fc.FusionCore(c_t=1.0, c_R=1.0, gate=fc.KappaGate(kth=1e9), t_warm=2.0, hess_frame="body",
+                         vio_adapt=adapt, vio_scale_T=vio_scale_T)
+    H = np.eye(6)
+    for k in range(n):
+        p = np.array([v * dt * k, 0.0, 0.0])
+        R, pf, info = core.step(k * dt, (np.eye(3), p), (np.eye(3), scale_v * p), H)
+    return pf, info, p
+
+
+def test_vio_consistency():
+    S = np.diag([4.0, 1.0, 0.25])
+    # gamma = 1 is the original weight, gamma = 0 trusts the LiDAR fully
+    lam = np.diag(S)
+    assert np.allclose(fc.info_weight(S, 0.5), np.diag(0.5 * lam / (0.5 * lam + 1)))
+    assert np.allclose(fc.info_weight(S, 0.5, 1.0), fc.info_weight(S, 0.5))
+    assert np.allclose(fc.info_weight(S, 0.5, 0.0), np.eye(3))
+    # consistent VINS: the gate opens after n_min windows and the result equals the original rule
+    chk = fc.VioConsistency(ref=0.156, stat="scale", rule="gate", avg=None, n_min=20)
+    pf, info, p = _straight_run(1.0, adapt=chk)
+    assert info["gamma"] == 1.0 and np.allclose(pf, p)
+    # VINS 1.5x too fast: without the check the fused path is too long, with it the LiDAR carries the steps
+    pf0, _, p = _straight_run(1.5)
+    assert pf0[0] > p[0] + 5.0
+    chk = fc.VioConsistency(ref=0.156, stat="scale", rule="gate", avg=None, n_min=20)
+    pf1, info, p = _straight_run(1.5, adapt=chk)
+    assert info["gamma"] == 0.0 and abs(pf1[0] - p[0]) < 1e-6
+    # online scale correction removes a constant VINS scale error after the first window
+    pf2, info, p = _straight_run(1.5, vio_scale_T=2.0)
+    assert abs(info["s_vio"] - 1 / 1.5) < 1e-6 and abs(pf2[0] - p[0]) < 1.0
+    # a VINS loss resets the check
+    chk.update(0.0, (np.eye(3), np.zeros(3)), (np.eye(3), np.zeros(3)), np.eye(3), np.zeros(3))
+    chk.reset()
+    assert chk.gamma() == 0.0 and not chk.rw
+
+
 if __name__ == "__main__":
     test_so3()
     test_extrinsic_increment()
@@ -199,4 +236,5 @@ if __name__ == "__main__":
     test_vins_loss_and_reinit()
     test_otsu()
     test_weight_modes()
+    test_vio_consistency()
     print("ALL TESTS PASSED")

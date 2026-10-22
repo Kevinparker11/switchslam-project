@@ -145,7 +145,7 @@ Open risk: 616 m in about 295 s, a mostly one-way run, may have few revisits, so
 |---|---|---|
 | Urban_Tunnel01–03 (vehicle) | RTK-INS 6-DoF (**GNSS is lost inside tunnels; GT quality there is unknown**) | **All methods fail** except RELEAD 40.50 m on 01 |
 | Bridge01–03 (vehicle) | RTK-INS 6-DoF | **All methods fail** |
-| Stairs_Alpha (handheld, 345 s, 301 m) | PALoc alignment to a Leica RTC360 map, 6-DoF | LVI-SAM fails; LIO-SAM 6.30, FAST-LIO2 4.69, DLIO 4.89, R3LIVE 4.54, COIN-LIO 0.45, RELEAD 0.57 |
+| Stairs_Alpha (handheld, 345 s, 301 m) | PALoc alignment to a Leica RTC360 map, 6-DoF | LVI-SAM fails; LIO-SAM 6.30, FAST-LIO2 4.69, DLIO 4.89, R3LIVE 4.54, RELEAD 0.57 (COIN-LIO not run on alpha; its 0.45 is on beta) |
 | Inland_Waterways Short/Medium/Long | GNSS/INS (in the β frame; convert with `alpha2GT_gnss.py`) | LIO-SAM and LVI-SAM fail; FAST-LIO2 10.3 / 19.7 / 70.3 m |
 | Tunneling2 | Leica MS60, position only | All methods fail |
 

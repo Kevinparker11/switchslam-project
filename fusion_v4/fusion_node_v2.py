@@ -25,6 +25,12 @@ Environment (all optional):
                 fused heading; corrections are applied gradually (SAH_MAX_STEP deg per scan). Off by default.
   SAH_RMIN, SAH_RMAX, SAH_VOXEL, SAH_MAXPTS   scan preprocessing (defaults 1.0 m, 60 m, 0.25 m, 6000 points)
   SAH_SYNC      1: process keyframes inside the callback (tests); default 0: worker thread
+  VIO_CHECK     1: VINS-LiDAR scale-consistency gate (fusion_core.VioConsistency, stat 'scale', segment mean, rule 'gate'):
+                the VINS prior is used (gamma = 1) only while the RMS log ratio of VINS to LiDAR displacement over 10 s
+                windows of the current VINS segment is <= VIO_CHECK_REF (0.156 = largest value on Multi Floor with
+                >= VIO_CHECK_NMIN = 200 windows); otherwise gamma = 0 and the LiDAR carries the step. Off by default.
+  VIO_SCALE_T   > 0: VINS translation increments are rescaled by the LiDAR/VINS path-length ratio over the last
+                VIO_SCALE_T s of the VINS segment before fusion (0 = off, default).
 Extrinsic: SubT-MRS Multi Floor 'laser_to_imu' (override with EXTRINSIC_YAML=path to the same format).
 """
 import os
@@ -62,6 +68,10 @@ SAH_RMIN, SAH_RMAX = float(E("SAH_RMIN", "1.0")), float(E("SAH_RMAX", "60.0"))
 SAH_VOXEL, SAH_MAXPTS = float(E("SAH_VOXEL", "0.25")), int(E("SAH_MAXPTS", "6000"))
 SAH_MAX_STEP = np.radians(float(E("SAH_MAX_STEP", "0.25")))
 SAH_SYNC = E("SAH_SYNC", "0") == "1"
+VIO_CHECK = E("VIO_CHECK", "0") == "1"
+VIO_CHECK_REF = float(E("VIO_CHECK_REF", "0.156"))
+VIO_CHECK_NMIN = int(E("VIO_CHECK_NMIN", "200"))
+VIO_SCALE_T = float(E("VIO_SCALE_T", "0"))
 VINS_GAP = 1.0            # s without VINS -> treated as lost (warm-up restarts)
 
 # SubT-MRS Hawkins Multi Floor laser_to_imu (x_imu = R x_laser + t)
@@ -78,8 +88,9 @@ R_IL, t_IL = U @ Vt, T_LI[:3, 3].copy()
 
 lock = threading.Lock()
 gate = fc.KappaGate(kth=KAPPA_TH, mode=KAPPA_MODE)
+vio_check = fc.VioConsistency(ref=VIO_CHECK_REF, stat="scale", rule="gate", avg=None, n_min=VIO_CHECK_NMIN) if VIO_CHECK else None
 core = fc.FusionCore(R_IL, t_IL, c_t=C_T, c_R=C_R, gate=gate, t_warm=T_WARM, hess_frame=HESS_FRAME,
-                     jump_max=JUMP_MAX, w_mode=WEIGHT_MODE, alpha=W_ALPHA)
+                     jump_max=JUMP_MAX, w_mode=WEIGHT_MODE, alpha=W_ALPHA, vio_adapt=vio_check, vio_scale_T=VIO_SCALE_T)
 if MODE == "lidar":
     core.t_warm = 1e12                     # every step is WARMUP = LiDAR only
 
@@ -102,7 +113,7 @@ w.writerow(["time", "mode", "fused_x", "fused_y", "fused_z", "fused_qx", "fused_
             "aft_x", "aft_y", "aft_z", "aft_qx", "aft_qy", "aft_qz", "aft_qw",
             "v_px", "v_py", "v_pz", "v_qx", "v_qy", "v_qz", "v_qw",
             "gate", "kappa_R", "kappa_t", "kth", "wt0", "wt1", "wt2", "wR0", "wR1", "wR2", "dta", "dtv",
-            "hess_src", "cost", "m_res"] + HCOLS + ["sah_corr_deg", "sah_total_deg", "sah_acc"])
+            "hess_src", "cost", "m_res"] + HCOLS + ["sah_corr_deg", "sah_total_deg", "sah_acc", "vio_gamma", "s_vio"])
 cnt = [0]
 
 
@@ -313,7 +324,8 @@ def aft_cb(msg):
     w.writerow([t, info["mode"], *p, *fc.R_to_quat(R), *pa, *fc.R_to_quat(Ra), *vp, *vq,
                 info["gate"], info["kappa_R"], info["kappa_t"], info["kth"], *info["wt"], *info["wR"],
                 info["dta"], info["dtv"], HESS_TOPIC, cost, mres] + Hrow +
-               [np.degrees(corr_now), np.degrees(sah_state["applied"]), (sah.stats["acc"] if SAH else 0)])
+               [np.degrees(corr_now), np.degrees(sah_state["applied"]), (sah.stats["acc"] if SAH else 0),
+                info.get("gamma", 1.0), info.get("s_vio", 1.0)])
     cnt[0] += 1
     if cnt[0] % 50 == 0:
         log.flush()
@@ -338,6 +350,7 @@ def main():
             threading.Thread(target=sah_worker, daemon=True).start()
         print("SAH=1 KF_DIST=%g KF_ROT=%g SAH_RMIN=%g SAH_RMAX=%g SAH_VOXEL=%g SAH_MAXPTS=%d SAH_MAX_STEP=%.2f deg"
               % (KF_DIST, KF_ROT, SAH_RMIN, SAH_RMAX, SAH_VOXEL, SAH_MAXPTS, np.degrees(SAH_MAX_STEP)))
+    print("VIO_CHECK=%d VIO_CHECK_REF=%g VIO_CHECK_NMIN=%d VIO_SCALE_T=%g" % (VIO_CHECK, VIO_CHECK_REF, VIO_CHECK_NMIN, VIO_SCALE_T))
     print("FUSION_MODE=%s C_T=%g C_R=%g KAPPA_MODE=%s KAPPA_TH=%g T_WARM=%g HESS_TOPIC=%s PREDICT_WITH_VINS=%d RUN_TAG=%s WEIGHT_MODE=%s W_ALPHA=%g"
           % (MODE, C_T, C_R, KAPPA_MODE, KAPPA_TH, T_WARM, HESS_TOPIC, PREDICT_WITH_VINS, RUN_TAG, WEIGHT_MODE, W_ALPHA))
     print("fusion_node_v2 listening...")

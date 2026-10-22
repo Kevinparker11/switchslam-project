@@ -29,7 +29,7 @@ VINS-Mono health: Corridor02 modes FUSED 7906 / WARMUP 949 / VO_FAIL 0 (at 1.0x 
 | F5 (A-LOAM alone) | 7.98 | 3446 | one run |
 | VINS-Mono alone (replays) | 56-80 | | VO_FAIL 18-35 % of the time |
 
-Published stairs-alpha numbers (GEODE paper v2, from a garbled extraction: recheck): FAST-LIO2 4.69, DLIO 4.89, R3LIVE 4.54, LIO-SAM 6.30, COIN-LIO 0.45, RELEAD 0.57. GenZ-LIO alone with the Multi Floor configuration (0.35-0.49) is in the range of the best published values; this is the published front end, not a result of this project.
+Published stairs-alpha numbers (GEODE paper, Table 6, rechecked 22 Oct): LIO-SAM 6.30, FAST-LIO2 4.69, DLIO 4.89, R3LIVE 4.54, RELEAD 0.57; COIN-LIO was not run on alpha (its 0.45 is on device beta, Ouster OS1-64), LVI-SAM failed. Best published on alpha: RELEAD 0.57. GenZ-LIO alone with the Multi Floor configuration (0.35-0.49) is in the range of the best published values; this is the published front end, not a result of this project.
 
 Mechanism (G17 run 1, fused vs the LiDAR path): both agree for the first 33 s; the fused path leaves the LiDAR path only inside the FUSED stretches (0 to 13 m during 34-66 s, 13 to 50 m during 210-251 s); in WARMUP and VO_FAIL it follows the LiDAR increments. Scale: over 10 s windows VINS-Mono moved 2.7x (run 1) and 1.5x (run 2) the distance the LiDAR moved (median |ln ratio| 1.01 and 0.43).
 

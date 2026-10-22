@@ -50,7 +50,9 @@ Older systems: the **old switching node** (Switch-SLAM-style modes LIDAR_ONLY / 
 | G8 | C_T = 1e-4, no gate | The F8 rule on GenZ-LIO: rotation from VINS-Mono. Ablation. |
 | G16 | G8 + SAH | The F16 rule on GenZ-LIO. Ablation. |
 | **G9** | C_T = 3e-6, C_R = 5e-6, no gate | **R and T both from Schur, both active**: S_RR weights rotation, S_tt weights translation. |
-| **G17** | G9 + SAH | **G9 plus the additional T (SAH).** The proposed final system on GenZ-LIO. |
+| **G17** | G9 + SAH | **G9 plus the additional T (SAH).** The proposed final system on GenZ-LIO (until 22 Oct). |
+| G18 | G17 + VIO_CHECK=1 | Same structure; the VINS prior is used (γ = 1) only while VINS scale agrees with the LiDAR within the Multi Floor envelope (segment RMS log ratio ≤ 0.156), else γ = 0. |
+| **G19** | G18 + VIO_SCALE_T=10 | G18 with VINS translation rescaled online to the LiDAR's metric scale. **Recommended configuration from 22 Oct** (development result; see GenZ_fusion_v4_VIO_Consistency_Results.md). |
 
 Weights were chosen on Multi Floor only and frozen (rule: smallest mean ATE, plateau middle).
 
