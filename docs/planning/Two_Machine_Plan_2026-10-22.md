@@ -29,41 +29,44 @@ Purpose: decide what to run in the 4 hours on two computers (laptop Ryzen 5 5600
 - GenZ-LIO is multithreaded (`max_threads 0` = all cores) and varies by 0.3-0.6 m between identical runs on the same machine (G0 Multi Floor 0.88 / 0.53 / 0.31).
 - The i7-12700 (8 performance + 4 efficiency cores, 20 threads, up to about 4.9 GHz) is roughly 1.2x faster per thread and about 1.8x in total than the 5600H (6 cores, 12 threads, up to about 4.2 GHz, thermally limited in the laptop). Expected effect: fewer dropped scans and more optimiser iterations on the PC, so equal or better numbers, **but a PC number is not the same measurement as a laptop number**, and the 16 GB RAM must hold three stacks.
 
-**Rules that follow (fixed before the runs):**
-1. Never pool a cell of the table from different machines without a record of the machine. Every run is stored under `runs_..._L` or `_P`.
-2. The two machines run the **same design** (same configurations, same number of runs, same rate, same code commit, same images). Configurations are then compared within machine and across machines, and the machine effect is measured, not assumed.
-3. Retention (rows ÷ scans) is reported for every run as a validity measure. Runs under the row threshold are reported as failures, not hidden.
-4. The machine effect is called negligible if, for each of F16, G17, G0, the difference between the machine means is smaller than the pooled within-machine standard deviation and the retention differs by less than 5 percentage points. Otherwise results are reported per machine and conclusions are drawn only from within-machine comparisons.
-5. Older master numbers (laptop) stay valid as laptop numbers. No master number is recomputed on the PC.
+**Revision (22 Oct, user decision): the machines run different bags, no run is duplicated, to save time.** The price is that the machine effect is no longer measured inside the experiment, so the allocation is chosen so that **no comparison crosses machines**:
+
+- **PC: GEODE only**, every configuration of it (F16, G17, G0, F5). The GEODE comparisons (G17 vs G0 vs F16) are all within one machine. GEODE is new data, so no old laptop number has to be matched.
+- **Laptop: the two replay-rate controls** on Corridor02 and Cave02. They are compared with the old laptop results of the master and of the 1.0x run, so they should run on the machine that produced those.
+- A **60 s smoke test on both machines** (same code, same bag, same settings) first. It gives a coarse machine check (scans kept, time to first VINS pose) and confirms each stack works before the long runs.
+
+Rules (fixed before the runs):
+1. Every result is stored with its machine (`runs_..._L` / `_P`) and the repo commit.
+2. A PC number is never placed next to a laptop number as if it were the same measurement. GEODE results are PC results; the controls are laptop results.
+3. Scan retention (rows / scans) is reported for every run; runs under the row threshold are reported as failures.
+4. The smoke test is the only cross-machine evidence. If the retention differs by more than 5 percentage points or VINS-Mono starts at clearly different times, the GEODE numbers are reported as "PC, 0.5x" and not compared with laptop numbers at all.
 
 ## 3. Decisions (configuration to follow)
 
-| Decision | Choice | Reason |
-|---|---|---|
-| Code | both machines run a fresh clone of branch `fusion-v4-and-results` (same commit, printed in each log) | identical code; the old working folder on the laptop is not used |
-| Environment | the laptop's containers exported once and loaded on the PC (`tools/export_images.sh`, `import_images.sh`) | identical software; git holds code and configs, not the container images, which are the missing part |
-| Replay rate | 0.5x for all GEODE runs on both machines | the master's convention for Long Corridor/Cave02; 1.0x lost scans on the laptop |
-| Bag location | **local copy on each machine's internal disk** (`~/bags/GEODE`), not the external drive | same read speed on both, laptop and PC independent of one drive |
-| Settings | all frozen: C_T 0.03 (F16); c_T 3e-6, c_R 5e-6, SAH (G17); GenZ config as on Multi Floor | nothing is tuned on GEODE |
-| Runs per machine | GEODE: F16 x2, G17 x2, G0 x2, F5 x1 (7 runs); total n = 4 per main configuration, 2 for F5 | 7 x 14 min = 98 min per machine |
-| Dropped | F0 live: the VINS-only trajectory is part of every F16 / G17 log and is scored by the paired replay (same data); live F0 would only repeat it | saves 3 runs |
-| Control runs | laptop: Corridor02 G17 at 0.33x (47 min); PC: Cave02 G17 at 0.5x (35 min); one run each | answers the replay-rate question for both held-out bags |
-| Optional | `STAGES=extra`: third replicate of F16, G17, G0 (42 min) | only if time is left |
+| Decision | Choice |
+|---|---|
+| Code | both machines: a fresh clone of branch `fusion-v4-and-results` (commit printed in each log) |
+| Environment | the laptop's containers exported once and loaded on the PC (`tools/export_images.sh`, `import_images.sh`) |
+| Replay rate | GEODE 0.5x; Corridor02 0.33x; Cave02 0.5x (the master's rates) |
+| Settings | all frozen: C_T 0.03 (F16); c_T 3e-6, c_R 5e-6, SAH (G17); GenZ config as on Multi Floor |
+| PC runs | GEODE: F16 x3, G17 x3, G0 x3, F5 x1 = 10 runs, about 140 min; optional `STAGES=extra` is not needed (3 replicates already) |
+| Laptop runs | Corridor02 G17 at 0.33x (about 47 min), then Cave02 G17 at 0.5x (about 35 min) = about 82 min |
+| Bags | PC: local copy of GEODE (`~/bags/GEODE`). Laptop: reads Corridor02 and Cave02 from the external drive, which stays with the laptop except for the short trip below |
+| Dropped | F0 live (the VINS-only trajectory is inside every F16 and G17 log) |
 
-Why each run: F16 is the validated master; G17 is the proposed system; G0 is GenZ-LIO alone, the LiDAR-inertial baseline that G17 has to beat; F5 is plain A-LOAM. The published GEODE stairs-alpha numbers (recheck against the paper) are FAST-LIO2 4.69 m, DLIO 4.89, R3LIVE 4.54, LIO-SAM 6.30, COIN-LIO 0.45, RELEAD 0.57.
+Why each run: F16 is the validated master; G17 is the proposed system; G0 is GenZ-LIO alone, the LiDAR-inertial baseline that G17 has to beat; F5 is plain A-LOAM. Published GEODE stairs-alpha numbers (recheck against the paper): FAST-LIO2 4.69 m, DLIO 4.89, R3LIVE 4.54, LIO-SAM 6.30, COIN-LIO 0.45, RELEAD 0.57.
 
-## 4. Time plan (T0 = the moment you start; both machines about 4 h)
+## 4. Time plan (T0 = start)
 
 | Minutes | Laptop | PC |
 |---|---|---|
-| 0-10 | copy GEODE bag to `~/bags`, clone repo | (HDD not yet there) install Docker / git / pip, clone repo |
-| 10-35 | export the containers to the external drive (laptop idle) | wait; then plug the drive in |
-| 35-60 | start the batch (smoke, then GEODE) | `import_images.sh` (10-15 min), copy GEODE and Cave bags to `~/bags`, start the batch; the drive goes back to the laptop |
-| 60-160 | GEODE runs (98 min) | GEODE runs |
-| 160-210 | control: Corridor02 G17 at 0.33x | control: Cave02 G17 at 0.5x |
-| 210-240 | optional extra replicate / buffer | optional extra replicate / buffer |
+| 0-10 | clone repo; 60 s smoke test (reads GEODE from the drive) | install Docker / git, clone repo, 5 min after the drive arrives |
+| 10-35 | export the containers to the drive (laptop idle) | - |
+| 35-45 | drive goes to the PC | **copy** images, workspaces and GEODE from the drive to the PC's disk (about 5 min), return the drive |
+| 45-60 | drive is back; start the controls | `import_images.sh` from the local copy, smoke test, start GEODE |
+| 60-145 | Corridor02 then Cave02 controls (about 82 min), then idle | GEODE, 10 runs, ends at about minute 200 |
 
-If the PC window is tighter than 4 h in total, the PC drops the control and the extra stage; the GEODE block is what matters.
+Everything fits in 4 hours with about 40 minutes of buffer on the PC.
 
 ## 5. After the runs
 Bring back the results folders of both machines. Then: score GEODE and compare with the published table; per-machine and pooled statistics; the paired VINS-only / LiDAR-only / own-setting replays from the recorded logs; loop closure on the recorded keyframes (offline, on my side); decide whether G17 is kept as the final system or whether the VINS-failure gate becomes the next piece of work; update the project documents.
