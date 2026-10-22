@@ -1,0 +1,10 @@
+seq,run,role,log,labels
+floor01,1,calib,logs/degen_floor01_r0_run1.csv,labels/labels_floor01_r0.csv
+floor01,2,calib,logs/degen_floor01_r0_run2.csv,labels/labels_floor01_r0.csv
+floor01,3,calib,logs/degen_floor01_r0_run3.csv,labels/labels_floor01_r0.csv
+corridor01,1,test,logs/degen_corridor01_r0_run1.csv,labels/labels_corridor01_r0.csv
+corridor01,2,test,logs/degen_corridor01_r0_run2.csv,labels/labels_corridor01_r0.csv
+corridor01,3,test,logs/degen_corridor01_r0_run3.csv,labels/labels_corridor01_r0.csv
+cave02,1,test,logs/degen_cave02_r0_run1.csv,labels/labels_cave02_r0.csv
+cave02,2,test,logs/degen_cave02_r0_run2.csv,labels/labels_cave02_r0.csv
+cave02,3,test,logs/degen_cave02_r0_run3.csv,labels/labels_cave02_r0.csv
