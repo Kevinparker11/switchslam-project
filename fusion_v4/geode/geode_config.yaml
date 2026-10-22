@@ -1,0 +1,58 @@
+%YAML:1.0
+imu_topic: "/imu/data"
+image_topic: "/left_camera/image_raw"
+output_path: "/root/vins_output_geode/"
+model_type: PINHOLE
+camera_name: camera
+image_width: 1224
+image_height: 1024
+distortion_parameters:
+   k1: -0.054564387916302
+   k2: 0.118401668712345
+   p1: -5.660201404086453e-05
+   p2: 1.663858521146268e-04
+projection_parameters:
+   fx: 1178.885033542471
+   fy: 1179.140805904268
+   cx: 606.6447526169975
+   cy: 520.4657871771230
+estimate_extrinsic: 0
+extrinsicRotation: !!opencv-matrix
+   rows: 3
+   cols: 3
+   dt: d
+   data: [ 0.00458595, -0.00877931,  0.99995095,
+          -0.99997425,  0.00548025,  0.00463417,
+          -0.00552066, -0.99994644, -0.00875395]
+extrinsicTranslation: !!opencv-matrix
+   rows: 3
+   cols: 1
+   dt: d
+   data: [0.13519371, 0.15905829, 0.00537348]
+max_cnt: 150
+min_dist: 30
+freq: 10
+F_threshold: 1.0
+show_track: 1
+equalize: 1
+fisheye: 0
+max_solver_time: 0.04
+max_num_iterations: 8
+keyframe_parallax: 10.0
+# IMU noise: Xsens MTi-30 values published in alpha_config.yaml (a calibration, not a tuned value)
+acc_n: 1.0481546278947311e-02
+gyr_n: 9.6690835928856730e-03
+acc_w: 1.8451561389195461e-04
+gyr_w: 8.2887875865635737e-05
+g_norm: 9.81007
+loop_closure: 0
+load_previous_pose_graph: 0
+fast_relocalization: 0
+pose_graph_save_path: "/root/vins_output_geode/pose_graph/"
+estimate_td: 0
+td: 0.0
+rolling_shutter: 0
+rolling_shutter_tr: 0
+save_image: 0
+visualize_imu_forward: 0
+visualize_camera_size: 0.4
