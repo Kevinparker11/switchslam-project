@@ -5,7 +5,7 @@
 #   ./setup_geode.sh <ground-truth file>   (once the GEODE stairs-alpha trajectory has been downloaded)
 set -u
 HERE=$(cd "$(dirname "$0")" && pwd)
-BAGDIR="/media/kavinkumar/One Touch1/laptop_bags/GEODE"
+BAGDIR=${GEODE_DIR:-"${BAGS_ROOT:-/media/$USER/One Touch1/laptop_bags}/GEODE"}   # GEODE_DIR= or BAGS_ROOT= to relocate
 GTF=${1:-}
 GPU_C=switchslam_gpu_v2; VINS_C=vinsmono_test
 OUT=~/runs_geode; mkdir -p $OUT
