@@ -1,48 +1,54 @@
-# SwitchSLAM: LiDAR–VIO fusion under LiDAR degeneracy (M.Tech thesis code)
+# SwitchSLAM: LiDAR–VIO fusion under LiDAR degeneracy
 
-Two generations of work live in this repository.
+M.Tech thesis code and records. The question: when LiDAR scan matching is poorly constrained (corridors, caves, stairs), how should a LiDAR–visual–inertial system weight LiDAR against VINS-Mono, and can it be done without hand-tuned thresholds? The answer built here is **VINS-Mono as the primary pose, corrected by a LiDAR scan-to-map registration weighted per direction by the Schur complement of its Hessian** (`W = (c·S + I)⁻¹ c·S`), plus a **structure-anchored heading** (SAH) correction from wall directions and an offline loop-closure back end.
 
-| Generation | Folders | What it is |
-|---|---|---|
-| **1. SwitchSLAM + Bingham channel T** (Sep 2026) | repo root, `farm/`, `multifloor/` | The original switching nodes (A-LOAM + VINS-Mono), Farm/Panels and Multi Floor experiments, the Bingham orientation channel. Left in place, as committed. |
-| **2. Schur-weighted fusion** (Oct 2026) | `fusion_v2/`, `fusion_v3/`, `fusion_v4/`, `sah/`, `analysis/`, `threshold_study/`, `channelT_test/` | Fusion with a Schur-complement translation weight, structure-anchored heading (SAH) and an offline loop-closure back end. |
+## Where to start
 
-## Fusion versions
-
-| Folder | Role |
+| I want to... | Go to |
 |---|---|
-| `fusion_v2/` | First fusion node (fusion core + node, early tools). |
-| `fusion_v3/` | **Master system, config F16**: VINS-Mono primary + A-LOAM scan-to-map, Schur translation weight `W_t = (c·S_tt + I)^-1 · c·S_tt` (`C_T = 0.03`, no kappa gate), rotation from VINS-Mono only, SAH as the additional translation/heading correction, offline loop closure. |
-| `fusion_v4/` | Same fusion with **GenZ-LIO replacing A-LOAM** (`FRONT=genz`); `FRONT=aloam` reproduces the master. Includes GenZ install/config tools, the LiDAR-information patch, `lio_bridge.py`, and `geode/` (GEODE device-alpha setup). The fusion files are byte-identical to `fusion_v3`. |
+| set the environment up on a new PC | [`docs/setup/INSTALL.md`](docs/setup/INSTALL.md) |
+| place the bags and ground truth | [`docs/setup/DATASETS.md`](docs/setup/DATASETS.md) |
+| repeat a run or a result table | [`docs/setup/REPRODUCE.md`](docs/setup/REPRODUCE.md) |
+| see every configuration and every result | [`docs/results/Configurations_Explained_and_Results_To_Date.md`](docs/results/Configurations_Explained_and_Results_To_Date.md) |
+| read the documentation index | [`docs/README.md`](docs/README.md) |
 
-### Configuration names (run with `run_fusion_study.sh`)
-
-`F0` VINS only · `F5` A-LOAM only · `F8` soft Schur translation weight, rotation from VINS · `F12` hard switch · `F14` W = I · `F16` = F8 + SAH · "+loops" = offline loop closure.
-GenZ stack: `G0` GenZ-LIO alone · `GV` VINS control · `G8`/`G16` the F8/F16 rule on GenZ · `G9` rotation and translation both Schur-active · `G17` = G9 + SAH.
-
-## Results at a glance (full-sequence ATE RMSE, metres, Umeyama SE(3))
-
-| Sequence | Role | Master F16 | GenZ-LIO alone | G17 (fusion_v4) |
-|---|---|---|---|---|
-| Multi Floor | tuning sequence | see `docs/results/` | 0.26 | 0.29 (live) |
-| Corridor02 | held out | 1.71 | 3.98 | 5.60 |
-| Cave02 | held out | 4.40 | 4.61 | 12.66 |
-
-The GenZ-LIO configuration calibrated on Multi Floor **did not generalise** to the two held-out bags: live VINS-Mono failed or re-initialised on both, and the frozen translation weight let that into the output. This is reported as found, with no re-tuning on the held-out bags. See `docs/results/Front_End_Upgrade_GenZ_fusion_v4.md` and `docs/results/Improvement_Replay_Tests.md`. GEODE (stairs, device alpha) is the untouched test set; its scored runs are still pending.
-
-## Layout
+## Repository layout
 
 ```
-fusion_v2/ fusion_v3/ fusion_v4/   fusion code, run scripts, tests, back end (loop closure)
-sah/                               structure-anchored-heading development and replay harness
-analysis/improve/                  replay / ablation / statistical-test scripts for the fusion study
-threshold_study/                   degeneracy-threshold screening
-channelT_test/                     Bingham channel-T validity tests
-scripts/                           batch helpers for Cave02 and longer runs
-docs/research/                     literature, datasets, method proofs
-docs/results/                      result records and comparisons
-docs/protocols/                    held-out test protocols and setup logs
-docs/planning/                     thesis plan, novelty and research gap
+fusion_v2/ fusion_v3/ fusion_v4/   the fusion system, three generations (see below); each folder is self-contained
+sah/                               structure-anchored-heading development harness (replays, stress tests)
+analysis/improve/                  replay, ablation, statistics and held-out diagnostics
+threshold_study/, channelT_test/   degeneracy-threshold screening; Bingham channel-T validity tests
+patches/aloam_vins/                modifications of third-party A-LOAM / VINS-Mono code
+configs/                           per-sequence launch/config files that live inside the containers
+tools/                             capture_environment.sh (records the working machine's environment)
+scripts/                           one-off batch helpers
+switchslam_v1/                     generation 1 (Sep 2026): the original switching nodes, Farm/Multi Floor logs
+docs/                              setup guides, results, protocols, planning, research notes
+requirements.txt                   host Python packages
 ```
 
-Bags, recordings (`.bag`, `.npz`), and run outputs are not stored here (see `.gitignore`).
+## The systems
+
+| Folder | System |
+|---|---|
+| `fusion_v2/` | first Schur-weighted fusion node |
+| `fusion_v3/` | **master, config F16**: VINS-Mono + A-LOAM scan-to-map, Schur translation weight (`C_T = 0.03`, no κ gate), rotation from VINS-Mono, SAH, offline loop closure |
+| `fusion_v4/` | the same fusion rules with **GenZ-LIO replacing A-LOAM** (`FRONT=genz`; `FRONT=aloam` reproduces the master), plus the GEODE setup. The fusion files are byte-identical to `fusion_v3` |
+
+Configuration names: `F0` VINS only · `F5` A-LOAM only · `F8` soft Schur translation weight · `F12` hard switch · `F14` W = I · `F16` = F8 + SAH. GenZ stack: `G0` GenZ-LIO alone · `G9` Schur on rotation and translation · `G17` = G9 + SAH. Definitions: [`docs/results/Configurations_Explained_and_Results_To_Date.md`](docs/results/Configurations_Explained_and_Results_To_Date.md).
+
+## Results at a glance
+Full-sequence ATE RMSE in metres (Umeyama SE(3), no scale), mean over live runs.
+
+| Sequence | Role | VINS-Mono | Master F8 | Master F16 | G17 (GenZ stack) |
+|---|---|---|---|---|---|
+| Multi Floor | tuning | 1.28 | 0.617 | 0.640 | 0.388 (replay, in-sample); 0.293 (1 live run) |
+| Long Corridor | SAH development | 5.81 | 4.53 | 2.27 | not run |
+| Corridor02 | held out for F8; SAH development | 4.03 | 2.12 | 1.71 | 5.60 (1 live run, 1.0x) |
+| Cave02 | clean control | 10.25 | 4.47 | 4.40 | 12.66 (1 live run, 1.0x) |
+| GEODE stairs (alpha) | untouched test | | | pending | pending |
+
+What this does and does not show: the master system clearly improves on VINS-Mono alone and on the published Switch-SLAM numbers on Multi Floor, and SAH helps on the corridors (significant in the run-level tests). The GenZ-LIO variant reaches 0.29–0.39 m on Multi Floor, but its weights were tuned on that sequence, and **the first two held-out runs did not generalise** — live VINS-Mono failed on both. That diagnosis and the planned control are in [`docs/results/GenZ_fusion_v4_HeldOut_Results.md`](docs/results/GenZ_fusion_v4_HeldOut_Results.md). Settings are frozen before each new sequence and never tuned on held-out bags.
+
+Bags, recordings (`.bag`, `.npz`) and run outputs are not stored here (see `.gitignore`).
