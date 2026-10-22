@@ -30,6 +30,8 @@ Installation, datasets, reproduction commands. Standing path rules are in [setup
 | update_2026-10-14_batch5.md, farm_generalization_findings.md | dated updates |
 
 ## protocols/ and planning/
+Current plan: [planning/Two_Machine_Plan_2026-10-22.md](planning/Two_Machine_Plan_2026-10-22.md) (status, machine-effect rules, GEODE and control runs on laptop + PC; scripts in `fusion_v4/batches/`).
+
 Held-out test protocol, dataset test plan, long-corridor setup log; the thesis plan, the plan to beat published results, novelty and research gap.
 
 ## research/

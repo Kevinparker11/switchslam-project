@@ -12,6 +12,7 @@ set -e
 GPU_C=${GPU_C:-switchslam_gpu_v2}; VINS_C=${VINS_C:-vinsmono_test}
 OUT=${1:-$HOME/switchslam_export}; TAG=export-$(date +%Y%m%d)
 mkdir -p "$OUT"
+echo "free space on the target: $(df -h --output=avail "$OUT" | tail -1) (need roughly 25 GB); free in $HOME: $(df -h --output=avail "$HOME" | tail -1) (docker commit needs ~10 GB)"
 src_of() { docker inspect "$1" --format '{{range .Mounts}}{{if eq .Destination "/root/catkin_ws"}}{{.Source}}{{end}}{{end}}'; }
 GPU_WS=$(src_of $GPU_C); VINS_WS=$(src_of $VINS_C)
 [ -d "$GPU_WS" ] && [ -d "$VINS_WS" ] || { echo "cannot find the bind-mounted catkin_ws folders (got '$GPU_WS' / '$VINS_WS')"; exit 1; }
@@ -19,7 +20,8 @@ GPU_WS=$(src_of $GPU_C); VINS_WS=$(src_of $VINS_C)
 docker stop $GPU_C $VINS_C >/dev/null
 docker commit $GPU_C  switchslam_gpu_v2:$TAG
 docker commit $VINS_C vinsmono_test:$TAG
-docker save switchslam_gpu_v2:$TAG vinsmono_test:$TAG | gzip > "$OUT/images.tar.gz"
+GZ=$(command -v pigz || echo gzip)      # pigz (parallel) is much faster if installed: sudo apt install pigz
+docker save switchslam_gpu_v2:$TAG vinsmono_test:$TAG | $GZ > "$OUT/images.tar.gz"
 tar czf "$OUT/ws_gpu_catkin_ws.tgz"  -C "$(dirname "$GPU_WS")"  "$(basename "$GPU_WS")"
 tar czf "$OUT/ws_vins_catkin_ws.tgz" -C "$(dirname "$VINS_WS")" "$(basename "$VINS_WS")"
 docker start $GPU_C $VINS_C >/dev/null
