@@ -2,7 +2,7 @@
 
 The whole study runs on one Linux machine with Docker. Two long-lived containers hold the ROS stacks, a third (stock `ros:noetic`) plays the bags. The fusion node, scoring and back end are plain Python.
 
-> **Status of this guide (22 Oct 2026).** The two containers were built interactively on the original laptop and no Dockerfile was kept. This repository therefore carries (a) everything that was written by us (all code, patches, configs), (b) the pinned third-party versions where they are known, and (c) `tools/capture_environment.sh`, which records the rest from the working machine (package versions, source revisions, local modifications of A-LOAM and VINS-Mono). **Run it once on the working laptop and commit its output** (see section 6) — until then the container recipe below has gaps, marked **[capture]**. The guaranteed way to get an identical environment is to move the images (section 2A).
+> **Status (22 Oct 2026).** The two containers were built interactively on the original laptop and no Dockerfile was kept. The environment was therefore **captured from the working machine** (versions, source revisions, local modifications; see [ENVIRONMENT.md](ENVIRONMENT.md)). Two routes exist: **2A move the containers** (guaranteed identical, large) or **2B rebuild from source** with the pinned revisions and the captured diffs (small, but not yet verified end to end on a clean machine).
 
 ## 1. Host requirements
 
@@ -32,35 +32,33 @@ Directory layout the scripts assume on the host:
 
 Both long-lived containers join the user-defined Docker network **`vins_bridge`** so that ROS 1 can span them (the run script reads each container's IP on that network and sets `ROS_IP` / `ROS_MASTER_URI=http://<gpu-ip>:11311`).
 
-### 2A. Recommended: move the images from the working laptop
-On the working laptop:
+### 2A. Recommended: move the containers from the working laptop
+The A-LOAM and VINS-Mono workspaces are **bind mounts from the host** (`~/catkin_ws_rebuild` and `~/catkin_ws_mono`), so an image alone does not contain them. The two helper scripts handle both parts:
 ```bash
-docker commit switchslam_gpu_v2 switchslam_gpu_v2:export
-docker commit vinsmono_test    vinsmono_test:export
-docker save switchslam_gpu_v2:export vinsmono_test:export | gzip > switchslam_images.tar.gz      # large (several GB)
+# on the working laptop (stops the containers for a minute; output several GB)
+bash tools/export_images.sh ~/switchslam_export
+# copy ~/switchslam_export to the new PC, then there:
+bash tools/import_images.sh ~/switchslam_export
 ```
-On the new PC:
+`import_images.sh` loads the images, creates the network `vins_bridge`, unpacks the two workspaces under `$HOME` and starts the containers with the same network, mounts and display settings as the original (reconstructed from `docker inspect`, see ENVIRONMENT.md). The snapshots `*:baseline-2026-10-09` on the laptop pre-date GenZ-LIO and GEODE; do not use them for fusion_v4.
+
+### 2B. Rebuild from source
+Revisions and local changes are recorded in [ENVIRONMENT.md](ENVIRONMENT.md). The two diffs were checked to apply cleanly to fresh upstream checkouts at these revisions; the full build and a run on a clean machine have not been repeated. If a step fails, 2A is the fallback.
+
 ```bash
-gunzip -c switchslam_images.tar.gz | docker load
 docker network create vins_bridge
-docker run -dit --name switchslam_gpu_v2 --network vins_bridge switchslam_gpu_v2:export bash
-docker run -dit --name vinsmono_test    --network vins_bridge vinsmono_test:export bash
-docker pull ros:noetic
+mkdir -p ~/catkin_ws_rebuild/src ~/catkin_ws_mono/src
 ```
-(Check `docker inspect <container> --format '{{.HostConfig.Binds}}'` on the old machine in case a container had bind mounts; `tools/capture_environment.sh` prints them.)
 
-### 2B. Rebuild from scratch
-Needed only if images cannot be moved. Versions marked **[capture]** are filled in from `docs/setup/ENVIRONMENT.md` after the capture run.
-
-**Noetic container (`switchslam_gpu_v2`)**
-1. Start from `osrf/ros:noetic-desktop-full` (Ubuntu 20.04). Install `ros-noetic-velodyne-pointcloud ros-noetic-pcl-ros ros-noetic-pcl-conversions ros-noetic-tf ros-noetic-tf2-ros libyaml-cpp-dev libceres-dev python3-numpy python3-scipy python3-pandas python3-yaml`.
-2. A-LOAM: clone `HKUST-Aerial-Robotics/A-LOAM` into `/root/catkin_ws/src/` at revision **[capture]**, then apply the patches in `patches/aloam_vins/` (section 3), `catkin_make`.
+**Noetic container (`switchslam_gpu_v2`, Ubuntu 20.04)**
+1. `docker run -dit --name switchslam_gpu_v2 --network vins_bridge -v ~/catkin_ws_rebuild:/root/catkin_ws osrf/ros:noetic-desktop-full bash`, then inside: `apt-get update && apt-get install -y ros-noetic-velodyne-pointcloud ros-noetic-velodyne ros-noetic-pcl-ros ros-noetic-pcl-conversions ros-noetic-compressed-image-transport ros-noetic-image-transport-plugins libceres-dev python3-numpy python3-scipy python3-pandas python3-yaml python3-matplotlib` (the original also has Ceres 1.14.0 built from source in `/root`; the packaged Ceres is the first thing to try).
+2. A-LOAM: `git clone https://github.com/HKUST-Aerial-Robotics/A-LOAM /root/catkin_ws/src/A-LOAM && cd /root/catkin_ws/src/A-LOAM && git checkout e51f88c && git apply /path/to/patches/aloam_vins/captured_diffs/A-LOAM_e51f88c_local_changes.diff`, then `cd /root/catkin_ws && catkin_make`.
 3. GenZ-LIO: `bash fusion_v4/genz/install_genz.sh` (section 4).
-4. `mkdir -p /root/thr`.
+4. `mkdir -p /root/thr` and copy the sequence files (section 5).
 
-**Kinetic container (`vinsmono_test`)**
-1. Start from `osrf/ros:kinetic-desktop-full` (Ubuntu 16.04) with Ceres and OpenCV as VINS-Mono requires.
-2. VINS-Mono: clone `HKUST-Aerial-Robotics/VINS-Mono` into `/root/catkin_ws/src/` at revision **[capture]**, apply the VINS patch (section 3), `catkin_make`.
+**Kinetic container (`vinsmono_test`, Ubuntu 16.04)**
+1. `docker run -dit --name vinsmono_test --network vins_bridge -v ~/catkin_ws_mono:/root/catkin_ws osrf/ros:kinetic-desktop-full bash`; inside: `apt-get install -y ros-kinetic-compressed-image-transport ros-kinetic-image-transport-plugins` and Ceres 1.14.0 built from source (VINS-Mono needs it).
+2. VINS-Mono: `git clone https://github.com/HKUST-Aerial-Robotics/VINS-Mono /root/catkin_ws/src/VINS-Mono && cd /root/catkin_ws/src/VINS-Mono && git checkout 90dabb5 && git apply /path/to/patches/aloam_vins/captured_diffs/VINS-Mono_90dabb5_local_changes.diff`, then `cd /root/catkin_ws && catkin_make`.
 3. `mkdir -p /root/thr`.
 
 ## 3. Patches to third-party code (`patches/aloam_vins/`)
@@ -69,12 +67,12 @@ Needed only if images cannot be moved. Versions marked **[capture]** are filled 
 |---|---|---|
 | `patch_hessian.py` | A-LOAM `src/laserOdometry.cpp` | extracts the Gauss-Newton Hessian after `ceres::Solve` and publishes it on `/laser_hessian` (`Float64MultiArray`) |
 | `patch_odom_buffer.py`, `patch_timestamp_tolerance.py` | A-LOAM `src/laserMapping.cpp` | buffer fix and timestamp tolerance so the feedback loop (fused pose back into A-LOAM) does not stall |
-| `laserMapping.cpp` | reference copy | the patched A-LOAM `laserMapping.cpp` kept from generation 1; compare with the container's file (the `git diff` from the capture tool is authoritative) |
+| `laserMapping.cpp` | reference copy | the patched A-LOAM `laserMapping.cpp` kept from generation 1; superseded by the captured diff |
 | `patch_vinsmono_hessian.py` | VINS-Mono `vins_estimator/src/estimator.cpp` | publishes the VINS-Mono Hessian (used by the generation-1 switching node) |
 | `patch_vins_hessian.py` | VINS-Fusion (noetic, OpenCV4) `estimator.cpp` | the same patch for a VINS-Fusion tree; not used by the fusion_v2/v3/v4 studies |
 | `fusion_v3/patch_mapping_hessian.py` | A-LOAM `src/laserMapping.cpp` | optional scan-to-map Hessian on `/mapping_hessian`, used only by the unused M0/M1 configs |
 
-Each script asserts that its anchor text exists and edits the file in place (paths are container paths such as `/root/catkin_ws/src/A-LOAM/src/laserOdometry.cpp`); copy it into the container, run it there with `python3`, then rebuild with `catkin_make`. The **exact set and order applied on the original machine** is captured as `git diff` files by `tools/capture_environment.sh` (`source_diffs/`) — treat those as authoritative if they differ from this table.
+Each script asserts that its anchor text exists and edits the file in place (paths are container paths such as `/root/catkin_ws/src/A-LOAM/src/laserOdometry.cpp`); copy it into the container, run it there with `python3`, then rebuild with `catkin_make`. The **exact state of the original machine** is the pair of diffs in `patches/aloam_vins/captured_diffs/` (A-LOAM at `e51f88c`, VINS-Mono at `90dabb5`), made with `git diff` on the working containers. They are authoritative: `git apply` them on a fresh checkout instead of running the scripts (the scripts are how the changes were first made).
 
 ## 4. GenZ-LIO (front end of fusion_v4)
 
@@ -87,20 +85,30 @@ Known issue: GenZ-LIO's CMake downloads Eigen 3.4 from gitlab, which is blocked 
 
 ## 5. Per-sequence files that must exist inside the containers
 
-`run_fusion_study.sh` expects, for **Multi Floor**, these files inside `switchslam_gpu_v2` / `vinsmono_test` (sources are in `configs/multifloor/`):
-```bash
-docker cp configs/multifloor/multifloor_aloam.launch            switchslam_gpu_v2:/root/multifloor_aloam.launch
-docker cp configs/multifloor/multifloor_velodyne_convert.launch switchslam_gpu_v2:/root/multifloor_velodyne_convert.launch
-docker cp configs/multifloor/multifloor_config.yaml             vinsmono_test:/root/catkin_ws/src/VINS-Mono/config/multifloor_config.yaml
-```
-For every other sequence, `fusion_v4/setup_sequence.sh` (SubT-MRS) or `fusion_v4/geode/setup_geode.sh` (GEODE) generates and copies the equivalent files and writes `~/runs_<name>/seq.env`; reference outputs for Cave02 are in `configs/cave02/` and `configs/templates/`.
+Everything below is in [`configs/`](../../configs/) (copied from the working containers on 22 Oct 2026). `run_fusion_study.sh` reads `seq.env` (templates in `configs/seq_env_examples/`; the paths inside are those of the original laptop and must be adapted) and expects these inside the containers:
 
-## 6. Recording what only the working laptop knows (do this once)
+| Sequence | Into `switchslam_gpu_v2:/root/` | Into `vinsmono_test:/root/catkin_ws/src/VINS-Mono/config/` | Into `switchslam_gpu_v2:/root/thr/` |
+|---|---|---|---|
+| Multi Floor | `multifloor_aloam.launch`, `multifloor_velodyne_convert.launch` | `multifloor_config.yaml` | - |
+| Long Corridor | `corridor_aloam.launch`, `corridor_velodyne_convert.launch` | `corridor_config.yaml` | `corridor_extrinsics.yaml` |
+| Corridor02 | `corridor2_aloam.launch` | `corridor2_config.yaml` | `corridor2_extrinsics.yaml` |
+| Cave02 | `cave02_aloam.launch` | `cave02_config.yaml` | `cave02_extrinsics.yaml` |
+| GEODE alpha | `geode_aloam.launch` | `fusion_v4/geode/geode_config.yaml` | `fusion_v4/geode/geode_extrinsics.yaml` |
+
+```bash
+# example: Multi Floor
+docker cp configs/multifloor/multifloor_aloam.launch            switchslam_gpu_v2:/root/
+docker cp configs/multifloor/multifloor_velodyne_convert.launch switchslam_gpu_v2:/root/
+docker cp configs/multifloor/multifloor_config.yaml             vinsmono_test:/root/catkin_ws/src/VINS-Mono/config/
+```
+`fusion_v4/setup_sequence.sh` (SubT-MRS) and `fusion_v4/geode/setup_geode.sh` (GEODE) do this copying and write `seq.env` for you. The frozen GenZ-LIO configuration is generated by `fusion_v4/genz/make_genz_config.py`; the generated file from the working machine is `configs/genz/genz_frozen.yaml`. The Python files in `/root/thr` are copied by `run_fusion_study.sh` itself before each run (they match the repository byte for byte as of 22 Oct 2026, except `threshold_study/switching_node_mf_thr.py`, added from the container).
+
+## 6. Re-capturing the environment (only after changing the setup)
 
 ```bash
 bash tools/capture_environment.sh            # -> ~/switchslam_environment.txt and ~/switchslam_environment_files.tgz
 ```
-The text file lists OS/Docker/ROS versions, image history, the git revision of every source repo in both containers, installed libraries and Python packages. The tarball holds the small files that exist only on that machine: the VINS-Mono config directory (including the generated per-sequence configs), `/root/*.launch`, `/root/thr/*`, every `~/runs_*/seq.env`, a file inventory of `~/switchslam_project` and `~/switchslam_channelT`, and `git diff` of each modified third-party source tree. Add them to `docs/setup/` (`ENVIRONMENT.md` from the text file) so the **[capture]** gaps above can be filled in.
+The capture of 22 Oct 2026 is stored as [environment_capture_2026-10-22.txt](environment_capture_2026-10-22.txt) and summarised in [ENVIRONMENT.md](ENVIRONMENT.md).
 
 ## 7. Smoke test of a fresh install
 
