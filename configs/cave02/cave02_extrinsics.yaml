@@ -1,0 +1,22 @@
+%YAML 1.2
+---
+laser_to_imu:
+  rows: 4
+  cols: 4
+  data: [1.000, 0.000, 0.000, 0.080,
+         0.000, 1.000, 0.000, 0.029,
+         0.000, 0.000, 1.000, 0.030,
+         0.000, 0.000, 0.000, 1.000]
+         
+rgb_camera_to_imu:
+  rows: 4
+  cols: 4
+  data: [-0.04279531, -0.00237969,  0.99908103,  0.19499356,
+         -0.99880330, -0.02359508, -0.04283961,  0.04340662,
+          0.02367534, -0.99971877, -0.00136708, -0.01782382,
+          0.00000000,  0.00000000,  0.00000000,  1.00000000]
+          
+acc_n: 0.08          # accelerometer measurement noise standard deviation. #0.2
+gyr_n: 0.004         # gyroscope measurement noise standard deviation.     #0.05
+acc_w: 0.00004         # accelerometer bias random work noise standard deviation.  #0.02
+gyr_w: 2.0e-6       # gyroscope bias random work noise standard deviation.     #4.0e-5
