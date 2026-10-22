@@ -1,0 +1,50 @@
+==============================================================================================================
+A. BETWEEN CONFIGURATIONS: independent live runs (A-LOAM stack), two-sided
+==============================================================================================================
+SAH effect, Long Corridor          F8 n=3 mean 4.533  vs  F16 n=6 mean 2.273 | diff +2.260  95% boot CI [+1.663, +2.752] | Welch p=0.0033  MWU(exact) p=0.0238  perm p=0.0238 | Hedges g=4.37
+SAH effect, Corridor02             F8 n=3 mean 2.120  vs  F16 n=6 mean 1.708 | diff +0.412  95% boot CI [+0.335, +0.487] | Welch p=0.0005  MWU(exact) p=0.0238  perm p=0.0238 | Hedges g=5.42
+SAH effect, Multi Floor (matched 0.5x) F8 n=3 mean 0.603  vs  F16 n=6 mean 0.640 | diff -0.037  95% boot CI [-0.165, +0.100] | Welch p=0.6682  MWU(exact) p=0.5476  perm p=0.5476 | Hedges g=-0.29
+SAH effect, Multi Floor (all F8)   F8 n=9 mean 0.617  vs  F16 n=6 mean 0.640 | diff -0.023  95% boot CI [-0.135, +0.081] | Welch p=0.7009  MWU(exact) p=0.6889  perm p=0.6869 | Hedges g=-0.20
+Holm-adjusted MWU p (4 tests): [0.0952 0.0952 1.     1.    ]
+note: exact MWU minimum attainable two-sided p: 3v6 = 0.0238, 3v3 = 0.1000, 4v6 = 0.0095, 4v9 = 0.0028
+
+==============================================================================================================
+B. GenZ STACK, Multi Floor: 4 independent GenZ-LIO runs, same run -> paired
+==============================================================================================================
+G0   per-run ATE [0.876 0.525 0.307 0.626] mean 0.583 sd 0.236
+G8   per-run ATE [0.705 9.03  0.565 0.641] mean 2.735 sd 4.197
+G9   per-run ATE [0.587 0.393 0.281 0.337] mean 0.399 sd 0.133
+G17  per-run ATE [0.551 0.359 0.256 0.287] mean 0.363 sd 0.132
+G9         vs G0   mean diff -0.184 | paired t p=0.0646 | Wilcoxon exact p=0.1250 (min possible 0.1250) | all 4/4 runs lower | mean ratio 0.71 (95% CI 0.50-1.00, log-scale t)
+G17        vs G0   mean diff -0.220 | paired t p=0.0489 | Wilcoxon exact p=0.1250 (min possible 0.1250) | all 4/4 runs lower | mean ratio 0.64 (95% CI 0.43-0.94, log-scale t)
+G17        vs G9   mean diff -0.037 | paired t p=0.0059 | Wilcoxon exact p=0.1250 (min possible 0.1250) | all 4/4 runs lower | mean ratio 0.90 (95% CI 0.84-0.96, log-scale t)
+G8 (old rule) vs G0   mean diff +2.152 | paired t p=0.3847 | Wilcoxon exact p=0.3750 (min possible 0.1250) | all 1/4 runs lower | mean ratio 2.26 (95% CI 0.25-20.86, log-scale t)
+
+G17 (4 GenZ runs) vs the A-LOAM stack, independent two-sided:
+MF G17 vs F8 (9 runs)              G17 n=4 mean 0.363  vs  F n=9 mean 0.617 | diff -0.254  95% boot CI [-0.374, -0.118] | Welch p=0.0208  MWU(exact) p=0.0196  perm p=0.0112 | Hedges g=-2.06
+MF G17 vs F16 (6 runs)             G17 n=4 mean 0.363  vs  F n=6 mean 0.640 | diff -0.277  95% boot CI [-0.408, -0.130] | Welch p=0.0147  MWU(exact) p=0.0190  perm p=0.0190 | Hedges g=-2.05
+MF G0 (GenZ alone) vs F16          G0 n=4 mean 0.583  vs  F16 n=6 mean 0.640 | diff -0.057  95% boot CI [-0.271, +0.164] | Welch p=0.6784  MWU(exact) p=0.7619  perm p=0.6857 | Hedges g=-0.30
+
+==============================================================================================================
+C. RUN-TO-RUN VARIATION (chi-square tests on the variance)
+==============================================================================================================
+G0 vs F16's sd (0.115)         n=4 sd=0.236  95% CI for sigma [0.134, 0.880] | H0 sigma=0.115: chi2=12.62, p(sigma > H0)=0.006, p(sigma < H0)=0.994
+G17 vs F16's sd (0.115)        n=4 sd=0.132  95% CI for sigma [0.075, 0.493] | H0 sigma=0.115: chi2=3.97, p(sigma > H0)=0.265, p(sigma < H0)=0.735
+F16 (6 runs) vs 0.115          n=6 sd=0.115  95% CI for sigma [0.072, 0.282] | H0 sigma=0.115: chi2=5.01, p(sigma > H0)=0.415, p(sigma < H0)=0.585
+Brown-Forsythe equal-variance test, G0 / G17 / F16 (run-level ATE): W=0.86 p=0.451
+F-test of variance ratio G0/G17: F=3.18 p=0.367 (two-sided)
+
+==============================================================================================================
+D. WITHIN-RUN: do the 4 GenZ runs differ? per-30-s-window error (RMSE of position error per window)
+==============================================================================================================
+G0   windows/run [14, 14, 14, 14] | Kruskal-Wallis across runs: H=6.00 p=0.112 | chi-square homogeneity (window error above/below pooled median): chi2=2.29 dof=3 p=0.515
+G17  windows/run [14, 14, 14, 14] | Kruskal-Wallis across runs: H=7.06 p=0.070 | chi-square homogeneity (window error above/below pooled median): chi2=2.86 dof=3 p=0.414
+
+Paired per-window comparison inside each run (same windows, G17 vs G0), Wilcoxon signed-rank:
+  run 1: 14 windows, G17 lower in 11, median window error 0.392 vs 0.622 m, p=0.0017
+  run 2: 14 windows, G17 lower in 9, median window error 0.281 vs 0.365 m, p=0.1189
+  run 3: 14 windows, G17 lower in 12, median window error 0.260 vs 0.302 m, p=0.0353
+  run 4: 14 windows, G17 lower in 14, median window error 0.225 vs 0.394 m, p=0.0001
+pooled 56 windows: G17 lower in 46 (82%), mean window-error change -0.172 m, run-resampled bootstrap 95% CI [-0.283, -0.074]
+
+HOW MANY GenZ RUNS are needed for a paired exact Wilcoxon to reach p<0.05 two-sided: n>=6 (min p: n=3 0.25, n=4 0.125, n=5 0.0625, n=6 0.031)
