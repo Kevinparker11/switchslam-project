@@ -1,0 +1,59 @@
+%YAML:1.0
+imu_topic: "/imu/data"
+image_topic: "/camera_1/image_raw"
+output_path: "/root/vins_output_corridor/"
+model_type: MEI
+camera_name: camera
+image_width: 640
+image_height: 480
+mirror_parameters:
+   xi: 1.507983304667433
+distortion_parameters:
+   k1: -0.07347781616721441
+   k2: 0.24417387274492433
+   p1: 0.0019232361081336904
+   p2: 0.0014668219651531832
+projection_parameters:
+   gamma1: 740.729341011609
+   gamma2: 660.2628898817492
+   u0: 319.6316274499249
+   v0: 235.25773827438545
+estimate_extrinsic: 0
+extrinsicRotation: !!opencv-matrix
+   rows: 3
+   cols: 3
+   dt: d
+   data: [-0.02050035, -0.00037277, 0.99978978,
+         -0.99958560, -0.02020440, -0.02050369,
+         0.02020780, -0.99979580, 0.00004158]
+extrinsicTranslation: !!opencv-matrix
+   rows: 3
+   cols: 1
+   dt: d
+   data: [0.17967550, 0.04727031, -0.01985536]
+max_cnt: 150
+min_dist: 30
+freq: 10
+F_threshold: 1.0
+show_track: 1
+equalize: 1
+fisheye: 1
+max_solver_time: 0.04
+max_num_iterations: 8
+keyframe_parallax: 10.0
+acc_n: 0.08
+gyr_n: 0.004
+acc_w: 0.00004
+gyr_w: 2.0e-6
+g_norm: 9.81007
+loop_closure: 0
+load_previous_pose_graph: 0
+fast_relocalization: 0
+pose_graph_save_path: "/root/vins_output_corridor/pose_graph/"
+estimate_td: 0
+td: 0.0
+rolling_shutter: 0
+rolling_shutter_tr: 0
+save_image: 0
+visualize_imu_forward: 0
+visualize_camera_size: 0.4
