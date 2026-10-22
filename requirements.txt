@@ -1,0 +1,9 @@
+# Host-side Python (scoring, replay, back end, analysis). Versions of the original machine are recorded by
+# tools/capture_environment.sh into docs/setup/ENVIRONMENT.md; pin them there once captured.
+numpy
+scipy
+pandas
+matplotlib
+scikit-learn
+pyyaml
+gtsam        # offline loop-closure back end (fusion_v3/run_backend.py)
