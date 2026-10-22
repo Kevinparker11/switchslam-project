@@ -26,10 +26,14 @@ for d in multifloor MultiFloor Multi_Floor multi_floor RosBag; do      # Multi F
 done
 [ -n "$BAG_DIR" ] || BAG_DIR="$BAGS_ROOT/multifloor"
 BAGS=$(cd "$BAG_DIR" 2>/dev/null && ls -1 *.bag 2>/dev/null | sort | sed 's|^|/bags/|' | tr '\n' ' ')
-GT=~/Downloads/SubT_MRS_Hawkins_Multi_Floor_LegRobot/ground_truth_path.csv
-ATE=~/switchslam_project/multifloor_ate_eval.py
-FUSION_DIR=~/switchslam_channelT/fusion_v4
-RESTART=~/switchslam_project/clean_restart.sh
+# Portable paths: everything the script needs is looked up next to it (this folder is self-contained), and every path
+# can be overridden from the environment (FUSION_DIR, ATE, RESTART, MULTIFLOOR_GT).
+FUSION_DIR=${FUSION_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}
+GT=${MULTIFLOOR_GT:-$HOME/Downloads/SubT_MRS_Hawkins_Multi_Floor_LegRobot/ground_truth_path.csv}
+ATE=${ATE:-$FUSION_DIR/multifloor_ate_eval.py}
+[ -f "$ATE" ] || ATE=$HOME/switchslam_project/multifloor_ate_eval.py          # older layout on the original laptop
+RESTART=${RESTART:-$FUSION_DIR/clean_restart.sh}
+[ -f "$RESTART" ] || RESTART=$HOME/switchslam_project/clean_restart.sh
 ROS1="source /opt/ros/noetic/setup.bash && source /root/catkin_ws/devel/setup.bash"
 ROSK="source /opt/ros/kinetic/setup.bash && source /root/catkin_ws/devel/setup.bash"
 VINS_CFG=/root/catkin_ws/src/VINS-Mono/config/multifloor_config.yaml
