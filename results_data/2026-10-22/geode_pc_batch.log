@@ -1,0 +1,172 @@
+=== machine P  Thu Oct 22 11:09:31 AM IST 2026
+cpu: 12th Gen Intel(R) Core(TM) i7-12700  threads: 20  ram: 15 GB
+repo commit: 438ea97  stages: smoke
+vinsmono_test:export-20261022 85b7e8b17ec1
+switchslam_gpu_v2:export-20261022 89f3c7b4d33c
+##### SMOKE A-LOAM stack (60 s)   11:09:31
+bags: /bags/stairs_alpha.bag 
+=== F16_run1 : FUSION_MODE=fused C_T=3e-2 KAPPA_TH=1e9 SAH=1  (11:09:31)
+SAH=1 KF_DIST=1 KF_ROT=0.2 SAH_RMIN=1 SAH_RMAX=60 SAH_VOXEL=0.25 SAH_MAXPTS=6000 SAH_MAX_STEP=0.25 deg
+FUSION_MODE=fused C_T=0.03 C_R=0 KAPPA_MODE=fixed KAPPA_TH=1e+09 T_WARM=20 HESS_TOPIC=/laser_hessian PREDICT_WITH_VINS=1 RUN_TAG=SMOKE_F16_run1 WEIGHT_MODE=schur W_ALPHA=0.7
+fusion_node_v2 listening...
+    log rows in 60 s of bag: 599 (expect a few hundred)
+    modes: {'WARMUP': 598, 'INIT': 1}
+    VINS present in rows: 0 | Hessian present: 598
+    time looks like sim time: True
+    first VINS-Mono pose never
+    first FUSED row      never
+    expect: VINS-Mono from ~20 s into the bag, FUSED about 20 s later (F1/F2/F3 only; WARMUP before that)
+done 11:11:13. Index: /home/amrita/runs_geode_P/results_index.csv
+##### SMOKE GenZ stack (60 s)   11:11:13
+bags: /bags/stairs_alpha.bag 
+=== G17_run1 : FUSION_MODE=fused C_T=3e-6 C_R=5e-6 KAPPA_TH=1e9 SAH=1  (11:11:13)
+    GenZ-LIO LiDAR topic: /velodyne_points   IMU topic: /imu/data
+SAH=1 KF_DIST=1 KF_ROT=0.2 SAH_RMIN=1 SAH_RMAX=60 SAH_VOXEL=0.25 SAH_MAXPTS=6000 SAH_MAX_STEP=0.25 deg
+FUSION_MODE=fused C_T=3e-06 C_R=5e-06 KAPPA_MODE=fixed KAPPA_TH=1e+09 T_WARM=20 HESS_TOPIC=/laser_hessian PREDICT_WITH_VINS=1 RUN_TAG=SMOKE_G17_run1 WEIGHT_MODE=schur W_ALPHA=0.7
+fusion_node_v2 listening...
+    log rows in 60 s of bag: 596 (expect a few hundred)
+    modes: {'WARMUP': 595, 'INIT': 1}
+    VINS present in rows: 0 | Hessian present: 596
+    time looks like sim time: True
+    first VINS-Mono pose never
+    first FUSED row      never
+    expect: VINS-Mono from ~20 s into the bag, FUSED about 20 s later (F1/F2/F3 only; WARMUP before that)
+done 11:12:55. Index: /home/amrita/runs_geode_P_genz/results_index.csv
+smoke rows: A-LOAM stack 599, GenZ stack 596 (a healthy 60 s smoke gives roughly 400-600 each; summary in /home/amrita/smoke_P.txt)
+##### ALL DONE   11:12:55
+=== machine P  Thu Oct 22 11:18:05 AM IST 2026
+cpu: 12th Gen Intel(R) Core(TM) i7-12700  threads: 20  ram: 15 GB
+repo commit: 36e7ae6  stages: smoke
+vinsmono_test:export-20261022 85b7e8b17ec1
+switchslam_gpu_v2:export-20261022 89f3c7b4d33c
+##### SMOKE A-LOAM stack (60 s)   11:18:05
+bags: /bags/stairs_alpha.bag 
+=== F16_run1 : FUSION_MODE=fused C_T=3e-2 KAPPA_TH=1e9 SAH=1  (11:18:05)
+SAH=1 KF_DIST=1 KF_ROT=0.2 SAH_RMIN=1 SAH_RMAX=60 SAH_VOXEL=0.25 SAH_MAXPTS=6000 SAH_MAX_STEP=0.25 deg
+FUSION_MODE=fused C_T=0.03 C_R=0 KAPPA_MODE=fixed KAPPA_TH=1e+09 T_WARM=20 HESS_TOPIC=/laser_hessian PREDICT_WITH_VINS=1 RUN_TAG=SMOKE_F16_run1 WEIGHT_MODE=schur W_ALPHA=0.7
+fusion_node_v2 listening...
+    log rows in 60 s of bag: 599 (expect a few hundred)
+    modes: {'WARMUP': 372, 'FUSED': 225, 'INIT': 1, 'VO_FAIL': 1}
+    VINS present in rows: 460 | Hessian present: 598
+    time looks like sim time: True
+    first VINS-Mono pose 13.9 s after the first mapped scan
+    first FUSED row      33.9 s after the first mapped scan
+    expect: VINS-Mono from ~20 s into the bag, FUSED about 20 s later (F1/F2/F3 only; WARMUP before that)
+done 11:19:47. Index: /home/amrita/runs_geode_P/results_index.csv
+##### SMOKE GenZ stack (60 s)   11:19:47
+bags: /bags/stairs_alpha.bag 
+=== G17_run1 : FUSION_MODE=fused C_T=3e-6 C_R=5e-6 KAPPA_TH=1e9 SAH=1  (11:19:47)
+    GenZ-LIO LiDAR topic: /velodyne_points   IMU topic: /imu/data
+SAH=1 KF_DIST=1 KF_ROT=0.2 SAH_RMIN=1 SAH_RMAX=60 SAH_VOXEL=0.25 SAH_MAXPTS=6000 SAH_MAX_STEP=0.25 deg
+FUSION_MODE=fused C_T=3e-06 C_R=5e-06 KAPPA_MODE=fixed KAPPA_TH=1e+09 T_WARM=20 HESS_TOPIC=/laser_hessian PREDICT_WITH_VINS=1 RUN_TAG=SMOKE_G17_run1 WEIGHT_MODE=schur W_ALPHA=0.7
+fusion_node_v2 listening...
+    log rows in 60 s of bag: 596 (expect a few hundred)
+    modes: {'WARMUP': 391, 'FUSED': 203, 'INIT': 1, 'VO_FAIL': 1}
+    VINS present in rows: 460 | Hessian present: 596
+    time looks like sim time: True
+    first VINS-Mono pose 13.6 s after the first mapped scan
+    first FUSED row      33.6 s after the first mapped scan
+    expect: VINS-Mono from ~20 s into the bag, FUSED about 20 s later (F1/F2/F3 only; WARMUP before that)
+done 11:21:28. Index: /home/amrita/runs_geode_P_genz/results_index.csv
+smoke rows: A-LOAM stack 599, GenZ stack 596 (a healthy 60 s smoke gives roughly 400-600 each; summary in /home/amrita/smoke_P.txt)
+##### ALL DONE   11:21:28
+=== machine P  Thu Oct 22 11:27:42 AM IST 2026
+cpu: 12th Gen Intel(R) Core(TM) i7-12700  threads: 20  ram: 15 GB
+repo commit: 36e7ae6  stages: geode
+vinsmono_test:export-20261022 85b7e8b17ec1
+switchslam_gpu_v2:export-20261022 89f3c7b4d33c
+##### GEODE pass 1: F16 (master, A-LOAM)   11:27:42
+bags: /bags/stairs_alpha.bag 
+=== F16_kf_run1 : FUSION_MODE=fused C_T=3e-2 KAPPA_TH=1e9 SAH=1  (11:27:42)
+SAH=1 KF_DIST=1 KF_ROT=0.2 SAH_RMIN=1 SAH_RMAX=60 SAH_VOXEL=0.25 SAH_MAXPTS=6000 SAH_MAX_STEP=0.25 deg
+FUSION_MODE=fused C_T=0.03 C_R=0 KAPPA_MODE=fixed KAPPA_TH=1e+09 T_WARM=20 HESS_TOPIC=/laser_hessian PREDICT_WITH_VINS=1 RUN_TAG=F16_kf_run1 WEIGHT_MODE=schur W_ALPHA=0.7
+fusion_node_v2 listening...
+    keyframes saved: /home/amrita/runs_geode_P/keyframes_F16_kf_run1.npz (4.4M)
+    rows=3444  full-span ATE (RMSE,max) = 19.77,40.14
+GT span 1705542304.1..1705542648.7, log span 1705542303.3..1705542648.7, 3435 of 3444 poses inside GT span
+full span of this run: n= 3435  GT path  301.1 m  RMSE =  19.77 m   Max =  40.14 m
+done 11:40:00. Index: /home/amrita/runs_geode_P/results_index.csv
+##### GEODE pass 1: G17 (GenZ + fusion)   11:40:00
+bags: /bags/stairs_alpha.bag 
+=== G17_kf_run1 : FUSION_MODE=fused C_T=3e-6 C_R=5e-6 KAPPA_TH=1e9 SAH=1  (11:40:00)
+    GenZ-LIO LiDAR topic: /velodyne_points   IMU topic: /imu/data
+SAH=1 KF_DIST=1 KF_ROT=0.2 SAH_RMIN=1 SAH_RMAX=60 SAH_VOXEL=0.25 SAH_MAXPTS=6000 SAH_MAX_STEP=0.25 deg
+FUSION_MODE=fused C_T=3e-06 C_R=5e-06 KAPPA_MODE=fixed KAPPA_TH=1e+09 T_WARM=20 HESS_TOPIC=/laser_hessian PREDICT_WITH_VINS=1 RUN_TAG=G17_kf_run1 WEIGHT_MODE=schur W_ALPHA=0.7
+fusion_node_v2 listening...
+    keyframes saved: /home/amrita/runs_geode_P_genz/keyframes_G17_kf_run1.npz (4.3M)
+    rows=3452  full-span ATE (RMSE,max) = 19.75,30.73
+GT span 1705542304.1..1705542648.7, log span 1705542303.6..1705542648.7, 3447 of 3452 poses inside GT span
+full span of this run: n= 3447  GT path  301.1 m  RMSE =  19.75 m   Max =  30.73 m
+done 11:52:18. Index: /home/amrita/runs_geode_P_genz/results_index.csv
+##### GEODE pass 1: G0 (GenZ alone)   11:52:18
+bags: /bags/stairs_alpha.bag 
+=== G0_kf_run1 : FUSION_MODE=lidar  (11:52:18)
+    GenZ-LIO LiDAR topic: /velodyne_points   IMU topic: /imu/data
+FUSION_MODE=lidar C_T=0.001 C_R=0 KAPPA_MODE=fixed KAPPA_TH=15.7 T_WARM=20 HESS_TOPIC=/laser_hessian PREDICT_WITH_VINS=1 RUN_TAG=G0_kf_run1 WEIGHT_MODE=schur W_ALPHA=0.7
+fusion_node_v2 listening...
+    keyframes saved: /home/amrita/runs_geode_P_genz/keyframes_G0_kf_run1.npz (4.3M)
+    rows=3452  full-span ATE (RMSE,max) = 0.49,1.65
+GT span 1705542304.1..1705542648.7, log span 1705542303.6..1705542648.7, 3447 of 3452 poses inside GT span
+full span of this run: n= 3447  GT path  301.1 m  RMSE =   0.49 m   Max =   1.65 m
+done 12:04:35. Index: /home/amrita/runs_geode_P_genz/results_index.csv
+##### GEODE pass 1: F5 (A-LOAM alone)   12:04:35
+bags: /bags/stairs_alpha.bag 
+=== F5_kf_run1 : FUSION_MODE=lidar PREDICT_WITH_VINS=0  (12:04:35)
+FUSION_MODE=lidar C_T=0.001 C_R=0 KAPPA_MODE=fixed KAPPA_TH=15.7 T_WARM=20 HESS_TOPIC=/laser_hessian PREDICT_WITH_VINS=0 RUN_TAG=F5_kf_run1 WEIGHT_MODE=schur W_ALPHA=0.7
+fusion_node_v2 listening...
+    keyframes saved: /home/amrita/runs_geode_P/keyframes_F5_kf_run1.npz (4.3M)
+    rows=3446  full-span ATE (RMSE,max) = 7.98,22.09
+GT span 1705542304.1..1705542648.7, log span 1705542303.3..1705542648.7, 3437 of 3446 poses inside GT span
+full span of this run: n= 3437  GT path  301.1 m  RMSE =   7.98 m   Max =  22.09 m
+done 12:16:53. Index: /home/amrita/runs_geode_P/results_index.csv
+##### GEODE pass 2: F16 (master, A-LOAM)   12:16:53
+bags: /bags/stairs_alpha.bag 
+=== F16_kf_run1 : FUSION_MODE=fused C_T=3e-2 KAPPA_TH=1e9 SAH=1  (12:16:53)
+    already in results_index.csv, skipping
+=== F16_kf_run2 : FUSION_MODE=fused C_T=3e-2 KAPPA_TH=1e9 SAH=1  (12:16:53)
+SAH=1 KF_DIST=1 KF_ROT=0.2 SAH_RMIN=1 SAH_RMAX=60 SAH_VOXEL=0.25 SAH_MAXPTS=6000 SAH_MAX_STEP=0.25 deg
+FUSION_MODE=fused C_T=0.03 C_R=0 KAPPA_MODE=fixed KAPPA_TH=1e+09 T_WARM=20 HESS_TOPIC=/laser_hessian PREDICT_WITH_VINS=1 RUN_TAG=F16_kf_run2 WEIGHT_MODE=schur W_ALPHA=0.7
+fusion_node_v2 listening...
+    keyframes saved: /home/amrita/runs_geode_P/keyframes_F16_kf_run2.npz (4.4M)
+    rows=3451  full-span ATE (RMSE,max) = 17.54,34.78
+GT span 1705542304.1..1705542648.7, log span 1705542303.3..1705542648.7, 3442 of 3451 poses inside GT span
+full span of this run: n= 3442  GT path  301.1 m  RMSE =  17.54 m   Max =  34.78 m
+done 12:29:10. Index: /home/amrita/runs_geode_P/results_index.csv
+##### GEODE pass 2: G17 (GenZ + fusion)   12:29:10
+bags: /bags/stairs_alpha.bag 
+=== G17_kf_run1 : FUSION_MODE=fused C_T=3e-6 C_R=5e-6 KAPPA_TH=1e9 SAH=1  (12:29:10)
+    already in results_index.csv, skipping
+=== G17_kf_run2 : FUSION_MODE=fused C_T=3e-6 C_R=5e-6 KAPPA_TH=1e9 SAH=1  (12:29:10)
+    GenZ-LIO LiDAR topic: /velodyne_points   IMU topic: /imu/data
+SAH=1 KF_DIST=1 KF_ROT=0.2 SAH_RMIN=1 SAH_RMAX=60 SAH_VOXEL=0.25 SAH_MAXPTS=6000 SAH_MAX_STEP=0.25 deg
+FUSION_MODE=fused C_T=3e-06 C_R=5e-06 KAPPA_MODE=fixed KAPPA_TH=1e+09 T_WARM=20 HESS_TOPIC=/laser_hessian PREDICT_WITH_VINS=1 RUN_TAG=G17_kf_run2 WEIGHT_MODE=schur W_ALPHA=0.7
+fusion_node_v2 listening...
+    keyframes saved: /home/amrita/runs_geode_P_genz/keyframes_G17_kf_run2.npz (4.3M)
+    rows=3453  full-span ATE (RMSE,max) = 24.62,38.46
+GT span 1705542304.1..1705542648.7, log span 1705542303.5..1705542648.7, 3447 of 3453 poses inside GT span
+full span of this run: n= 3447  GT path  301.1 m  RMSE =  24.62 m   Max =  38.46 m
+done 12:41:28. Index: /home/amrita/runs_geode_P_genz/results_index.csv
+##### GEODE pass 2: G0 (GenZ alone)   12:41:28
+bags: /bags/stairs_alpha.bag 
+=== G0_kf_run1 : FUSION_MODE=lidar  (12:41:28)
+    already in results_index.csv, skipping
+=== G0_kf_run2 : FUSION_MODE=lidar  (12:41:28)
+    GenZ-LIO LiDAR topic: /velodyne_points   IMU topic: /imu/data
+FUSION_MODE=lidar C_T=0.001 C_R=0 KAPPA_MODE=fixed KAPPA_TH=15.7 T_WARM=20 HESS_TOPIC=/laser_hessian PREDICT_WITH_VINS=1 RUN_TAG=G0_kf_run2 WEIGHT_MODE=schur W_ALPHA=0.7
+fusion_node_v2 listening...
+    keyframes saved: /home/amrita/runs_geode_P_genz/keyframes_G0_kf_run2.npz (4.3M)
+    rows=3452  full-span ATE (RMSE,max) = 0.35,0.90
+GT span 1705542304.1..1705542648.7, log span 1705542303.6..1705542648.7, 3447 of 3452 poses inside GT span
+full span of this run: n= 3447  GT path  301.1 m  RMSE =   0.35 m   Max =   0.90 m
+done 12:53:46. Index: /home/amrita/runs_geode_P_genz/results_index.csv
+##### GEODE pass 3: F16 (master, A-LOAM)   12:53:46
+bags: /bags/stairs_alpha.bag 
+=== F16_kf_run1 : FUSION_MODE=fused C_T=3e-2 KAPPA_TH=1e9 SAH=1  (12:53:46)
+    already in results_index.csv, skipping
+=== F16_kf_run2 : FUSION_MODE=fused C_T=3e-2 KAPPA_TH=1e9 SAH=1  (12:53:46)
+    already in results_index.csv, skipping
+=== F16_kf_run3 : FUSION_MODE=fused C_T=3e-2 KAPPA_TH=1e9 SAH=1  (12:53:46)
+SAH=1 KF_DIST=1 KF_ROT=0.2 SAH_RMIN=1 SAH_RMAX=60 SAH_VOXEL=0.25 SAH_MAXPTS=6000 SAH_MAX_STEP=0.25 deg
+FUSION_MODE=fused C_T=0.03 C_R=0 KAPPA_MODE=fixed KAPPA_TH=1e+09 T_WARM=20 HESS_TOPIC=/laser_hessian PREDICT_WITH_VINS=1 RUN_TAG=F16_kf_run3 WEIGHT_MODE=schur W_ALPHA=0.7
+fusion_node_v2 listening...
+!! batch received a signal at Thu Oct 22 12:59:20 PM IST 2026 - stopped

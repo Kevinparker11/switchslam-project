@@ -15,6 +15,7 @@ Installation, datasets, reproduction commands. Standing path rules are in [setup
 ## results/ (what was found, newest first)
 | Document | Content |
 |---|---|
+| GenZ_fusion_v4_RateControl_and_GEODE_Results.md | **22 Oct (evening):** rate controls (Corridor02 1.89, Cave02 3.65), GEODE stairs (fusion fails, GenZ alone 0.35-0.49), post-hoc diagnostics |
 | GenZ_fusion_v4_HeldOut_Results.md | **22 Oct:** frozen GenZ weights on Corridor02 and Cave02 did not generalise; diagnosis |
 | Statistical_Tests_Multiple_Runs.md | hypothesis tests across runs (Welch, Mann-Whitney, bootstrap, chi-square variance, Kruskal-Wallis) |
 | GenZ_fusion_v4_MultiFloor_Results.md | GenZ-LIO front end on Multi Floor; frozen weights; live G17 0.293 m |

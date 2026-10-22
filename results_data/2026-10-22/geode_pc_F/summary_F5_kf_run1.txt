@@ -1,0 +1,11 @@
+log: /home/amrita/runs_geode_P/switching_log_v2_F5_kf_run1.csv | scans 3446, span 345.4 s, Hessian frame body
+mode share: INIT 0.000, VO_FAIL 0.346, WARMUP 0.654
+
+ATE RMSE / max (m)                                       full span               bag 0 (calibration)               bags 1-2 (held out)   after VINS start (>=1705542317)
+LIVE fused (this run)                               7.981 /  22.09                      nan /    nan                    7.981 /  22.09                    7.756 /  21.39
+replay VINS-primary (C_T=0)                        73.440 / 127.12                      nan /    nan                   73.440 / 127.12                   74.198 / 125.36
+replay LiDAR only                                   7.981 /  22.09                      nan /    nan                    7.981 /  22.09                    7.756 /  21.39
+replay fused C_T=0.001 gated k<=15.7                   68.106 / 118.82                      nan /    nan                   68.106 / 118.82                   68.790 / 117.12
+replay fused C_T=0.001 no gate                     62.290 / 109.77                      nan /    nan                   62.290 / 109.77                   62.926 / 108.23
+
+RPE(1 s) held-out: LIVE fused (this run) 0.7324, replay VINS-primary (C_T=0) 2.2732, replay LiDAR only 0.7324, replay fused C_T=0.001 gated k<=15.7 2.0792, replay fused C_T=0.001 no gate 1.9059

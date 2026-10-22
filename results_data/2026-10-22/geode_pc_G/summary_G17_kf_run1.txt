@@ -1,0 +1,13 @@
+log: /home/amrita/runs_geode_P_genz/switching_log_v2_G17_kf_run1.csv | scans 3452, span 345.1 s, Hessian frame body
+mode share: FUSED 0.284, INIT 0.000, VO_FAIL 0.339, WARMUP 0.377
+gate open in FUSED: 1.000 | median LiDAR weight eigenvalues (min/mid/max) when open: [0.626 0.772 0.871]
+kappa threshold at end: 1000000000.00
+
+ATE RMSE / max (m)                                       full span               bag 0 (calibration)               bags 1-2 (held out)   after VINS start (>=1705542317)
+LIVE fused (this run)                              19.750 /  30.73                      nan /    nan                   19.750 /  30.73                   19.580 /  29.85
+replay VINS-primary (C_T=0)                        60.655 /  89.51                      nan /    nan                   60.655 /  89.51                   59.615 /  86.68
+replay LiDAR only                                   0.345 /   0.90                      nan /    nan                    0.345 /   0.90                    0.306 /   0.89
+replay fused C_T=3e-06 gated k<=15.7                   36.171 /  54.64                      nan /    nan                   36.171 /  54.64                   35.614 /  52.96
+replay fused C_T=3e-06 no gate                     19.834 /  31.34                      nan /    nan                   19.834 /  31.34                   19.734 /  30.49
+
+RPE(1 s) held-out: LIVE fused (this run) 0.5927, replay VINS-primary (C_T=0) 1.8610, replay LiDAR only 0.1053, replay fused C_T=3e-06 gated k<=15.7 1.2865, replay fused C_T=3e-06 no gate 0.6078
