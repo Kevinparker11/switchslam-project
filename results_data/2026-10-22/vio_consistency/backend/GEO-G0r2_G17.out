@@ -1,0 +1,9 @@
+run /tmp/claude-0/-home-claude/3f90fe9f-923e-500d-a688-dedb31fbfbe6/scratchpad/adapt/bk/GEO-G0r2_G17.csv: 3452 scans, 517 keyframes (517 matched to the log), median 1653 points per keyframe
+odometry noise per keyframe step (given): rotation 1.460 deg, translation 0.054 m
+none        loops   0 | full 25.601 / 42.40 | bag0 nan / nan | bags1-2 25.601 / 42.40   (0 s)
+  round 1: 0 accepted loops, 0 kept after the chi2 check
+iso         loops   0 | full 25.601 / 42.40 | bag0 nan / nan | bags1-2 25.601 / 42.40   (1 s)
+
+model       loops   drop_t   drop_R |    full RMSE/max |   bag 0 RMSE/max | bags 1-2 RMSE/max
+none            0        0        0 |   25.601 / 42.40 |      nan /   nan |   25.601 / 42.40
+iso             0        0        0 |   25.601 / 42.40 |      nan /   nan |   25.601 / 42.40
