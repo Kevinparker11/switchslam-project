@@ -1,0 +1,2 @@
+tag,config,rows,ate_full_rmse,ate_full_max,finished
+G17_kf_run1,"FUSION_MODE=fused C_T=3e-6 C_R=5e-6 KAPPA_TH=1e9 SAH=1",8856,1.89,3.59,2026-10-22_11:47:31

@@ -1,0 +1,13 @@
+log: /home/kavinkumar/runs_cave02_rate05_L_genz/switching_log_v2_G17_kf_run1.csv | scans 9468, span 954.8 s, Hessian frame body
+mode share: FUSED 0.823, INIT 0.000, VO_FAIL 0.026, WARMUP 0.151
+gate open in FUSED: 1.000 | median LiDAR weight eigenvalues (min/mid/max) when open: [0.624 0.878 0.945]
+kappa threshold at end: 1000000000.00
+
+ATE RMSE / max (m)                                       full span               bag 0 (calibration)               bags 1-2 (held out)   after VINS start (>=1681498232)
+LIVE fused (this run)                               3.655 /   8.63                      nan /    nan                    3.655 /   8.63                    3.742 /   8.36
+replay VINS-primary (C_T=0)                        10.062 /  21.70                      nan /    nan                   10.062 /  21.70                   10.528 /  21.35
+replay LiDAR only                                   0.283 /   0.81                      nan /    nan                    0.283 /   0.81                    0.295 /   0.80
+replay fused C_T=3e-06 gated k<=15.7                    8.273 /  15.82                      nan /    nan                    8.273 /  15.82                    8.663 /  16.15
+replay fused C_T=3e-06 no gate                      3.769 /   8.46                      nan /    nan                    3.769 /   8.46                    3.827 /   8.18
+
+RPE(1 s) held-out: LIVE fused (this run) 0.0907, replay VINS-primary (C_T=0) 0.2384, replay LiDAR only 0.0412, replay fused C_T=3e-06 gated k<=15.7 0.1669, replay fused C_T=3e-06 no gate 0.0931

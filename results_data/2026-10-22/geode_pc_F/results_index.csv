@@ -1,0 +1,4 @@
+tag,config,rows,ate_full_rmse,ate_full_max,finished
+F16_kf_run1,"FUSION_MODE=fused C_T=3e-2 KAPPA_TH=1e9 SAH=1",3444,19.77,40.14,2026-10-22_11:40:00
+F5_kf_run1,"FUSION_MODE=lidar PREDICT_WITH_VINS=0",3446,7.98,22.09,2026-10-22_12:16:53
+F16_kf_run2,"FUSION_MODE=fused C_T=3e-2 KAPPA_TH=1e9 SAH=1",3451,17.54,34.78,2026-10-22_12:29:10

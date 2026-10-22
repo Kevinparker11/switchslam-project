@@ -21,7 +21,5 @@ For comparison, the master pipeline's VINS-Mono alone scored 4.03 m (Corridor02)
 ## Post-hoc observation (not adopted)
 Replaying the older G8 rule (c_T = 1e-4, rotation from VINS) on the same logs gives 3.82 m (Corridor02) and 2.61 m (Cave02, below the master's 4.40). This was seen after looking at these two bags, so it is **not** a valid tuned result and the setting was not adopted.
 
-## Open question and planned check
-Live VINS-Mono ran at 1.0x replay here, whereas the master's runs on these bags used 0.33x (Corridor02) and 0.5x (Cave02). VINS-Mono's feature tracker may drop frames at 1.0x. The planned control is a rerun of live G17 at the master's replay rates with nothing else changed (`PLAY_RATE=0.33` for Corridor02, `PLAY_RATE=0.5` for Cave02). If VINS stays healthy, the failure was a replay-rate effect; if not, the fusion rule needs a principled gate on VINS failure/re-initialisation, validated on Multi Floor first.
-
-Status on 22 Oct 2026: this control and the GEODE runs were launched in an overnight batch that did not start (the batch process exited immediately); they are still pending.
+## Update, 22 Oct 2026: the rate control was run
+Rerun of G17 at the master's replay rates (laptop, one run each): **Corridor02 1.89 m (0.33x), Cave02 3.65 m (0.5x)**, with VINS-Mono healthy. The failure above was therefore a replay-rate effect, not a fusion failure. The same logs show, however, that GenZ-LIO alone is better than the fused result on Cave02 (0.283 m), and the GEODE test (GenZ alone 0.35-0.49 m, fused 19.8-24.6 m) shows the same pattern. Details: `GenZ_fusion_v4_RateControl_and_GEODE_Results.md`.

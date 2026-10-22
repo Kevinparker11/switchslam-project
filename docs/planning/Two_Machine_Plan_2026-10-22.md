@@ -76,3 +76,6 @@ Bring back the results folders of both machines. Then: score GEODE and compare w
 - RAM 16 GB: GenZ's voxel map plus VINS-Mono plus recorders; watch `free -g`; Cave02 is the heaviest.
 - Laptop thermals: raise the fan profile, keep the lid open, run on mains power.
 - VINS-Mono may fail on GEODE again at about 125 s; that is a result (the fusion must then run on LiDAR only), not a reason to change settings.
+
+## 7. Outcome (22 Oct, evening)
+Run as planned, with the PC stopped early after two replicates each (F16 x2, G17 x2, G0 x2, F5 x1): the extra repeats added nothing once the failure was consistent. Results and conclusions: `docs/results/GenZ_fusion_v4_RateControl_and_GEODE_Results.md`. The batch scripts needed three fixes found on the way (pre-flight on the laptop, missing GEODE config in the moved container, smoke test that did not notice VINS-Mono never starting); all are in the repository.
