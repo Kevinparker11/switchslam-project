@@ -15,6 +15,7 @@ Installation, datasets, reproduction commands. Standing path rules are in [setup
 ## results/ (what was found, newest first)
 | Document | Content |
 |---|---|
+| GenZ_fusion_v4_VIO_Consistency_Results.md | **22 Oct (night):** same R/T/SAH structure plus a VINS-LiDAR scale-consistency check (G18) and VINS scale correction (G19); G19 + loops below the best published value on Cave02 (0.270 vs 0.43) and GEODE alpha (0.393 vs 0.57), not on Multi Floor (0.330 vs 0.25) or Corridor02; development results, Long Corridor is the clean test |
 | GenZ_fusion_v4_RateControl_and_GEODE_Results.md | **22 Oct (evening):** rate controls (Corridor02 1.89, Cave02 3.65), GEODE stairs (fusion fails, GenZ alone 0.35-0.49), post-hoc diagnostics |
 | GenZ_fusion_v4_HeldOut_Results.md | **22 Oct:** frozen GenZ weights on Corridor02 and Cave02 did not generalise; diagnosis |
 | Statistical_Tests_Multiple_Runs.md | hypothesis tests across runs (Welch, Mann-Whitney, bootstrap, chi-square variance, Kruskal-Wallis) |

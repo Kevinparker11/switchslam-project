@@ -116,16 +116,97 @@ def schur_blocks(H, hess_frame="world", R_wb=None):
     return S_RR, S_tt, float(er[-1] / er[0]), float(et[-1] / et[0])
 
 
-def info_weight(S, c):
-    """W = (cS + I)^-1 cS : MAP weight of a LiDAR increment with information cS against a unit VIO
-    information per step.  Eigen-directions with little LiDAR information get weight ~0."""
+def info_weight(S, c, gamma=1.0):
+    """W = (cS + gamma I)^-1 cS : MAP weight of a LiDAR increment with information cS against a VIO
+    information gamma I per step (gamma = 1: the unit VIO information of the original rule).
+    Eigen-directions with little LiDAR information get weight ~0; gamma -> 0 gives W -> I."""
     if c <= 0:
         return np.zeros((3, 3))
     S = 0.5 * (S + S.T)
     lam, V = np.linalg.eigh(S)
     lam = np.clip(lam, 0.0, None)
-    w = c * lam / (c * lam + 1.0)
+    w = c * lam / (c * lam + max(float(gamma), 0.0) + 1e-300)
     return (V * w) @ V.T
+
+
+class VioConsistency:
+    """Online check of how far the VIO translation agrees with the LiDAR translation; its output gamma scales the
+    VIO prior information in info_weight (gamma = 1: the unit VIO information used when c_T, c_R were calibrated
+    on Multi Floor; gamma = 0: the LiDAR carries the step).  The R / T / SAH structure is not changed.
+
+    Every scan closes a window of the last T seconds inside one continuous VIO segment.  Both relative motions are
+    expressed in the LiDAR body frame at the window start (da: LiDAR, dv: VIO through T_IL).  Per window:
+      stat 'vec'   : rho^2 = |dv - da|^2 / max(|da|, d_min)^2   (relative disagreement, scale and direction)
+      stat 'scale' : ln(|dv| / |da|)^2, only windows with |da| >= d_min   (VIO scale against LiDAR scale)
+    The causal statistic r = sqrt(mean over the windows that ended in the last `avg` s, or over all windows of the
+    current VIO segment if avg is None); it needs >= n_min windows.
+      rule 'ratio' : gamma = min(1, ref^2 / r^2)          (covariance matching, Mehra 1972)
+      rule 'gate'  : gamma = 1 while r <= ref, else 0     (consistency test; ref = largest r seen on Multi Floor)
+    While r is undefined (no motion) the previous gamma is held; at the start of every VIO segment gamma = 0 until
+    the VIO has shown that it agrees with the LiDAR.  The estimate restarts whenever the VIO is lost or re-initialised."""
+
+    def __init__(self, ref, stat="scale", rule="gate", T=10.0, avg=10.0, d_min=1.0, n_min=5):
+        assert stat in ("vec", "scale") and rule in ("ratio", "gate")
+        self.ref, self.stat, self.rule, self.T, self.avg, self.d_min, self.n_min = ref, stat, rule, T, avg, d_min, n_min
+        self.reset()
+
+    def reset(self):
+        self.ts, self.A, self.V, self.rw = [], [], [], []      # times, LiDAR poses, VIO poses, (t_end, value)
+        self.i0, self.g, self.r = 0, 0.0, float("nan")
+        self.sum, self.nused = 0.0, 0
+
+    def update(self, t, aft, vins, R_IL, t_IL):
+        self.ts.append(t); self.A.append(aft); self.V.append(vins)
+        while self.i0 + 1 < len(self.ts) and self.ts[self.i0 + 1] <= t - self.T:
+            self.i0 += 1
+        if self.ts[self.i0] <= t - self.T + 1e-6 and self.i0 < len(self.ts) - 1:
+            j = self.i0
+            _, da = rel_body(self.A[j][0], self.A[j][1], aft[0], aft[1])
+            dRI, dtI = rel_body(self.V[j][0], self.V[j][1], vins[0], vins[1])
+            _, dv = imu_to_lidar_increment(dRI, dtI, R_IL, t_IL)
+            la = float(np.linalg.norm(da))
+            if self.stat == "vec":
+                self.rw.append((t, float(np.linalg.norm(dv - da)) ** 2 / max(la, self.d_min) ** 2))
+            elif la >= self.d_min:
+                self.rw.append((t, float(np.log(max(float(np.linalg.norm(dv)), 1e-3) / la)) ** 2))
+        while self.avg is not None and self.rw and self.rw[0][0] <= t - self.avg:
+            self.rw.pop(0)
+        if self.i0 > 2000:                                       # keep the buffers short
+            k = self.i0
+            self.ts, self.A, self.V, self.i0 = self.ts[k:], self.A[k:], self.V[k:], 0
+        if len(self.rw) >= self.n_min:
+            if self.avg is None:                                # running mean over the whole segment
+                self.sum += sum(v for _, v in self.rw[self.nused:]) if self.nused < len(self.rw) else 0.0
+                self.nused = len(self.rw)
+                self.r = float(np.sqrt(self.sum / self.nused))
+            else:
+                self.r = float(np.sqrt(np.mean([v for _, v in self.rw])))
+            if self.rule == "gate":
+                self.g = 1.0 if self.r <= self.ref else 0.0
+            else:
+                self.g = float(min(1.0, self.ref ** 2 / max(self.r ** 2, 1e-12)))
+
+    def gamma(self):
+        return self.g
+
+
+class VioChecks:
+    """Several VioConsistency checks at once (e.g. a slow segment-level test for a persistent scale bias and a fast
+    one for a sudden blow-up); gamma = the smallest of their gammas."""
+
+    def __init__(self, checks):
+        self.checks = list(checks)
+
+    def reset(self):
+        for c in self.checks:
+            c.reset()
+
+    def update(self, *a):
+        for c in self.checks:
+            c.update(*a)
+
+    def gamma(self):
+        return min(c.gamma() for c in self.checks)
 
 
 SWITCH_SLAM_LT = np.array([0.12, 0.27, 0.48])     # Switch-SLAM Eq. 12 thresholds (as published)
@@ -228,8 +309,21 @@ class FusionCore:
 
     def __init__(self, R_IL=I3, t_IL=np.zeros(3), c_t=1e-3, c_R=0.0, gate=None, t_warm=20.0,
                  hess_frame="world", jump_max=1.0, rot_jump_max=0.5, gate_trans=False, kth_t=1e9,
-                 w_mode="schur", alpha=0.7, tau_R=0.0, c_Rb=1.0, bias_axis="all", clip_R=0.0):
+                 w_mode="schur", alpha=0.7, tau_R=0.0, c_Rb=1.0, bias_axis="all", clip_R=0.0, vio_adapt=None,
+                 vio_scale_T=0.0, vio_scale_dmin=1.0, vio_scale_proj=False):
         assert w_mode in W_MODES, w_mode
+        # vio_adapt: None (unit VIO information, the original rule) or a VioConsistency; its gamma scales the VIO
+        # information in both Schur weights (W_t and W_R).  The R / T / SAH structure is unchanged.
+        self.vio_adapt = vio_adapt
+        # vio_scale_T > 0: online VIO scale correction.  Monocular VIO scale is weakly observable and drifts; the LiDAR is
+        # metric.  s = (LiDAR path length) / (VIO path length) over the last vio_scale_T s of the current VIO segment
+        # (updated once the LiDAR moved >= vio_scale_dmin m in that span, else held); the VIO translation increment is
+        # multiplied by s before the Schur-weighted fusion.  Restarts at every VIO loss / re-initialisation.
+        # vio_scale_proj: measure both path lengths only along LiDAR-constrained motion, i.e. after projecting the
+        # increments with the Schur translation weight W_t = info_weight(S_tt, c_t) (a LiDAR-degenerate corridor axis
+        # then carries no scale evidence).
+        self.vio_scale_T, self.vio_scale_dmin, self.vio_scale_proj = vio_scale_T, vio_scale_dmin, vio_scale_proj
+        self.sbuf, self.s_vio = [], 1.0
         # slow rotation-drift correction (complementary filter): tau_R = time constant in s (0 = off); the LiDAR-minus-VIO
         # rotation increment is low-passed with weight info_weight(S_RR, c_Rb) per eigen-direction
         self.tau_R, self.c_Rb, self.bias_axis = tau_R, c_Rb, bias_axis   # bias_axis "yaw": only about the gravity axis (VINS tilt is gravity-observable)
@@ -286,6 +380,30 @@ class FusionCore:
         have_v = vins_ok and self.prev_v is not None and not jump
         lost = self.t_vins0 is not None and self.prev_v is not None and (not vins_ok or jump)
         info["dta"] = float(np.linalg.norm(dt_a))
+        if self.vio_scale_T > 0:
+            if have_v:
+                if self.vio_scale_proj and H is not None:
+                    Wp = info_weight(schur_blocks(H, self.hess_frame, self.prev_a[0])[1], self.c_t)
+                    self.sbuf.append((t, float(np.linalg.norm(Wp @ dt_a)), float(np.linalg.norm(Wp @ dt_v))))
+                elif not self.vio_scale_proj:
+                    self.sbuf.append((t, float(np.linalg.norm(dt_a)), float(np.linalg.norm(dt_v))))
+                while self.sbuf and self.sbuf[0][0] <= t - self.vio_scale_T:
+                    self.sbuf.pop(0)
+                la, lv = sum(x[1] for x in self.sbuf), sum(x[2] for x in self.sbuf)
+                if la >= self.vio_scale_dmin and lv > 1e-6:
+                    self.s_vio = la / lv
+                dt_v = self.s_vio * dt_v
+            elif lost:
+                self.sbuf, self.s_vio = [], 1.0
+        info["s_vio"] = self.s_vio
+        gam = 1.0
+        if self.vio_adapt is not None:
+            if have_v:
+                self.vio_adapt.update(t, (Ra, pa), (np.asarray(vins[0], float), np.asarray(vins[1], float)), self.R_IL, self.t_IL)
+            elif lost:
+                self.vio_adapt.reset()
+            gam = self.vio_adapt.gamma()
+        info["gamma"] = gam
 
         if not have_v:
             # VINS absent, still starting, jumped or re-initialised: LiDAR carries this step.
@@ -317,8 +435,8 @@ class FusionCore:
                 elif self.w_mode != "schur":
                     W_t = W_R = np.zeros((3, 3))
                 elif ok and np.linalg.norm(dt_a) <= self.jump_max:
-                    W_t = info_weight(S_tt, self.c_t)
-                    W_R = info_weight(S_RR, self.c_R)
+                    W_t = info_weight(S_tt, self.c_t, gam)
+                    W_R = info_weight(S_RR, self.c_R, gam)
                     if self.tau_R > 0 and self.t_prev is not None:
                         g = min(1.0, max(0.0, t - self.t_prev) / self.tau_R)
                         z = so3_log(dR_a) - so3_log(dR_v)

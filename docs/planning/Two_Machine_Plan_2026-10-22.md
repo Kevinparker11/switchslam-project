@@ -54,7 +54,7 @@ Rules (fixed before the runs):
 | Bags | PC: local copy of GEODE (`~/bags/GEODE`). Laptop: reads Corridor02 and Cave02 from the external drive, which stays with the laptop except for the short trip below |
 | Dropped | F0 live (the VINS-only trajectory is inside every F16 and G17 log) |
 
-Why each run: F16 is the validated master; G17 is the proposed system; G0 is GenZ-LIO alone, the LiDAR-inertial baseline that G17 has to beat; F5 is plain A-LOAM. Published GEODE stairs-alpha numbers (recheck against the paper): FAST-LIO2 4.69 m, DLIO 4.89, R3LIVE 4.54, LIO-SAM 6.30, COIN-LIO 0.45, RELEAD 0.57.
+Why each run: F16 is the validated master; G17 is the proposed system; G0 is GenZ-LIO alone, the LiDAR-inertial baseline that G17 has to beat; F5 is plain A-LOAM. Published GEODE stairs-alpha numbers (recheck against the paper): FAST-LIO2 4.69 m, DLIO 4.89, R3LIVE 4.54, LIO-SAM 6.30, RELEAD 0.57; COIN-LIO was not run on alpha (its 0.45 is on device beta, Ouster). Corrected 22 Oct from GEODE Table 6.
 
 ## 4. Time plan (T0 = start)
 
