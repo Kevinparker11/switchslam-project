@@ -20,7 +20,14 @@ import yaml
 
 src_dir = sys.argv[1] if len(sys.argv) > 1 else "/root/genz_ws/src/genz-lio"
 out = sys.argv[2] if len(sys.argv) > 2 else "/root/thr/genz_frozen.yaml"
-base = os.path.join(src_dir, "ros/config/experiments/subt_mrs/vlp16_multi_floor.yaml")
+# Default (the frozen protocol): GenZ-LIO's own Multi Floor file for every sequence.
+# GENZ_BASE_YAML=<file name under ros/config/experiments/subt_mrs/, or a full path> selects the authors' own file for a sequence
+# (the "authors' config" protocol: the settings the GenZ-LIO paper used for that sequence, fixed by them, not tuned here).
+_b = os.environ.get("GENZ_BASE_YAML", "vlp16_multi_floor.yaml")
+base = _b if os.path.isabs(_b) else os.path.join(src_dir, "ros/config/experiments/subt_mrs", _b)
+if not os.path.exists(base):
+    d = os.path.dirname(base)
+    sys.exit("GenZ base config not found: %s\navailable in %s: %s" % (base, d, sorted(os.listdir(d)) if os.path.isdir(d) else "(no such folder)"))
 cfg = yaml.safe_load(open(base))
 
 T = np.array([[0.999945562, 0.009074807, 0.005149763, 0.080],
