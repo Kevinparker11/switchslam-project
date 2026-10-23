@@ -92,7 +92,7 @@ start_stack() {
   fi
   [ -n "$VEL_USE" ] && docker exec -d -e ROS_IP=$GPU $GPU_C bash -c "$ROS1 && roslaunch $VEL_USE > /root/thr/velodyne.out 2>&1"
   if [ "$FRONT" = genz ]; then
-    docker exec -e GENZ_LIDAR_TOPIC=$GLT -e GENZ_IMU_TOPIC=$GIT ${EXTRINSIC_YAML:+-e EXTRINSIC_YAML=/root/thr/$(basename "${EXTRINSIC_YAML:-x}")} $GPU_C bash -c \
+    docker exec -e GENZ_LIDAR_TOPIC=$GLT -e GENZ_IMU_TOPIC=$GIT ${GENZ_BASE_YAML:+-e GENZ_BASE_YAML=$GENZ_BASE_YAML} ${EXTRINSIC_YAML:+-e EXTRINSIC_YAML=/root/thr/$(basename "${EXTRINSIC_YAML:-x}")} $GPU_C bash -c \
       "$ROS1 && python3 /root/thr/make_genz_config.py $GENZ_WS/src/genz-lio /root/thr/genz_frozen.yaml" > $OUT/genz_config_$tag.out 2>&1
     docker exec -d -e ROS_IP=$GPU -e PYTHONUNBUFFERED=1 $GPU_C bash -c "$ROS1 && source $GENZ_WS/devel/setup.bash && roslaunch genz_lio odometry.launch config:=/root/thr/genz_frozen.yaml rviz:=false > /root/thr/genz.out 2>&1"
     docker exec -d -e ROS_IP=$GPU ${EXTRINSIC_YAML:+-e EXTRINSIC_YAML=/root/thr/$(basename "${EXTRINSIC_YAML:-x}")} $GPU_C \
