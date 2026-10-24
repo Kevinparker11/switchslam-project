@@ -96,7 +96,32 @@ Simulation-specific issues to handle first:
 3. A wheeled robot on flat ground at constant speed makes monocular scale weakly observable: expect VINS scale drift (exercises the gate and scale correction).
 4. Record bags (LiDAR, IMU, camera, `/gazebo/model_states` ground truth) and run them through the same `setup_sequence.sh` / `run_fusion_study.sh` pipeline, so simulation and real runs share every step after the sensors.
 
-## 9. Next runs
+## 9. Live confirmation of G20 (laptop, 24 Oct 2026, 17:50-20:23)
 
-1. Live G20 on GEODE (PC, 0.5x, 2 runs) and Multi Floor (laptop, 1.0x, 2 runs): confirm the node matches the replay (G20 must equal G19 on Multi Floor and improve GEODE).
+Commit 4579ed2, the frozen G20 settings (`VIO_CHECK_FAST=5 LIDAR_GUARD_T=2`), RECORD_KF=1: Multi Floor 4 runs at 1.0x, Long Corridor 4 runs at 0.5x (frozen config), Cave02 2 runs at 0.5x. Each recording was also replayed with GenZ-LIO alone, G17, G18 and G19 (the GenZ-LIO and VINS-Mono outputs are shared). Full-span ATE RMSE (m):
+
+| Run | GenZ-LIO alone | G17 | G18 | G19 | G20 replay | **G20 live** |
+|---|---|---|---|---|---|---|
+| Multi Floor 1 | 0.446 | 0.256 | 0.251 | 0.257 | 0.257 | **0.26** |
+| Multi Floor 2 | 0.446 | 0.293 | 0.297 | 0.320 | 0.320 | **0.32** |
+| Multi Floor 3 | 0.446 | 0.253 | 0.253 | 0.264 | 0.264 | **0.26** |
+| Multi Floor 4 | 0.512 | 0.400 | 0.394 | 0.384 | 0.384 | **0.38** |
+| Long Corridor 1 | 1.923 | 2.815 | 2.696 | 1.746 | 1.746 | **1.75** |
+| Long Corridor 2 | 1.984 | 1.418 | 1.474 | 1.643 | 1.643 | **1.64** |
+| Long Corridor 3 | 1.984 | 1.388 | 1.442 | 1.636 | 1.636 | **1.64** |
+| Long Corridor 4 | 1.990 | 1.417 | 1.466 | 1.668 | 1.668 | **1.67** |
+| Cave02 1 | 0.283 | 3.803 | 0.514 | 0.297 | 0.297 | **0.30** |
+| Cave02 2 | 0.283 | 4.213 | 0.341 | 0.284 | 0.284 | **0.28** |
+
+Medians: Multi Floor GenZ 0.446, G17 0.274, G19 = G20 0.292; Long Corridor GenZ 1.984, G17 1.418, G19 = G20 1.656; Cave02 GenZ 0.283, G19 = G20 0.291.
+
+- **The live node equals the replay** on all 10 recordings (every difference is below the 0.01 m rounding of the live log), and **G20 equals G19 to the last digit on all 10**: the fast check and the guard never acted on healthy data, as designed. Together with the earlier 32 healthy recordings this is 42 recordings on which G20 = G19 or better, none worse.
+- G20 beats GenZ-LIO alone on 4 of 4 Multi Floor and 4 of 4 Long Corridor recordings; on Cave02 it ties (0.297 / 0.284 against 0.283, inside the 0.1 m tie band).
+- **What stays open.** (a) Long Corridor: G17 (no gate, no scale correction) is better than G19 / G20 on 3 of these 4 recordings (1.39-1.42 against 1.64-1.67) but 2.8 on the first; its 6-recording median earlier was 2.78, so it is high-variance, and G19 / G20 is the stable choice, not the best on every run. (b) The guard did not fire live because GenZ-LIO did not diverge in these 10 runs; its live action is shown only by the replay of Multi Floor run 2 (1113 to 1.46 m) and the unit test. (c) GEODE (PC) has no live G20 run; its 0.545 to 0.475 gain is a replay result.
+
+Data: `results_data/2026-10-24/live_g20/`.
+
+## 10. Next runs
+
+1. Live G20 on GEODE (PC, 0.5x, 2 runs): needs the PC; the gain is replay-only until then.
 2. Gazebo office hallway and empty world with G18 / G19 / G20 / G21, 3 runs each.

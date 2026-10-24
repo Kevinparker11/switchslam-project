@@ -34,3 +34,8 @@ LOGS = [
  L("GEO-c3","GEO",S+"/pcres/runs_geode_P_rate1.0_genz","G19_kf_run1",GEO,GX),
  L("GEO-c4","GEO",S+"/pcres/runs_geode_P_rate1.0_genz","G19_kf_run2",GEO,GX),
 ]
+# live G20 runs of 24 Oct 2026 (laptop): Multi Floor 1.0x, Long Corridor 0.5x (frozen config), Cave02 0.5x
+G20D = S+"/g20all"
+LOGS += [L("MF-c%d"%r,"MF",G20D+"/mf","G20_kf_run%d"%r,MFGT,"-") for r in range(1,5)]
+LOGS += [L("LC-c%d"%r,"LC",G20D+"/lc","G20_kf_run%d"%r,LCGT,LCX) for r in range(1,5)]
+LOGS += [L("CV-c%d"%r,"CV",G20D+"/cv","G20_kf_run%d"%r,CVGT,CVX) for r in (1,2)]
