@@ -227,6 +227,60 @@ def test_vio_consistency():
     assert chk.gamma() == 0.0 and not chk.rw
 
 
+def _guard_run(blowup, guard_T=0.0, fast=False, n=600, dt=0.1, v=1.0):
+    """walk along x at v m/s; the VINS is exact; from t = 40 s the LiDAR runs away (each step `blowup` times too long)
+    while its Hessian still looks healthy -- the GenZ-LIO divergence seen in Multi Floor run 2."""
+    slow = fc.VioConsistency(ref=0.156, stat="scale", rule="gate", avg=None, n_min=20)
+    chk = fc.VioChecks([slow, fc.VioConsistency(ref=0.278, stat="scale", rule="gate", avg=5.0, n_min=25)]) if fast else slow
+    core = fc.FusionCore(c_t=1.0, c_R=1.0, gate=fc.KappaGate(kth=1e9), t_warm=2.0, hess_frame="body",
+                         vio_adapt=chk, vio_scale_T=10.0, lidar_guard_T=guard_T, lidar_guard_ex=2.16)
+    H = np.eye(6); pl = np.zeros(3); flagged = 0
+    for k in range(n):
+        p = np.array([v * dt * k, 0.0, 0.0])
+        if k > 0:
+            pl = pl + (blowup if k * dt >= 40.0 else 1.0) * np.array([v * dt, 0.0, 0.0])
+        R, pf, info = core.step(k * dt, (np.eye(3), pl.copy()), (np.eye(3), p), H)
+        flagged += info.get("lidar_bad", 0)
+    return pf, p, flagged, info
+
+
+def test_lidar_guard_and_fast_check():
+    # without the guard the scale correction follows the runaway LiDAR (G19 on Multi Floor run 2)
+    pf0, p, n0, _ = _guard_run(3.0)
+    assert pf0[0] > p[0] + 20.0 and n0 == 0
+    # with the guard the VINS carries the steps once the LiDAR outruns it; the error stays bounded
+    pf1, p, n1, info = _guard_run(3.0, guard_T=2.0)
+    assert n1 > 100 and abs(pf1[0] - p[0]) < 3.0
+    # the fast check closing the gate (it sees the disagreement too) must not switch the guard off
+    pf2, p, n2, info = _guard_run(3.0, guard_T=2.0, fast=True)
+    assert n2 > 100 and abs(pf2[0] - p[0]) < 3.0
+    # healthy LiDAR: the guard never fires and the result is identical to running without it
+    pfa, p, na, _ = _guard_run(1.0, guard_T=2.0, fast=True)
+    pfb, p, nb, _ = _guard_run(1.0, fast=True)
+    assert na == 0 and np.allclose(pfa, pfb)
+    # the fast check drops a VINS that goes wrong after it has earned trust
+    slow = fc.VioConsistency(ref=0.156, stat="scale", rule="gate", avg=None, n_min=20)
+    two = fc.VioChecks([slow, fc.VioConsistency(ref=0.278, stat="scale", rule="gate", avg=5.0, n_min=25)])
+    I3 = np.eye(3); z = np.zeros(3); g = []
+    for k in range(700):
+        t = 0.1 * k; pa = np.array([0.1 * k, 0, 0])
+        pv = pa.copy() if t < 40 else np.array([4.0 + 2.0 * 0.1 * (k - 400), 0, 0])   # VINS twice too fast after 40 s
+        two.update(t, (I3, pa), (I3, pv), I3, z); g.append((t, two.gamma(), slow.gamma()))
+    g = np.array(g)
+    assert g[(g[:, 0] > 30) & (g[:, 0] < 40), 1].min() == 1.0          # trusted while consistent
+    t_fast = g[(g[:, 0] >= 40) & (g[:, 1] == 0.0), 0].min()
+    t_slow = g[(g[:, 0] >= 40) & (g[:, 2] == 0.0), 0].min()
+    assert t_fast < 41.5 and t_fast < t_slow                            # the fast check reacts first
+
+
+def test_gamma_floor():
+    # a LiDAR direction with almost no information must go to the VINS even when the gate is closed (gamma = 0)
+    S = np.diag([1e6, 1e6, 1e-3]); c = 3e-6          # c*lambda: 3, 3, 3e-9
+    W0 = fc.info_weight(S, c, 0.0); Wf = fc.info_weight(S, c, 1e-3)
+    assert np.allclose(np.diag(W0), [1, 1, 1])                       # no floor: the degenerate axis is trusted fully
+    assert Wf[2, 2] < 1e-5 and Wf[0, 0] > 0.999                      # floor: degenerate axis -> VINS, others unchanged
+
+
 if __name__ == "__main__":
     test_so3()
     test_extrinsic_increment()
@@ -237,4 +291,6 @@ if __name__ == "__main__":
     test_otsu()
     test_weight_modes()
     test_vio_consistency()
+    test_lidar_guard_and_fast_check()
+    test_gamma_floor()
     print("ALL TESTS PASSED")
