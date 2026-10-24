@@ -14,3 +14,13 @@ Nothing about the method is tuned for simulation; sensor settings are in `husky_
 
 Stage-1 output is read for: PASS on lidar / camera / imu, `lidar time` normally FAIL (the plugin writes no per-point time; the
 converter adds zeros, which is right because Gazebo scans have no motion distortion), IMU rate (the farm study used 200 Hz).
+
+## Stage 2a (written 25 Oct 2026): `./gz_record.sh office [laps]`
+Drives `routes/office_loop.csv` (134 m per lap, planned on the office mesh with 0.55 m clearance by `make_office_route.py`: left wing with a
+dead-end lobe, centre, a ~10 m hallway about 1.5 m wide, right wing, back) at 0.5 m/s for 2 laps (the second lap revisits places, which gives the
+loop-closure back end something to close) and records `/velodyne_points /imu/data /camera/image_raw /camera/camera_info /gt/husky_pose`
+(`/gt/husky_pose` = exact base_link pose from Gazebo, 100 Hz). The driver was checked against a simulated unicycle: completes the route, wall clearance
+0.54 m at the closest point. The office is a large open floor (44 x 25 m) with thin partition walls, not a long corridor.
+Open points before stage 3: how GenZ-LIO uses the per-point `time` field (the plugin synthesises it from the azimuth although Gazebo samples all rays
+at one instant, so deskewing with it would add a false correction during turns), and the calibration files (IMU frame = base_link, so
+T_imu_lidar = (0, 0, 0.4) with identity rotation).
