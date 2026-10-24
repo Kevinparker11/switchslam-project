@@ -1,7 +1,7 @@
 #!/bin/bash
 # Runs INSIDE switchslam_gpu_v2 (started by gz_smoke.sh): launch one Clearpath world headless with the test sensors, measure, shut down.
-set -u
 WORLD=${1:-office}
+export ROS_MASTER_URI=${ROS_MASTER_URI:-http://localhost:11311}   # the ROS setup files fail on an unset variable
 source /opt/ros/noetic/setup.bash
 export ROS_PACKAGE_PATH=/root/cpr_ws/src/cpr_gazebo:${ROS_PACKAGE_PATH:-}
 export HUSKY_URDF_EXTRAS=/root/husky_sim_extras.urdf.xacro CPR_GAZEBO_PLATFORM=husky
