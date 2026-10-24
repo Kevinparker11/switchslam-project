@@ -27,9 +27,10 @@ T_imu_lidar = (0, 0, 0.4) with identity rotation).
 
 ## Stage 2b (25 Oct 2026): `./gz_prepare.sh office`
 Stage 2a recorded 639 s (6391 scans at 10 Hz, 200 Hz IMU, 9645 camera frames, exact pose at 100 Hz). Stage 2b converts it with `gz_convert.py`
-(ground truth to TUM text; a second bag with the per-point time scaled by 1e-3) and writes `gazebo_intrinsics.yaml` / `gazebo_extrinsics.yaml`
+(ground truth to TUM text; a second bag whose per-point time is an azimuth ramp over 0.1 ms) and writes `gazebo_intrinsics.yaml` / `gazebo_extrinsics.yaml`
 (`make_sim_calib.py`; fx = fy = 381.361 as in the farm study, laser_to_imu = (0, 0, 0.4) with identity rotation because the Husky IMU frame is
-base_link) and calls `setup_sequence.sh` for two sequences: `gzoffice` (plugin time as recorded) and `gzoffice_nd` (time scaled).
-GenZ-LIO reads a varying `time` field as seconds from the scan start; a constant field makes it rebuild the time from the azimuth
-(CloudConversion.cpp), so a plain zero would not remove the deskewing. Which variant is the physically right input is decided with a GenZ-LIO-alone
+base_link) and calls `setup_sequence.sh` for two sequences: `gzoffice` (plugin time as recorded) and `gzoffice_nd` (time ramp).
+The plugin writes time = 0 for every point (found in the first conversion). GenZ-LIO reads a varying `time` field as seconds from the scan start;
+a constant field makes it rebuild the time from the azimuth (CloudConversion.cpp), i.e. it deskews as if the scan took 0.1 s although Gazebo sampled
+all rays at one instant. The nd variant therefore replaces the field by an azimuth ramp over 0.1 ms. Which variant is the physically right input is decided with a GenZ-LIO-alone
 (G0) pilot against the exact ground truth, before any fusion configuration is run.
