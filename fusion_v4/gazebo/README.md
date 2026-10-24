@@ -24,3 +24,12 @@ loop-closure back end something to close) and records `/velodyne_points /imu/dat
 Open points before stage 3: how GenZ-LIO uses the per-point `time` field (the plugin synthesises it from the azimuth although Gazebo samples all rays
 at one instant, so deskewing with it would add a false correction during turns), and the calibration files (IMU frame = base_link, so
 T_imu_lidar = (0, 0, 0.4) with identity rotation).
+
+## Stage 2b (25 Oct 2026): `./gz_prepare.sh office`
+Stage 2a recorded 639 s (6391 scans at 10 Hz, 200 Hz IMU, 9645 camera frames, exact pose at 100 Hz). Stage 2b converts it with `gz_convert.py`
+(ground truth to TUM text; a second bag with the per-point time scaled by 1e-3) and writes `gazebo_intrinsics.yaml` / `gazebo_extrinsics.yaml`
+(`make_sim_calib.py`; fx = fy = 381.361 as in the farm study, laser_to_imu = (0, 0, 0.4) with identity rotation because the Husky IMU frame is
+base_link) and calls `setup_sequence.sh` for two sequences: `gzoffice` (plugin time as recorded) and `gzoffice_nd` (time scaled).
+GenZ-LIO reads a varying `time` field as seconds from the scan start; a constant field makes it rebuild the time from the azimuth
+(CloudConversion.cpp), so a plain zero would not remove the deskewing. Which variant is the physically right input is decided with a GenZ-LIO-alone
+(G0) pilot against the exact ground truth, before any fusion configuration is run.
