@@ -140,6 +140,8 @@ declare -A CFG=(
   [G17]="FUSION_MODE=fused C_T=$GENZ_C_T C_R=$GENZ_C_R KAPPA_TH=1e9 SAH=1"  # G9 + SAH (the additional T)
   [G18]="FUSION_MODE=fused C_T=$GENZ_C_T C_R=$GENZ_C_R KAPPA_TH=1e9 SAH=1 VIO_CHECK=1"                 # G17 + VINS-LiDAR scale-consistency gate (same R / T / SAH structure)
   [G19]="FUSION_MODE=fused C_T=$GENZ_C_T C_R=$GENZ_C_R KAPPA_TH=1e9 SAH=1 VIO_CHECK=1 VIO_SCALE_T=10"  # G18 + online VINS scale correction
+  [G20]="FUSION_MODE=fused C_T=$GENZ_C_T C_R=$GENZ_C_R KAPPA_TH=1e9 SAH=1 VIO_CHECK=1 VIO_SCALE_T=10 VIO_CHECK_FAST=5 LIDAR_GUARD_T=2"  # G19 + fast VINS check + LiDAR blow-up guard
+  [G21]="FUSION_MODE=fused C_T=$GENZ_C_T C_R=$GENZ_C_R KAPPA_TH=1e9 SAH=1 VIO_CHECK=1 VIO_SCALE_T=10 VIO_CHECK_FAST=5 LIDAR_GUARD_T=2 GAMMA_MIN=1e-3"  # G20 + VINS information floor (for degenerate-LiDAR tests)
   [M0]="FUSION_MODE=vins HESS_TOPIC=/mapping_hessian"
   [M1]="FUSION_MODE=fused C_T=$MAP_C_T KAPPA_MODE=fixed KAPPA_TH=15.7 HESS_TOPIC=/mapping_hessian"
 )
@@ -156,7 +158,7 @@ for f in fusion_core.py fusion_node_v2.py v2_tools.py fusion_summary.py structur
 done
 if [ "$FRONT" = genz ]; then
   for s in "${SEL[@]}"; do
-    case "$s" in G*) ;; *) echo "FRONT=genz runs the G configs (G0 GV G8 G9 G16 G17 G18 G19); $s belongs to the A-LOAM stack (FRONT=aloam)"; exit 1 ;; esac
+    case "$s" in G*) ;; *) echo "FRONT=genz runs the G configs (G0 GV G8 G9 G16 G17 G18 G19 G20 G21); $s belongs to the A-LOAM stack (FRONT=aloam)"; exit 1 ;; esac
   done
   docker exec $GPU_C bash -c "test -f $GENZ_WS/devel/setup.bash && grep -q GENZ_INFO_PATCH $GENZ_WS/src/genz-lio/ros/src/OdometryServer.cpp" \
     || { echo "patched GenZ-LIO not found in $GPU_C:$GENZ_WS - run genz/install_genz.sh first"; exit 1; }

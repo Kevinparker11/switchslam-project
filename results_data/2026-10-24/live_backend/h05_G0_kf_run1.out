@@ -1,0 +1,10 @@
+run /tmp/claude-0/-home-claude/3f90fe9f-923e-500d-a688-dedb31fbfbe6/scratchpad/pcres/runs_geode_P_genz/switching_log_v2_G0_kf_run1.csv: 3452 scans, 520 keyframes (520 matched to the log), median 1657 points per keyframe
+odometry noise per keyframe step (given): rotation 1.460 deg, translation 0.054 m
+none        loops   0 | full 0.489 / 1.65 | bag0 nan / nan | bags1-2 0.489 / 1.65   (2 s)
+  round 1: 6 accepted loops, 6 kept after the chi2 check
+iso         loops   6 | full 0.243 / 0.77 | bag0 nan / nan | bags1-2 0.243 / 0.77   (39 s)
+            loops connect t+17<->329, 17<->330, 17<->331, 17<->332, 17<->333, 17<->335 s
+
+model       loops   drop_t   drop_R |    full RMSE/max |   bag 0 RMSE/max | bags 1-2 RMSE/max
+none            0        0        0 |    0.489 /  1.65 |      nan /   nan |    0.489 /  1.65
+iso             6        0        0 |    0.243 /  0.77 |      nan /   nan |    0.243 /  0.77

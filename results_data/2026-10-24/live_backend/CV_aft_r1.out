@@ -1,0 +1,10 @@
+run /tmp/claude-0/-home-claude/3f90fe9f-923e-500d-a688-dedb31fbfbe6/scratchpad/lapres/runs_cave02_authcfg_L_genz/switching_log_v2_G19_kf_run1.csv: 9468 scans, 737 keyframes (737 matched to the log), median 1771 points per keyframe
+odometry noise per keyframe step (given): rotation 1.460 deg, translation 0.054 m
+none        loops   0 | full 0.319 / 0.77 | bag0 nan / nan | bags1-2 0.319 / 0.77   (0 s)
+  round 1: 327 accepted loops, 327 kept after the chi2 check
+iso         loops 327 | full 0.316 / 0.77 | bag0 nan / nan | bags1-2 0.316 / 0.77   (173 s)
+            loops connect t+0<->43, 0<->45, 0<->46, 0<->46, 0<->49, 0<->50, 0<->51, 0<->51, 0<->56, 0<->71, 0<->72, 72<->112 s ...
+
+model       loops   drop_t   drop_R |    full RMSE/max |   bag 0 RMSE/max | bags 1-2 RMSE/max
+none            0        0        0 |    0.319 /  0.77 |      nan /   nan |    0.319 /  0.77
+iso           327        0        0 |    0.316 /  0.77 |      nan /   nan |    0.316 /  0.77

@@ -1,0 +1,120 @@
+GEO-a1_G19.out:none        loops   0 | full 0.555 / 1.41 | bag0 nan / nan | bags1-2 0.555 / 1.41   (0 s)
+GEO-a1_G19.out:iso         loops   6 | full 0.360 / 0.85 | bag0 nan / nan | bags1-2 0.360 / 0.85   (12 s)
+GEO-a1_G19.out:none            0        0        0 |    0.555 /  1.41 |      nan /   nan |    0.555 /  1.41
+GEO-a1_G19.out:iso             6        0        0 |    0.360 /  0.85 |      nan /   nan |    0.360 /  0.85
+GEO-a1_G20.out:none        loops   0 | full 0.489 / 1.24 | bag0 nan / nan | bags1-2 0.489 / 1.24   (0 s)
+GEO-a1_G20.out:iso         loops   6 | full 0.321 / 0.65 | bag0 nan / nan | bags1-2 0.321 / 0.65   (12 s)
+GEO-a1_G20.out:none            0        0        0 |    0.489 /  1.24 |      nan /   nan |    0.489 /  1.24
+GEO-a1_G20.out:iso             6        0        0 |    0.321 /  0.65 |      nan /   nan |    0.321 /  0.65
+GEO-a2_G19.out:none        loops   0 | full 0.439 / 1.12 | bag0 nan / nan | bags1-2 0.439 / 1.12   (0 s)
+GEO-a2_G19.out:iso         loops   6 | full 0.509 / 1.05 | bag0 nan / nan | bags1-2 0.509 / 1.05   (10 s)
+GEO-a2_G19.out:none            0        0        0 |    0.439 /  1.12 |      nan /   nan |    0.439 /  1.12
+GEO-a2_G19.out:iso             6        0        0 |    0.509 /  1.05 |      nan /   nan |    0.509 /  1.05
+GEO-a2_G20.out:none        loops   0 | full 0.439 / 1.12 | bag0 nan / nan | bags1-2 0.439 / 1.12   (0 s)
+GEO-a2_G20.out:iso         loops   6 | full 0.509 / 1.05 | bag0 nan / nan | bags1-2 0.509 / 1.05   (10 s)
+GEO-a2_G20.out:none            0        0        0 |    0.439 /  1.12 |      nan /   nan |    0.439 /  1.12
+GEO-a2_G20.out:iso             6        0        0 |    0.509 /  1.05 |      nan /   nan |    0.509 /  1.05
+GEO-a3_G19.out:none        loops   0 | full 0.584 / 1.75 | bag0 nan / nan | bags1-2 0.584 / 1.75   (0 s)
+GEO-a3_G19.out:iso         loops   6 | full 0.345 / 0.97 | bag0 nan / nan | bags1-2 0.345 / 0.97   (9 s)
+GEO-a3_G19.out:none            0        0        0 |    0.584 /  1.75 |      nan /   nan |    0.584 /  1.75
+GEO-a3_G19.out:iso             6        0        0 |    0.345 /  0.97 |      nan /   nan |    0.345 /  0.97
+GEO-a3_G20.out:none        loops   0 | full 0.531 / 1.65 | bag0 nan / nan | bags1-2 0.531 / 1.65   (0 s)
+GEO-a3_G20.out:iso         loops   6 | full 0.304 / 0.91 | bag0 nan / nan | bags1-2 0.304 / 0.91   (9 s)
+GEO-a3_G20.out:none            0        0        0 |    0.531 /  1.65 |      nan /   nan |    0.531 /  1.65
+GEO-a3_G20.out:iso             6        0        0 |    0.304 /  0.91 |      nan /   nan |    0.304 /  0.91
+GEO-a4_G19.out:none        loops   0 | full 0.526 / 1.31 | bag0 nan / nan | bags1-2 0.526 / 1.31   (0 s)
+GEO-a4_G19.out:iso         loops   6 | full 0.359 / 0.84 | bag0 nan / nan | bags1-2 0.359 / 0.84   (8 s)
+GEO-a4_G19.out:none            0        0        0 |    0.526 /  1.31 |      nan /   nan |    0.526 /  1.31
+GEO-a4_G19.out:iso             6        0        0 |    0.359 /  0.84 |      nan /   nan |    0.359 /  0.84
+GEO-a4_G20.out:none        loops   0 | full 0.461 / 1.15 | bag0 nan / nan | bags1-2 0.461 / 1.15   (0 s)
+GEO-a4_G20.out:iso         loops   6 | full 0.320 / 0.65 | bag0 nan / nan | bags1-2 0.320 / 0.65   (8 s)
+GEO-a4_G20.out:none            0        0        0 |    0.461 /  1.15 |      nan /   nan |    0.461 /  1.15
+GEO-a4_G20.out:iso             6        0        0 |    0.320 /  0.65 |      nan /   nan |    0.320 /  0.65
+GEO-b1_G19.out:none        loops   0 | full 0.541 / 1.39 | bag0 nan / nan | bags1-2 0.541 / 1.39   (0 s)
+GEO-b1_G19.out:iso         loops   6 | full 0.458 / 0.91 | bag0 nan / nan | bags1-2 0.458 / 0.91   (7 s)
+GEO-b1_G19.out:none            0        0        0 |    0.541 /  1.39 |      nan /   nan |    0.541 /  1.39
+GEO-b1_G19.out:iso             6        0        0 |    0.458 /  0.91 |      nan /   nan |    0.458 /  0.91
+GEO-b1_G20.out:none        loops   0 | full 0.539 / 1.38 | bag0 nan / nan | bags1-2 0.539 / 1.38   (0 s)
+GEO-b1_G20.out:iso         loops   6 | full 0.456 / 0.90 | bag0 nan / nan | bags1-2 0.456 / 0.90   (8 s)
+GEO-b1_G20.out:none            0        0        0 |    0.539 /  1.38 |      nan /   nan |    0.539 /  1.38
+GEO-b1_G20.out:iso             6        0        0 |    0.456 /  0.90 |      nan /   nan |    0.456 /  0.90
+GEO-b2_G19.out:none        loops   0 | full 0.443 / 1.12 | bag0 nan / nan | bags1-2 0.443 / 1.12   (0 s)
+GEO-b2_G19.out:iso         loops   6 | full 0.512 / 1.06 | bag0 nan / nan | bags1-2 0.512 / 1.06   (10 s)
+GEO-b2_G19.out:none            0        0        0 |    0.443 /  1.12 |      nan /   nan |    0.443 /  1.12
+GEO-b2_G19.out:iso             6        0        0 |    0.512 /  1.06 |      nan /   nan |    0.512 /  1.06
+GEO-b2_G20.out:none        loops   0 | full 0.443 / 1.12 | bag0 nan / nan | bags1-2 0.443 / 1.12   (0 s)
+GEO-b2_G20.out:iso         loops   6 | full 0.512 / 1.06 | bag0 nan / nan | bags1-2 0.512 / 1.06   (10 s)
+GEO-b2_G20.out:none            0        0        0 |    0.443 /  1.12 |      nan /   nan |    0.443 /  1.12
+GEO-b2_G20.out:iso             6        0        0 |    0.512 /  1.06 |      nan /   nan |    0.512 /  1.06
+GEO-b3_G19.out:none        loops   0 | full 0.555 / 1.40 | bag0 nan / nan | bags1-2 0.555 / 1.40   (0 s)
+GEO-b3_G19.out:iso         loops   6 | full 0.360 / 0.85 | bag0 nan / nan | bags1-2 0.360 / 0.85   (7 s)
+GEO-b3_G19.out:none            0        0        0 |    0.555 /  1.40 |      nan /   nan |    0.555 /  1.40
+GEO-b3_G19.out:iso             6        0        0 |    0.360 /  0.85 |      nan /   nan |    0.360 /  0.85
+GEO-b3_G20.out:none        loops   0 | full 0.489 / 1.24 | bag0 nan / nan | bags1-2 0.489 / 1.24   (0 s)
+GEO-b3_G20.out:iso         loops   6 | full 0.322 / 0.66 | bag0 nan / nan | bags1-2 0.322 / 0.66   (7 s)
+GEO-b3_G20.out:none            0        0        0 |    0.489 /  1.24 |      nan /   nan |    0.489 /  1.24
+GEO-b3_G20.out:iso             6        0        0 |    0.322 /  0.66 |      nan /   nan |    0.322 /  0.66
+GEO-b4_G19.out:none        loops   0 | full 0.521 / 1.30 | bag0 nan / nan | bags1-2 0.521 / 1.30   (0 s)
+GEO-b4_G19.out:iso         loops   6 | full 0.332 / 0.82 | bag0 nan / nan | bags1-2 0.332 / 0.82   (8 s)
+GEO-b4_G19.out:none            0        0        0 |    0.521 /  1.30 |      nan /   nan |    0.521 /  1.30
+GEO-b4_G19.out:iso             6        0        0 |    0.332 /  0.82 |      nan /   nan |    0.332 /  0.82
+GEO-b4_G20.out:none        loops   0 | full 0.448 / 1.12 | bag0 nan / nan | bags1-2 0.448 / 1.12   (0 s)
+GEO-b4_G20.out:iso         loops   6 | full 0.297 / 0.64 | bag0 nan / nan | bags1-2 0.297 / 0.64   (8 s)
+GEO-b4_G20.out:none            0        0        0 |    0.448 /  1.12 |      nan /   nan |    0.448 /  1.12
+GEO-b4_G20.out:iso             6        0        0 |    0.297 /  0.64 |      nan /   nan |    0.297 /  0.64
+GEO-b5_G19.out:none        loops   0 | full 0.389 / 1.00 | bag0 nan / nan | bags1-2 0.389 / 1.00   (0 s)
+GEO-b5_G19.out:iso         loops   6 | full 0.334 / 0.72 | bag0 nan / nan | bags1-2 0.334 / 0.72   (10 s)
+GEO-b5_G19.out:none            0        0        0 |    0.389 /  1.00 |      nan /   nan |    0.389 /  1.00
+GEO-b5_G19.out:iso             6        0        0 |    0.334 /  0.72 |      nan /   nan |    0.334 /  0.72
+GEO-b5_G20.out:none        loops   0 | full 0.389 / 1.00 | bag0 nan / nan | bags1-2 0.389 / 1.00   (0 s)
+GEO-b5_G20.out:iso         loops   6 | full 0.334 / 0.72 | bag0 nan / nan | bags1-2 0.334 / 0.72   (10 s)
+GEO-b5_G20.out:none            0        0        0 |    0.389 /  1.00 |      nan /   nan |    0.389 /  1.00
+GEO-b5_G20.out:iso             6        0        0 |    0.334 /  0.72 |      nan /   nan |    0.334 /  0.72
+GEO-b6_G19.out:none        loops   0 | full 0.634 / 1.89 | bag0 nan / nan | bags1-2 0.634 / 1.89   (0 s)
+GEO-b6_G19.out:iso         loops   6 | full 0.346 / 0.97 | bag0 nan / nan | bags1-2 0.346 / 0.97   (8 s)
+GEO-b6_G19.out:none            0        0        0 |    0.634 /  1.89 |      nan /   nan |    0.634 /  1.89
+GEO-b6_G19.out:iso             6        0        0 |    0.346 /  0.97 |      nan /   nan |    0.346 /  0.97
+GEO-b6_G20.out:none        loops   0 | full 0.578 / 1.78 | bag0 nan / nan | bags1-2 0.578 / 1.78   (0 s)
+GEO-b6_G20.out:iso         loops   6 | full 0.306 / 0.91 | bag0 nan / nan | bags1-2 0.306 / 0.91   (8 s)
+GEO-b6_G20.out:none            0        0        0 |    0.578 /  1.78 |      nan /   nan |    0.578 /  1.78
+GEO-b6_G20.out:iso             6        0        0 |    0.306 /  0.91 |      nan /   nan |    0.306 /  0.91
+GEO-c1_G19.out:none        loops   0 | full 0.562 / 1.42 | bag0 nan / nan | bags1-2 0.562 / 1.42   (0 s)
+GEO-c1_G19.out:iso         loops   6 | full 0.364 / 0.85 | bag0 nan / nan | bags1-2 0.364 / 0.85   (7 s)
+GEO-c1_G19.out:none            0        0        0 |    0.562 /  1.42 |      nan /   nan |    0.562 /  1.42
+GEO-c1_G19.out:iso             6        0        0 |    0.364 /  0.85 |      nan /   nan |    0.364 /  0.85
+GEO-c1_G20.out:none        loops   0 | full 0.495 / 1.26 | bag0 nan / nan | bags1-2 0.495 / 1.26   (0 s)
+GEO-c1_G20.out:iso         loops   6 | full 0.324 / 0.65 | bag0 nan / nan | bags1-2 0.324 / 0.65   (7 s)
+GEO-c1_G20.out:none            0        0        0 |    0.495 /  1.26 |      nan /   nan |    0.495 /  1.26
+GEO-c1_G20.out:iso             6        0        0 |    0.324 /  0.65 |      nan /   nan |    0.324 /  0.65
+GEO-c2_G19.out:none        loops   0 | full 0.430 / 1.12 | bag0 nan / nan | bags1-2 0.430 / 1.12   (0 s)
+GEO-c2_G19.out:iso         loops   6 | full 0.512 / 1.06 | bag0 nan / nan | bags1-2 0.512 / 1.06   (10 s)
+GEO-c2_G19.out:none            0        0        0 |    0.430 /  1.12 |      nan /   nan |    0.430 /  1.12
+GEO-c2_G19.out:iso             6        0        0 |    0.512 /  1.06 |      nan /   nan |    0.512 /  1.06
+GEO-c2_G20.out:none        loops   0 | full 0.430 / 1.12 | bag0 nan / nan | bags1-2 0.430 / 1.12   (0 s)
+GEO-c2_G20.out:iso         loops   6 | full 0.512 / 1.06 | bag0 nan / nan | bags1-2 0.512 / 1.06   (10 s)
+GEO-c2_G20.out:none            0        0        0 |    0.430 /  1.12 |      nan /   nan |    0.430 /  1.12
+GEO-c2_G20.out:iso             6        0        0 |    0.512 /  1.06 |      nan /   nan |    0.512 /  1.06
+GEO-c3_G19.out:none        loops   0 | full 0.549 / 1.37 | bag0 nan / nan | bags1-2 0.549 / 1.37   (0 s)
+GEO-c3_G19.out:iso         loops   6 | full 0.325 / 0.86 | bag0 nan / nan | bags1-2 0.325 / 0.86   (8 s)
+GEO-c3_G19.out:none            0        0        0 |    0.549 /  1.37 |      nan /   nan |    0.549 /  1.37
+GEO-c3_G19.out:iso             6        0        0 |    0.325 /  0.86 |      nan /   nan |    0.325 /  0.86
+GEO-c3_G20.out:none        loops   0 | full 0.455 / 1.13 | bag0 nan / nan | bags1-2 0.455 / 1.13   (0 s)
+GEO-c3_G20.out:iso         loops   6 | full 0.279 / 0.63 | bag0 nan / nan | bags1-2 0.279 / 0.63   (8 s)
+GEO-c3_G20.out:none            0        0        0 |    0.455 /  1.13 |      nan /   nan |    0.455 /  1.13
+GEO-c3_G20.out:iso             6        0        0 |    0.279 /  0.63 |      nan /   nan |    0.279 /  0.63
+GEO-c4_G19.out:none        loops   0 | full 0.675 / 1.56 | bag0 nan / nan | bags1-2 0.675 / 1.56   (0 s)
+GEO-c4_G19.out:iso         loops   6 | full 0.353 / 0.85 | bag0 nan / nan | bags1-2 0.353 / 0.85   (8 s)
+GEO-c4_G19.out:none            0        0        0 |    0.675 /  1.56 |      nan /   nan |    0.675 /  1.56
+GEO-c4_G19.out:iso             6        0        0 |    0.353 /  0.85 |      nan /   nan |    0.353 /  0.85
+GEO-c4_G20.out:none        loops   0 | full 0.578 / 1.32 | bag0 nan / nan | bags1-2 0.578 / 1.32   (0 s)
+GEO-c4_G20.out:iso         loops   6 | full 0.314 / 0.73 | bag0 nan / nan | bags1-2 0.314 / 0.73   (8 s)
+GEO-c4_G20.out:none            0        0        0 |    0.578 /  1.32 |      nan /   nan |    0.578 /  1.32
+GEO-c4_G20.out:iso             6        0        0 |    0.314 /  0.73 |      nan /   nan |    0.314 /  0.73
+MF-b2_G19.out:none        loops   0 | full 1113.125 / 4694.49 | bag0 nan / nan | bags1-2 1113.125 / 4694.49   (1 s)
+MF-b2_G19.out:iso         loops 178 | full 1111.193 / 4694.09 | bag0 nan / nan | bags1-2 1111.193 / 4694.09   (142 s)
+MF-b2_G19.out:none            0        0        0 | 1113.125 / 4694.49 |      nan /   nan | 1113.125 / 4694.49
+MF-b2_G19.out:iso           178        0        0 | 1111.193 / 4694.09 |      nan /   nan | 1111.193 / 4694.09
+MF-b2_G20.out:none        loops   0 | full 1.461 / 4.23 | bag0 nan / nan | bags1-2 1.461 / 4.23   (1 s)
+MF-b2_G20.out:iso         loops 179 | full 1.749 / 3.55 | bag0 nan / nan | bags1-2 1.749 / 3.55   (526 s)
+MF-b2_G20.out:none            0        0        0 |    1.461 /  4.23 |      nan /   nan |    1.461 /  4.23
+MF-b2_G20.out:iso           179        0        0 |    1.749 /  3.55 |      nan /   nan |    1.749 /  3.55

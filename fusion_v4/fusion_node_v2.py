@@ -31,6 +31,16 @@ Environment (all optional):
                 >= VIO_CHECK_NMIN = 200 windows); otherwise gamma = 0 and the LiDAR carries the step. Off by default.
   VIO_SCALE_T   > 0: VINS translation increments are rescaled by the LiDAR/VINS path-length ratio over the last
                 VIO_SCALE_T s of the VINS segment before fusion (0 = off, default).
+  VIO_CHECK_FAST > 0 (with VIO_CHECK=1): a second, fast consistency check over the windows that ended in the last
+                VIO_CHECK_FAST s (reference VIO_CHECK_FAST_REF, 0.278 for 5 s = largest value on the four Multi Floor
+                calibration recordings, >= VIO_CHECK_FAST_NMIN = 25 windows); gamma = the smaller of the two checks, so a
+                VINS that goes wrong after earning trust is dropped within seconds (0 = off, default).
+  LIDAR_GUARD_T > 0 (with VIO_CHECK=1): LiDAR blow-up guard.  While the slow check trusts the VINS, a LiDAR path that
+                outruns the (scale-corrected) VINS path by more than LIDAR_GUARD_EX m over the last LIDAR_GUARD_T s marks the
+                LiDAR step as failed: the VINS carries it and the scale / consistency statistics are not fed
+                (2 s and 2.16 m = 3 x the largest value on the Multi Floor calibration recordings; 0 = off, default).
+  GAMMA_MIN     > 0 (with VIO_CHECK=1): floor on the VINS prior information, so that a truly degenerate LiDAR direction is
+                never trusted fully when the gate is closed (1e-3 changes the real-data results by <= 3 mm; 0 = off, default).
 Extrinsic: SubT-MRS Multi Floor 'laser_to_imu' (override with EXTRINSIC_YAML=path to the same format).
 """
 import os
@@ -72,6 +82,12 @@ VIO_CHECK = E("VIO_CHECK", "0") == "1"
 VIO_CHECK_REF = float(E("VIO_CHECK_REF", "0.156"))
 VIO_CHECK_NMIN = int(E("VIO_CHECK_NMIN", "200"))
 VIO_SCALE_T = float(E("VIO_SCALE_T", "0"))
+VIO_CHECK_FAST = float(E("VIO_CHECK_FAST", "0"))
+VIO_CHECK_FAST_REF = float(E("VIO_CHECK_FAST_REF", "0.278"))
+VIO_CHECK_FAST_NMIN = int(E("VIO_CHECK_FAST_NMIN", "25"))
+LIDAR_GUARD_T = float(E("LIDAR_GUARD_T", "0"))
+LIDAR_GUARD_EX = float(E("LIDAR_GUARD_EX", "2.16"))
+GAMMA_MIN = float(E("GAMMA_MIN", "0"))
 VINS_GAP = 1.0            # s without VINS -> treated as lost (warm-up restarts)
 
 # SubT-MRS Hawkins Multi Floor laser_to_imu (x_imu = R x_laser + t)
@@ -89,8 +105,13 @@ R_IL, t_IL = U @ Vt, T_LI[:3, 3].copy()
 lock = threading.Lock()
 gate = fc.KappaGate(kth=KAPPA_TH, mode=KAPPA_MODE)
 vio_check = fc.VioConsistency(ref=VIO_CHECK_REF, stat="scale", rule="gate", avg=None, n_min=VIO_CHECK_NMIN) if VIO_CHECK else None
+if vio_check is not None and VIO_CHECK_FAST > 0:
+    vio_check = fc.VioChecks([vio_check, fc.VioConsistency(ref=VIO_CHECK_FAST_REF, stat="scale", rule="gate",
+                                                          avg=VIO_CHECK_FAST, n_min=VIO_CHECK_FAST_NMIN)])
 core = fc.FusionCore(R_IL, t_IL, c_t=C_T, c_R=C_R, gate=gate, t_warm=T_WARM, hess_frame=HESS_FRAME,
-                     jump_max=JUMP_MAX, w_mode=WEIGHT_MODE, alpha=W_ALPHA, vio_adapt=vio_check, vio_scale_T=VIO_SCALE_T)
+                     jump_max=JUMP_MAX, w_mode=WEIGHT_MODE, alpha=W_ALPHA, vio_adapt=vio_check, vio_scale_T=VIO_SCALE_T,
+                     lidar_guard_T=LIDAR_GUARD_T if vio_check is not None else 0.0, lidar_guard_ex=LIDAR_GUARD_EX,
+                     gamma_min=GAMMA_MIN if vio_check is not None else 0.0)
 if MODE == "lidar":
     core.t_warm = 1e12                     # every step is WARMUP = LiDAR only
 
@@ -350,7 +371,8 @@ def main():
             threading.Thread(target=sah_worker, daemon=True).start()
         print("SAH=1 KF_DIST=%g KF_ROT=%g SAH_RMIN=%g SAH_RMAX=%g SAH_VOXEL=%g SAH_MAXPTS=%d SAH_MAX_STEP=%.2f deg"
               % (KF_DIST, KF_ROT, SAH_RMIN, SAH_RMAX, SAH_VOXEL, SAH_MAXPTS, np.degrees(SAH_MAX_STEP)))
-    print("VIO_CHECK=%d VIO_CHECK_REF=%g VIO_CHECK_NMIN=%d VIO_SCALE_T=%g" % (VIO_CHECK, VIO_CHECK_REF, VIO_CHECK_NMIN, VIO_SCALE_T))
+    print("VIO_CHECK=%d VIO_CHECK_REF=%g VIO_CHECK_NMIN=%d VIO_SCALE_T=%g VIO_CHECK_FAST=%g VIO_CHECK_FAST_REF=%g LIDAR_GUARD_T=%g LIDAR_GUARD_EX=%g GAMMA_MIN=%g"
+          % (VIO_CHECK, VIO_CHECK_REF, VIO_CHECK_NMIN, VIO_SCALE_T, VIO_CHECK_FAST, VIO_CHECK_FAST_REF, LIDAR_GUARD_T, LIDAR_GUARD_EX, GAMMA_MIN))
     print("FUSION_MODE=%s C_T=%g C_R=%g KAPPA_MODE=%s KAPPA_TH=%g T_WARM=%g HESS_TOPIC=%s PREDICT_WITH_VINS=%d RUN_TAG=%s WEIGHT_MODE=%s W_ALPHA=%g"
           % (MODE, C_T, C_R, KAPPA_MODE, KAPPA_TH, T_WARM, HESS_TOPIC, PREDICT_WITH_VINS, RUN_TAG, WEIGHT_MODE, W_ALPHA))
     print("fusion_node_v2 listening...")
