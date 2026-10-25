@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Plan the one-lap route through the Clearpath office world and write routes/office_loop.csv (x, y per 0.25 m).
-usage: python3 make_office_route.py <path to cpr_office_gazebo/meshes/office.dae> [out.csv]
+usage: python3 make_office_route.py <path to cpr_office_gazebo/meshes/office.dae or office_construction.dae> [out.csv] [office|construction]
 Rasterises the mesh (obstacles = surface between 0.15 and 1.2 m height), keeps cells with at least 0.55 m clearance (Husky
 half-width 0.34 m plus margin), and joins hand-picked waypoints with A* (cost grows near walls). Needs numpy, scipy."""
 import sys, heapq
@@ -12,8 +12,14 @@ NS = {'c': 'http://www.collada.org/2005/11/COLLADASchema'}
 RES, X0, Y0, WX, WY, CLEAR = 0.1, -16.0, -13.0, 46.0, 27.0, 0.55
 # waypoints (x, y): left wing incl. the dead-end lobe (entered and left by the same passage), centre, the ~10 m narrow hallway
 # along y = 1, right wing, and back to the start
-WAYPOINTS = [(0, 0), (-6, 3), (-11, 3.5), (-11.5, -1.5), (-8.5, -3), (-8.5, -8), (-8.5, -3), (-6, 1), (-1, 0.5), (2, 4), (-1, 5),
+WAYPOINTS_OFFICE = [(0, 0), (-6, 3), (-11, 3.5), (-11.5, -1.5), (-8.5, -3), (-8.5, -8), (-8.5, -3), (-6, 1), (-1, 0.5), (2, 4), (-1, 5),
              (0, 0.5), (12, 6), (13, 10.5), (14.5, 6), (20, 0.5), (25, -3), (20, -1), (14, 3), (5, 1), (0, 0)]
+# construction world (same building, other clutter): a different order of the same wings, planned on 25 Oct 2026 from the
+# rasterised map only, before any recording or score of this world existed
+WAYPOINTS_CONSTRUCTION = [(0, 0), (-2.5, 5.5), (-10, 6), (-11.5, 1), (-9.5, -2), (-6.5, -4), (-6.5, -8), (-6.5, -4), (-6.5, 0.5),
+                          (-2, -3.5), (1.5, 0), (2, 3), (4, 1), (15, 1.5), (14, 5), (13, 11), (14, 5), (18, 2), (23, -2), (25, -4),
+                          (20, 0), (10, 1), (3.5, 1), (0, 0)]
+WAYPOINTS = WAYPOINTS_OFFICE
 
 def triangles(dae):
     t = ET.parse(dae); geo = {}
@@ -21,6 +27,7 @@ def triangles(dae):
         m = g.find('c:mesh', NS)
         pos = [i for i in m.find('c:vertices', NS).iterfind('c:input', NS) if i.get('semantic') == 'POSITION'][0].get('source')[1:]
         src = [s for s in m.iterfind('c:source', NS) if s.get('id') == pos][0]
+        if not (src.find('c:float_array', NS).text or '').strip(): continue   # empty placeholder geometry
         a = np.array(src.find('c:float_array', NS).text.split(), float).reshape(-1, 3); tr = []
         for p in m.iterfind('c:triangles', NS):
             ins = list(p.iterfind('c:input', NS)); off = max(int(i.get('offset')) for i in ins) + 1
@@ -40,11 +47,14 @@ def triangles(dae):
         mat = n.find('c:matrix', NS); ig = n.find('c:instance_geometry', NS)
         if ig is None: continue
         M = np.array(mat.text.split(), float).reshape(4, 4) if mat is not None else np.eye(4)
+        if ig.get('url')[1:] not in geo: continue
         a, tr = geo[ig.get('url')[1:]]; T.append(((a @ M[:3, :3].T) + M[:3, 3])[tr])
     return np.vstack(T)
 
 def main():
+    global WAYPOINTS
     dae = sys.argv[1]; out = sys.argv[2] if len(sys.argv) > 2 else "routes/office_loop.csv"
+    if len(sys.argv) > 3 and sys.argv[3] == 'construction': WAYPOINTS = WAYPOINTS_CONSTRUCTION
     T = triangles(dae); W, H = int(WX / RES), int(WY / RES)
     occ = np.zeros((H, W), bool); floor = np.zeros((H, W), bool); rng = np.random.default_rng(0)
     for A, B, C in T:
