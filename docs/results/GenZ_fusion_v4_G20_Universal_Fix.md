@@ -121,7 +121,47 @@ Medians: Multi Floor GenZ 0.446, G17 0.274, G19 = G20 0.292; Long Corridor GenZ 
 
 Data: `results_data/2026-10-24/live_g20/`.
 
-## 10. Next runs
+## 10. Gazebo office: a clean world where the fusion costs accuracy (25 Oct 2026)
 
-1. Live G20 on GEODE (PC, 0.5x, 2 runs): needs the PC; the gain is replay-only until then.
-2. Gazebo office hallway and empty world with G18 / G19 / G20 / G21, 3 runs each.
+Clearpath office world (44 x 25 m open floor with thin partition walls, a ~10 m hallway about 1.5 m wide), Husky, VLP-16 (1800 samples per ring), forward 640x480 mono camera, 200 Hz IMU, exact pose. One 639 s recording (2 laps of a 134 m planned route, 266 m driven, 0.5 m/s) replayed 4 times at 1.0x with G20 live (`fusion_v4/gazebo/`). The plugin writes per-point time = 0, so GenZ-LIO rebuilds the time from the azimuth (a false deskew: Gazebo samples all rays at one instant). Main data: the per-point time replaced by an azimuth ramp over 0.1 ms (3 runs, no GenZ warnings); sensitivity: the plugin time as recorded (1 run). The variant was chosen on this physical argument, before the scores were seen.
+
+Full-span ATE (m), exact replay (the live G20 matches the replay within 0.01 m on the three ramp runs; 0.86 live against 0.82 replay on the plugin run):
+
+| Run | GenZ-LIO alone | G17 | G18 | G19 | G20 | G20 live |
+|---|---|---|---|---|---|---|
+| ramp 1 (GenZ-LIO drifted) | 1.015 | 0.445 | 0.517 | 0.316 | 0.319 | 0.32 |
+| ramp 2 | 0.141 | 0.474 | 0.477 | 0.449 | 0.449 | 0.45 |
+| ramp 3 | 0.141 | 0.489 | 0.492 | 0.468 | 0.468 | 0.47 |
+| plugin time | 0.493 | 0.819 | 0.812 | 0.752 | 0.816 | 0.86 |
+
+- **Where the fusion loses.** On the two runs where GenZ-LIO alone is excellent (0.141 m over 266 m) every fusion variant is about 3x worse (0.45-0.49). When GenZ-LIO drifted (run 1) the fusion rescues it (0.32 against 1.015). VINS-Mono alone gives 0.75-0.78. The runs 2 and 3 of GenZ-LIO are bit-identical: not independent samples.
+- **G20 is not identical to G19 here**: 3 mm worse on ramp 1 and **6 cm worse (0.816 against 0.752) on the plugin-time run**, where the fast check closes the gate on some windows. The "never worse than G19" property of section 7 therefore holds on the 42 real recordings only.
+- **Channel split** (replay, ramp 2): LiDAR in both channels 0.141 (reproduces GenZ-LIO), + SAH 0.149, rotation channel only 0.177, **translation channel only 0.469**, both channels without SAH 0.458. The T channel (VINS-Mono translation increments) is the source of the loss; on ramp 1 the same channel is what rescues the run (0.640 with it off, 0.481 with it on). On the plugin-time run SAH alone costs 0.49 to 1.07 (a separate sensitivity of the structure heading to the false deskew).
+- **Not a scale mismatch.** The median LiDAR translation information is of the same size in every environment (c_T x S_tt eigenvalues: Multi Floor 2.5 / 6.4 / 14, Long Corridor 0.4 / 16 / 38, Cave02 1.9 / 7.9 / 25, GEODE 1.8 / 4.9 / 10, Gazebo 1.7 / 5.5 / 24; min / mid / max), so the weight VINS-Mono gets (about 35 % along the weakest direction) is similar everywhere. What differs is how good GenZ-LIO is relative to VINS-Mono: the scan Hessian does not know that GenZ-LIO is IMU-aided.
+
+## 11. Sensitivity of the T-channel scale c_T, and the G22 candidate (25 Oct 2026)
+
+G20 settings, c_T varied (frozen value 3e-6, calibrated on the four Multi Floor recordings), replayed on all 47 recordings (45 real + 3 Gazebo ramp runs, Multi Floor run 2 excluded from medians). Median ATE (m):
+
+| Sequence (n) | GenZ-LIO alone | c_T / 3 | **3e-6 (G20)** | **1e-5 (G22)** | 3e-5 | 1e-4 |
+|---|---|---|---|---|---|---|
+| Multi Floor (13) | 0.446 | 0.425 | **0.346** | 0.356 | 0.393 | 0.416 |
+| Long Corridor (10) | 1.987 | 1.800 | 1.707 | **1.551** | 1.459 | 1.419 |
+| Cave02 (4) | 0.283 | 0.315 | 0.296 | 0.287 | 0.285 | 0.284 |
+| Corridor02 (1) | 2.696 | 3.131 | 2.481 | 2.197 | 2.213 | 2.250 |
+| GEODE (14) | 0.355 | 0.610 | 0.475 | **0.394** | 0.365 | 0.356 |
+| Gazebo ramp (3) | 0.141 (2 of 3), 1.015 | 0.559 | 0.449 | **0.305** | 0.219 | 0.186 |
+
+Multi Floor, the sequence c_T was calibrated on, is the only one that prefers the current value; every other sequence improves with a larger one, and at 1e-4 the fusion approaches GenZ-LIO alone wherever that is good (GEODE 0.356 against 0.355) while still rescuing the drifting runs (Gazebo ramp 1: 0.224 against 1.015; Multi Floor run 2 stays at 1.6 m).
+
+**G22 = G20 with c_T = 1e-5** (3.3x), frozen on 25 Oct 2026 (`run_fusion_study.sh G22`, `GENZ_C_T_G22` overrides). It is the largest step that keeps the calibration sequence within 0.01 m of G20 (Multi Floor median 0.346 to 0.356); 3e-5 already costs 0.047 on Multi Floor. Against G20, recording by recording (45 real recordings, a change counts above 0.05 m and 10 %): better on 15 (GEODE 11 of 14, Long Corridor 3 of 10, Corridor02 1), worse on 2 (Multi Floor MF-a2 0.49 to 0.63 and MF-b1 0.65 to 0.78), unchanged on 28. The Gazebo ramp runs improve from 0.449 to 0.305.
+
+**Honest status.** This is an in-sample choice: the effect of c_T was seen on every recording before G22 was fixed, and the Multi Floor calibration recordings are among the ones that get worse. It is a development result until confirmed on recordings not used here (a new Gazebo world recorded before looking at any score, any new real bag). c_T does not fix the cause (the scan Hessian underrates an IMU-aided LiDAR) but moves the constant to a value that costs the calibration sequence 0.01 m and helps the others. The G20 fast check and guard are unchanged by G22.
+
+Data: `results_data/2026-10-25/gazebo_office/` (batch log, replay JSONs, tables); scripts `analysis/improve/universal/` (`logs_all.py` has the four Gazebo recordings, `configs.py` D1-D5 and S03-S30).
+
+## 12. Next runs
+
+1. Held-out confirmation of G22 against G20: a second Gazebo world recorded and run before any score is looked at (construction or inspection), and the next real bag; G20 and G22 on the same recordings (replay is exact, one live G20 or G22 run per recording is enough).
+2. Live G20 on GEODE (PC, 0.5x, 2 runs): needs the PC; the gain is replay-only until then.
+3. Hypothesis-test table from the recordings (paired design, Holm), reporting G20 and G22 separately.

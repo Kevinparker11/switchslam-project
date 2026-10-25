@@ -1,0 +1,43 @@
+##### gzoffice_nd G20 x3   03:52:18
+bags: /bags/gazebo_office_20261025_0226_nd.bag 
+=== G20_kf_run1 : FUSION_MODE=fused C_T=3e-6 C_R=5e-6 KAPPA_TH=1e9 SAH=1 VIO_CHECK=1 VIO_SCALE_T=10 VIO_CHECK_FAST=5 LIDAR_GUARD_T=2  (03:52:18)
+    GenZ-LIO LiDAR topic: /velodyne_points   IMU topic: /imu/data
+SAH=1 KF_DIST=1 KF_ROT=0.2 SAH_RMIN=1 SAH_RMAX=60 SAH_VOXEL=0.25 SAH_MAXPTS=6000 SAH_MAX_STEP=0.25 deg
+VIO_CHECK=1 VIO_CHECK_REF=0.156 VIO_CHECK_NMIN=200 VIO_SCALE_T=10 VIO_CHECK_FAST=5 VIO_CHECK_FAST_REF=0.278 LIDAR_GUARD_T=2 LIDAR_GUARD_EX=2.16 GAMMA_MIN=0
+FUSION_MODE=fused C_T=3e-06 C_R=5e-06 KAPPA_MODE=fixed KAPPA_TH=1e+09 T_WARM=20 HESS_TOPIC=/laser_hessian PREDICT_WITH_VINS=1 RUN_TAG=G20_kf_run1 WEIGHT_MODE=schur W_ALPHA=0.7
+    keyframes saved: /home/kavinkumar/runs_gzoffice_nd_genz/keyframes_G20_kf_run1.npz (2.0M)
+    rows=6389  full-span ATE (RMSE,max) = 0.32,0.62
+GT span 52.1..686.2, log span 50.1..689.1, 6339 of 6389 poses inside GT span
+full span of this run: n= 6339  GT path  266.4 m  RMSE =   0.32 m   Max =   0.62 m
+=== G20_kf_run2 : FUSION_MODE=fused C_T=3e-6 C_R=5e-6 KAPPA_TH=1e9 SAH=1 VIO_CHECK=1 VIO_SCALE_T=10 VIO_CHECK_FAST=5 LIDAR_GUARD_T=2  (04:03:54)
+    GenZ-LIO LiDAR topic: /velodyne_points   IMU topic: /imu/data
+SAH=1 KF_DIST=1 KF_ROT=0.2 SAH_RMIN=1 SAH_RMAX=60 SAH_VOXEL=0.25 SAH_MAXPTS=6000 SAH_MAX_STEP=0.25 deg
+VIO_CHECK=1 VIO_CHECK_REF=0.156 VIO_CHECK_NMIN=200 VIO_SCALE_T=10 VIO_CHECK_FAST=5 VIO_CHECK_FAST_REF=0.278 LIDAR_GUARD_T=2 LIDAR_GUARD_EX=2.16 GAMMA_MIN=0
+FUSION_MODE=fused C_T=3e-06 C_R=5e-06 KAPPA_MODE=fixed KAPPA_TH=1e+09 T_WARM=20 HESS_TOPIC=/laser_hessian PREDICT_WITH_VINS=1 RUN_TAG=G20_kf_run2 WEIGHT_MODE=schur W_ALPHA=0.7
+    keyframes saved: /home/kavinkumar/runs_gzoffice_nd_genz/keyframes_G20_kf_run2.npz (2.0M)
+    rows=6389  full-span ATE (RMSE,max) = 0.45,0.82
+GT span 52.1..686.2, log span 50.1..689.1, 6339 of 6389 poses inside GT span
+full span of this run: n= 6339  GT path  266.4 m  RMSE =   0.45 m   Max =   0.82 m
+=== G20_kf_run3 : FUSION_MODE=fused C_T=3e-6 C_R=5e-6 KAPPA_TH=1e9 SAH=1 VIO_CHECK=1 VIO_SCALE_T=10 VIO_CHECK_FAST=5 LIDAR_GUARD_T=2  (04:15:33)
+    GenZ-LIO LiDAR topic: /velodyne_points   IMU topic: /imu/data
+SAH=1 KF_DIST=1 KF_ROT=0.2 SAH_RMIN=1 SAH_RMAX=60 SAH_VOXEL=0.25 SAH_MAXPTS=6000 SAH_MAX_STEP=0.25 deg
+VIO_CHECK=1 VIO_CHECK_REF=0.156 VIO_CHECK_NMIN=200 VIO_SCALE_T=10 VIO_CHECK_FAST=5 VIO_CHECK_FAST_REF=0.278 LIDAR_GUARD_T=2 LIDAR_GUARD_EX=2.16 GAMMA_MIN=0
+FUSION_MODE=fused C_T=3e-06 C_R=5e-06 KAPPA_MODE=fixed KAPPA_TH=1e+09 T_WARM=20 HESS_TOPIC=/laser_hessian PREDICT_WITH_VINS=1 RUN_TAG=G20_kf_run3 WEIGHT_MODE=schur W_ALPHA=0.7
+    keyframes saved: /home/kavinkumar/runs_gzoffice_nd_genz/keyframes_G20_kf_run3.npz (2.0M)
+    rows=6389  full-span ATE (RMSE,max) = 0.47,0.84
+GT span 52.1..686.2, log span 50.1..689.1, 6339 of 6389 poses inside GT span
+full span of this run: n= 6339  GT path  266.4 m  RMSE =   0.47 m   Max =   0.84 m
+done 04:27:05. Index: /home/kavinkumar/runs_gzoffice_nd_genz/results_index.csv
+##### gzoffice G20 x1   04:27:05
+bags: /bags/gazebo_office_20261025_0226.bag 
+=== G20_kf_run1 : FUSION_MODE=fused C_T=3e-6 C_R=5e-6 KAPPA_TH=1e9 SAH=1 VIO_CHECK=1 VIO_SCALE_T=10 VIO_CHECK_FAST=5 LIDAR_GUARD_T=2  (04:27:06)
+    GenZ-LIO LiDAR topic: /velodyne_points   IMU topic: /imu/data
+SAH=1 KF_DIST=1 KF_ROT=0.2 SAH_RMIN=1 SAH_RMAX=60 SAH_VOXEL=0.25 SAH_MAXPTS=6000 SAH_MAX_STEP=0.25 deg
+VIO_CHECK=1 VIO_CHECK_REF=0.156 VIO_CHECK_NMIN=200 VIO_SCALE_T=10 VIO_CHECK_FAST=5 VIO_CHECK_FAST_REF=0.278 LIDAR_GUARD_T=2 LIDAR_GUARD_EX=2.16 GAMMA_MIN=0
+FUSION_MODE=fused C_T=3e-06 C_R=5e-06 KAPPA_MODE=fixed KAPPA_TH=1e+09 T_WARM=20 HESS_TOPIC=/laser_hessian PREDICT_WITH_VINS=1 RUN_TAG=G20_kf_run1 WEIGHT_MODE=schur W_ALPHA=0.7
+    keyframes saved: /home/kavinkumar/runs_gzoffice_genz/keyframes_G20_kf_run1.npz (4.4M)
+    rows=6388  full-span ATE (RMSE,max) = 0.86,1.83
+GT span 52.1..686.2, log span 50.2..689.1, 6339 of 6388 poses inside GT span
+full span of this run: n= 6339  GT path  266.4 m  RMSE =   0.86 m   Max =   1.83 m
+done 04:39:23. Index: /home/kavinkumar/runs_gzoffice_genz/results_index.csv
+##### ALL DONE   04:39:23
