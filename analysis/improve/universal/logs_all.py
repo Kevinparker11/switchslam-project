@@ -39,3 +39,6 @@ G20D = S+"/g20all"
 LOGS += [L("MF-c%d"%r,"MF",G20D+"/mf","G20_kf_run%d"%r,MFGT,"-") for r in range(1,5)]
 LOGS += [L("LC-c%d"%r,"LC",G20D+"/lc","G20_kf_run%d"%r,LCGT,LCX) for r in range(1,5)]
 LOGS += [L("CV-c%d"%r,"CV",G20D+"/cv","G20_kf_run%d"%r,CVGT,CVX) for r in (1,2)]
+# Gazebo office, 25 Oct 2026 (laptop, 1.0x): nd = per-point time as an azimuth ramp over 0.1 ms (main), pl = plugin time (constant 0, GenZ-LIO rebuilds it from the azimuth)
+GZGT = S+"/gz20/gt_office.txt"; GZX = S+"/gz20/gazebo_extrinsics.yaml"
+LOGS += [L("GZ-nd%d"%r,"GZ",S+"/gz20/nd","G20_kf_run%d"%r,GZGT,GZX) for r in (1,2,3)] + [L("GZ-pl1","GZ",S+"/gz20/pl","G20_kf_run1",GZGT,GZX)]

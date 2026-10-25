@@ -45,3 +45,17 @@ CFG.update({
 CFG.update({
  "G20f": lambda fc4: dict(adapt=_two(fc4, 5.0), vio_scale_T=10.0, lidar_guard_T=2.0, lidar_guard_ex=3 * GUARD_EX, gamma_min=1e-3),
 })
+# --- diagnostics for the Gazebo office (25 Oct): which channel carries the extra error?  W = (cS + gamma I)^-1 cS, so a huge c means the LiDAR is trusted
+# in that channel and c = 0 means VINS-Mono only.  Analysis only, none of these is a proposed configuration.
+CFG.update({
+ "D1": lambda fc4: dict(sah=False),                                   # G17 without SAH
+ "D2": lambda fc4: dict(c_R=1e3),                                     # rotation from the LiDAR, T channel + SAH as G17
+ "D3": lambda fc4: dict(c_t=1e3),                                     # translation from the LiDAR, R channel + SAH as G17
+ "D4": lambda fc4: dict(c_t=1e3, c_R=1e3, sah=False),                 # LiDAR in both channels, no SAH (should reproduce GenZ-LIO)
+ "D5": lambda fc4: dict(c_t=1e3, c_R=1e3),                            # LiDAR in both channels + SAH
+})
+# --- sensitivity of the T-channel scale c_T (analysis only): G20 settings with c_T multiplied (more LiDAR trust for larger values)
+_G20 = lambda fc4: dict(adapt=_two(fc4, 5.0), vio_scale_T=10.0, lidar_guard_T=2.0, lidar_guard_ex=3 * GUARD_EX)
+for _k, _c in (("S03", 1e-6), ("S3", 1e-5), ("S10", 3e-5), ("S30", 1e-4)):
+    CFG[_k] = (lambda c: (lambda fc4: dict(_G20(fc4), c_t=c)))(_c)
+CFG["G20b"] = _G20
