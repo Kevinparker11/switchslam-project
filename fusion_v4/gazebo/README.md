@@ -34,3 +34,16 @@ The plugin writes time = 0 for every point (found in the first conversion). GenZ
 a constant field makes it rebuild the time from the azimuth (CloudConversion.cpp), i.e. it deskews as if the scan took 0.1 s although Gazebo sampled
 all rays at one instant. The nd variant therefore replaces the field by an azimuth ramp over 0.1 ms. Which variant is the physically right input is decided with a GenZ-LIO-alone
 (G0) pilot against the exact ground truth, before any fusion configuration is run.
+
+## Stage 3, held-out world: `construction` (written 25 Oct 2026, before the world was recorded)
+Purpose: test, on a recording nobody has looked at, whether G22 (G20 with C_T = 1e-5, chosen on development data) is better than G20.
+`office_construction` is the same building with other clutter, so it is a new recording and a new route but not a new floor plan; read it that
+way. The route (`routes/construction_loop.csv`, 141 m per lap, 0.67 m minimum clearance) was planned from the rasterised mesh only
+(`make_office_route.py <dae> <out.csv> construction`), in a different order of the wings than the office route. Commands (laptop):
+`./gz_smoke.sh construction` (optional), `./gz_record.sh construction`, `./gz_prepare.sh construction`, `./gz_batch.sh construction`.
+Rule written down before the recording exists (nothing is tuned afterwards):
+1. Data: sequence `gzconstruction_nd` only (the time-ramp variant, chosen on physical grounds for the office world). 3 runs of G20 live, 1 of G22 live; G0, G17, G19 and G22 (for runs 1-3) by replay of the G20 logs.
+2. Metric: full-span ATE (Umeyama SE(3)) of each run, median over the 3 G20 runs against the median of the replayed G22.
+3. Verdict: G22 better if its median is lower by more than 0.05 m and 10 %; worse if higher by the same margin; otherwise no difference. All
+   outcomes, including a failed run, a stuck robot or G22 worse, are reported, together with GenZ-LIO alone and the live-vs-replay check.
+4. A recording that fails (driver stuck, VINS does not initialise) is reported as such, and a re-record is announced, not silent.

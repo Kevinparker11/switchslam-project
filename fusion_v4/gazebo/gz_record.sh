@@ -6,7 +6,7 @@ set -u
 WORLD=${1:-office}; LAPS=${2:-2}; C=switchslam_gpu_v2
 HERE=$(cd "$(dirname "$0")" && pwd)
 BAGS_ROOT=${BAGS_ROOT:-"/media/$USER/One Touch1/laptop_bags"}
-case $WORLD in office|construction) ROUTE=office_loop.csv ;; *) echo "no planned route for $WORLD yet"; exit 1 ;; esac
+case $WORLD in office) ROUTE=office_loop.csv ;; construction) ROUTE=construction_loop.csv ;; *) echo "no planned route for $WORLD yet"; exit 1 ;; esac
 [ -d "$BAGS_ROOT" ] || { echo "bag drive not found: $BAGS_ROOT"; exit 1; }
 docker start $C >/dev/null 2>&1
 FREE_C=$(docker exec $C df -BG --output=avail /root | tail -1 | tr -dc 0-9); FREE_D=$(df -BG --output=avail "$BAGS_ROOT" | tail -1 | tr -dc 0-9)
