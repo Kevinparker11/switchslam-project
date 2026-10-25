@@ -37,4 +37,7 @@ Why this test. The thesis claim is robustness when one sensor degrades or fails.
 - Windows at fixed fractions are the same for every run on a sequence; they are not randomised.
 
 ## Running it
-`cd ~/switchslam-project/fusion_v4/faults`, then `setsid nohup systemd-inhibit --what=sleep:idle bash fault_batch.sh > ~/faults_batch.log 2>&1 < /dev/null & disown`. Resumable (finished runs have a DONE file); `MAX_HOURS=4` lowers the cap; `bash fault_batch.sh pack` rebuilds `~/faults_results.tgz`, the only file to send back.
+`cd ~/switchslam-project/fusion_v4/faults`, then `setsid nohup systemd-inhibit --what=sleep:idle bash fault_batch.sh > ~/faults_batch.log 2>&1 < /dev/null & disown`. Resumable (finished runs have a DONE file); `MAX_HOURS=4` lowers the cap, `DEADLINE=06:50` sets it as a clock time (next occurrence, laptop time); `bash fault_batch.sh pack` rebuilds `~/faults_results.tgz`, the only file to send back.
+
+## Disk
+The rewritten bag goes to the drive (one at a time, as large as the source sequence, deleted after each run). On the laptop SSD each finished run is compacted (raw stage logs replaced by filtered excerpts), about 20-30 MB per run; the batch refuses to start or continue with less than 3 GB free on the SSD.
