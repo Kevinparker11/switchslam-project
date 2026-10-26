@@ -29,7 +29,7 @@ Full-span ATE (m). "live" = the live G20 run, "G20 replay" = the core replayed (
 
 Reading: the rule removes the jump in 7 of 9 LiDAR-outage logs (to 0.8-4.3 m; VINS-Mono alone is 1.4 m on Multi Floor, 5.1-5.4 m on Long Corridor, 13.9 m on Cave02). It does not fix Long Corridor with 10 s gaps (15.5 and 14.2 m; in one log it is 2 m worse than the G20 replay): the windows fall in the degenerate corridor section where the unfaulted error is already 1-4 m, and no sensor is good there. These 19 logs are development data for the rule.
 
-## The test (not yet run; rules fixed now)
+## The test (run on 26 Oct, results in Gap_Test_Results.md; rules were fixed before)
 New recordings are not available, so the test uses the same bags with a second, disjoint set of outage windows and a live run of both configurations on every rewritten bag. This tests the rule against windows it has not seen, not against a new environment; it is stated that way in the report.
 - Faults: LiDAR only. Codes `L10B` (3 x 10 s at 0.15 D, 0.42 D, 0.68 D) and `L30B` (2 x 30 s at 0.20 D and 0.60 D), D = sequence span (`make_fault_bag.py`, tested). The first-campaign windows were 0.30/0.55/0.80 D and 0.40/0.75 D. Camera outages are not repeated: the rule cannot act without a scan gap, and the maximum scan interval in all 10 camera and no-fault logs is 0.20 s.
 - Sequences and rates as before (Multi Floor 1.0x, Long Corridor 0.5x, Cave02 0.5x). Runs: Multi Floor and Long Corridor, L10B and L30B, two replicates; Cave02 L30B, one. G20 and G23 are run live one after the other on the same rewritten bag, with keyframes recorded (so Channel T+ can be replayed). 9 bags, 18 live runs, about 5.6 h.
