@@ -7,6 +7,7 @@ usage (inside a ROS noetic container):
   is dropped for s seconds; IMU and everything else are copied untouched; none = copy only (control for the rewrite itself).
 Window rule (fixed before any data was looked at; fractions of the whole sequence span D = last - first message time, from the first message):
   10 s outages:  3 windows starting at 0.30 D, 0.55 D, 0.80 D        other durations: 2 windows starting at 0.40 D and 0.75 D
+  codes with a trailing B (C10B, L10B, C30B, L30B) use a second set: 0.15 D, 0.42 D, 0.68 D (10 s) and 0.20 D, 0.60 D (other durations)
 Messages are copied raw (no deserialisation) with their connection headers, so latched topics and message types are unchanged.
 Writes <out>/<same file names> and <out>/fault_manifest.json (windows in bag time and seconds from the start, dropped counts per topic)."""
 import argparse, json, os, sys
@@ -19,10 +20,13 @@ def windows(fault, t0, t1):
     """list of (start, end) in bag time for a fault code such as 'C10' ('none' gives [])."""
     if fault == "none":
         return []
-    kind, dur = fault[0], float(fault[1:])
-    assert kind in "CL" and dur > 0, "fault must be C<s>, L<s> or none"
+    kind, dur = fault[0], float(fault[1:].rstrip("B"))
+    assert kind in "CL" and dur > 0, "fault must be C<s>, L<s>, with an optional B, or none"
     d = t1 - t0
-    fr = (0.30, 0.55, 0.80) if dur <= 10 else (0.40, 0.75)
+    if fault.endswith("B"):       # second window set (26 Oct 2026), for the test of the LiDAR-gap rule: none of its windows starts where a first-set window does
+        fr = (0.15, 0.42, 0.68) if dur <= 10 else (0.20, 0.60)
+    else:
+        fr = (0.30, 0.55, 0.80) if dur <= 10 else (0.40, 0.75)
     return [(t0 + f * d, t0 + f * d + dur) for f in fr]
 
 

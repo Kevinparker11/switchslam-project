@@ -59,3 +59,5 @@ _G20 = lambda fc4: dict(adapt=_two(fc4, 5.0), vio_scale_T=10.0, lidar_guard_T=2.
 for _k, _c in (("S03", 1e-6), ("S3", 1e-5), ("S10", 3e-5), ("S30", 1e-4)):
     CFG[_k] = (lambda c: (lambda fc4: dict(_G20(fc4), c_t=c)))(_c)
 CFG["G20b"] = _G20
+# --- G23 (26 Oct 2026) = G20 + LiDAR-gap rule (gap_T = 1 s): fusion_core.FusionCore(gap_T=...), developed on the outage logs of 26 Oct
+CFG["G23"] = lambda fc4: dict(_G20(fc4), gap_T=1.0)

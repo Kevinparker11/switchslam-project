@@ -10,11 +10,14 @@
 #   Disk: the rewritten bags go to the drive and are deleted after each run; on the laptop SSD every finished run is compacted (raw stage logs
 #   replaced by filtered excerpts), about 20-30 MB per run; the batch stops if the SSD has less than 3 GB free.
 #   ONLY="MF_C10_r1 LC_L30_r1" bash fault_batch.sh     run just these tags
+#   PLAN_SET=gap DEADLINE=HH:MM bash fault_batch.sh     the second campaign: G20 and G23 live on the same rewritten bags (second window set), packs ~/faults_gap_results.tgz
 # Detach it:  setsid nohup systemd-inhibit --what=sleep:idle bash fault_batch.sh > ~/faults_batch.log 2>&1 < /dev/null & disown
 set -u
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd); FV4=$(dirname "$HERE"); REPO=$(dirname "$FV4")
 BAGS_ROOT=${BAGS_ROOT:-"/media/$USER/One Touch1/laptop_bags"}
 FAULT_ROOT="$BAGS_ROOT/_faults"; WORK=$HOME/runs_faults; PACK=$HOME/runs_faults_pack
+PACKNAME=faults_results; PACKGLOB="*_genz"
+[ "${PLAN_SET:-}" = gap ] && { PACKNAME=faults_gap_results; PACKGLOB="*B_r?_genz"; PACK=$HOME/runs_faults_gap_pack; }
 MAX_HOURS=${MAX_HOURS:-5.75}; LIMIT=$(awk -v h="$MAX_HOURS" 'BEGIN{printf "%d", h*3600}')
 if [ -n "${DEADLINE:-}" ]; then
   LIMIT=$(( $(date -d "$DEADLINE" +%s) - $(date +%s) )); [ "$LIMIT" -le 0 ] && LIMIT=$(( LIMIT + 86400 ))
@@ -36,14 +39,15 @@ compact() {   # $1 = run output folder: keep switching logs, scores, summaries, 
 }
 pack() {
   rm -rf "$PACK"; mkdir -p "$PACK"
-  for d in "$WORK"/*_genz; do
+  for d in "$WORK"/$PACKGLOB; do
     [ -d "$d" ] || continue; n=$(basename "$d" _genz); mkdir -p "$PACK/$n"
     cp "$d"/switching_log_v2_*.csv "$d"/ate_*.txt "$d"/summary_*.txt "$d"/node_head_*.txt "$d"/fault_manifest.json "$d"/results_index.csv "$d"/failed_runs.csv "$PACK/$n/" 2>/dev/null
+    [ "${PLAN_SET:-}" = gap ] && cp "$d"/keyframes_*.npz "$PACK/$n/" 2>/dev/null     # the gap test also returns the keyframes, so that Channel T+ can be replayed
     compact "$d"
     cp "$d"/*.tail "$d"/*.filtered "$d"/*.lines "$PACK/$n/" 2>/dev/null
   done
-  cp "$SUM" "$PACK/" 2>/dev/null; cp "$WORK"/*.log "$PACK/" 2>/dev/null; cp "$HOME/faults_batch.log" "$PACK/" 2>/dev/null
-  tar czf "$HOME/faults_results.tgz" -C "$PACK" . && say "packed: $HOME/faults_results.tgz ($(du -h "$HOME/faults_results.tgz" | cut -f1), $(ls "$PACK" | wc -l) entries)"
+  cp "$SUM" "$PACK/" 2>/dev/null; cp "$WORK"/*.log "$PACK/" 2>/dev/null; cp "$HOME"/faults_*batch*.log "$PACK/" 2>/dev/null
+  tar czf "$HOME/$PACKNAME.tgz" -C "$PACK" . && say "packed: $HOME/$PACKNAME.tgz ($(du -h "$HOME/$PACKNAME.tgz" | cut -f1), $(ls "$PACK" | wc -l) entries)"
 }
 [ "${1:-}" = pack ] && { pack; exit 0; }
 
@@ -72,6 +76,14 @@ PLAN=(
  "LC C10 2 G20" "LC L10 2 G20" "LC C30 2 G20" "LC L30 2 G20"
  "C02 C30 1 G20" "C02 L30 1 G20"
 )
+# PLAN_SET=gap: test of the LiDAR-gap rule (G23) against G20 on a second set of outage windows (protocol: docs/results/Gap_Rule_Test_Protocol.md)
+if [ "${PLAN_SET:-}" = gap ]; then
+  PLAN=(
+   "MF L30B 1 G20 G23" "LC L30B 1 G20 G23" "MF L10B 1 G20 G23" "LC L10B 1 G20 G23"
+   "MF L30B 2 G20 G23" "LC L30B 2 G20 G23" "MF L10B 2 G20 G23" "LC L10B 2 G20 G23"
+   "C02 L30B 1 G20 G23"
+  )
+fi
 START=$SECONDS; FAILS=0
 say "plan: ${#PLAN[@]} runs, cap $CAP; start $(date)"
 for item in "${PLAN[@]}"; do

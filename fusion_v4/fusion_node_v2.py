@@ -41,6 +41,9 @@ Environment (all optional):
                 (2 s and 2.16 m = 3 x the largest value on the Multi Floor calibration recordings; 0 = off, default).
   GAMMA_MIN     > 0 (with VIO_CHECK=1): floor on the VINS prior information, so that a truly degenerate LiDAR direction is
                 never trusted fully when the gate is closed (1e-3 changes the real-data results by <= 3 mm; 0 = off, default).
+  GAP_T         > 0: LiDAR-gap rule (fusion_core, gap_T).  A scan interval longer than GAP_T s (a LiDAR outage) is bridged by the VIO:
+                the LiDAR increment over the gap is ignored, the VIO jump limits are scaled by the gap, no consistency window spans
+                the gap, and the pose is held if the VIO cannot be used either.  1.0 for G23; 0 = off (G20 exactly, default).
 Extrinsic: SubT-MRS Multi Floor 'laser_to_imu' (override with EXTRINSIC_YAML=path to the same format).
 """
 import os
@@ -88,6 +91,7 @@ VIO_CHECK_FAST_NMIN = int(E("VIO_CHECK_FAST_NMIN", "25"))
 LIDAR_GUARD_T = float(E("LIDAR_GUARD_T", "0"))
 LIDAR_GUARD_EX = float(E("LIDAR_GUARD_EX", "2.16"))
 GAMMA_MIN = float(E("GAMMA_MIN", "0"))
+GAP_T = float(E("GAP_T", "0"))
 VINS_GAP = 1.0            # s without VINS -> treated as lost (warm-up restarts)
 
 # SubT-MRS Hawkins Multi Floor laser_to_imu (x_imu = R x_laser + t)
@@ -111,7 +115,7 @@ if vio_check is not None and VIO_CHECK_FAST > 0:
 core = fc.FusionCore(R_IL, t_IL, c_t=C_T, c_R=C_R, gate=gate, t_warm=T_WARM, hess_frame=HESS_FRAME,
                      jump_max=JUMP_MAX, w_mode=WEIGHT_MODE, alpha=W_ALPHA, vio_adapt=vio_check, vio_scale_T=VIO_SCALE_T,
                      lidar_guard_T=LIDAR_GUARD_T if vio_check is not None else 0.0, lidar_guard_ex=LIDAR_GUARD_EX,
-                     gamma_min=GAMMA_MIN if vio_check is not None else 0.0)
+                     gamma_min=GAMMA_MIN if vio_check is not None else 0.0, gap_T=GAP_T)
 if MODE == "lidar":
     core.t_warm = 1e12                     # every step is WARMUP = LiDAR only
 
@@ -371,8 +375,8 @@ def main():
             threading.Thread(target=sah_worker, daemon=True).start()
         print("SAH=1 KF_DIST=%g KF_ROT=%g SAH_RMIN=%g SAH_RMAX=%g SAH_VOXEL=%g SAH_MAXPTS=%d SAH_MAX_STEP=%.2f deg"
               % (KF_DIST, KF_ROT, SAH_RMIN, SAH_RMAX, SAH_VOXEL, SAH_MAXPTS, np.degrees(SAH_MAX_STEP)))
-    print("VIO_CHECK=%d VIO_CHECK_REF=%g VIO_CHECK_NMIN=%d VIO_SCALE_T=%g VIO_CHECK_FAST=%g VIO_CHECK_FAST_REF=%g LIDAR_GUARD_T=%g LIDAR_GUARD_EX=%g GAMMA_MIN=%g"
-          % (VIO_CHECK, VIO_CHECK_REF, VIO_CHECK_NMIN, VIO_SCALE_T, VIO_CHECK_FAST, VIO_CHECK_FAST_REF, LIDAR_GUARD_T, LIDAR_GUARD_EX, GAMMA_MIN))
+    print("VIO_CHECK=%d VIO_CHECK_REF=%g VIO_CHECK_NMIN=%d VIO_SCALE_T=%g VIO_CHECK_FAST=%g VIO_CHECK_FAST_REF=%g LIDAR_GUARD_T=%g LIDAR_GUARD_EX=%g GAMMA_MIN=%g GAP_T=%g"
+          % (VIO_CHECK, VIO_CHECK_REF, VIO_CHECK_NMIN, VIO_SCALE_T, VIO_CHECK_FAST, VIO_CHECK_FAST_REF, LIDAR_GUARD_T, LIDAR_GUARD_EX, GAMMA_MIN, GAP_T))
     print("FUSION_MODE=%s C_T=%g C_R=%g KAPPA_MODE=%s KAPPA_TH=%g T_WARM=%g HESS_TOPIC=%s PREDICT_WITH_VINS=%d RUN_TAG=%s WEIGHT_MODE=%s W_ALPHA=%g"
           % (MODE, C_T, C_R, KAPPA_MODE, KAPPA_TH, T_WARM, HESS_TOPIC, PREDICT_WITH_VINS, RUN_TAG, WEIGHT_MODE, W_ALPHA))
     print("fusion_node_v2 listening...")

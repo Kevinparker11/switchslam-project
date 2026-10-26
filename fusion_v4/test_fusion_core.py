@@ -294,3 +294,39 @@ if __name__ == "__main__":
     test_lidar_guard_and_fast_check()
     test_gamma_floor()
     print("ALL TESTS PASSED")
+
+
+def _gap_run(gap_T, teleport=300.0, vins_after=True, n=800, dt=0.1, v=1.0, k0=200, k1=500):
+    """walk along x at v m/s with an exact VINS; the LiDAR delivers no scan for k0 <= k < k1 (30 s) and re-enters with a pose that
+    is `teleport` m wrong (dead reckoning through the gap), then tracks the motion correctly again."""
+    slow = fc.VioConsistency(ref=0.156, stat="scale", rule="gate", avg=None, n_min=20)
+    chk = fc.VioChecks([slow, fc.VioConsistency(ref=0.278, stat="scale", rule="gate", avg=5.0, n_min=25)])
+    core = fc.FusionCore(c_t=1.0, c_R=1.0, gate=fc.KappaGate(kth=1e9), t_warm=2.0, hess_frame="body", vio_adapt=chk,
+                         vio_scale_T=10.0, lidar_guard_T=2.0, lidar_guard_ex=2.16, gap_T=gap_T)
+    H = np.eye(6); modes = []; pf = None
+    for k in range(n):
+        if k0 <= k < k1:
+            continue
+        x = v * dt * k
+        pl = np.array([x + (teleport if k >= k1 else 0.0), 0.0, 0.0])
+        vin = (np.eye(3), np.array([x, 0.0, 0.0])) if (vins_after or not (k == k1)) else None
+        R, pf, info = core.step(k * dt, (np.eye(3), pl), vin, H)
+        modes.append(info["mode"])
+    return pf, v * dt * (n - 1), modes
+
+
+def test_gap_rule():
+    # off (default): the VIO displacement over the gap looks like a VINS jump, the LiDAR carries the step and the teleport is adopted
+    pf0, x, m0 = _gap_run(0.0)
+    assert pf0[0] > x + 250.0 and "GAP" not in m0
+    # on: the VIO carries the step over the gap and the fused pose stays on the true path
+    pf1, x, m1 = _gap_run(1.0)
+    assert abs(pf1[0] - x) < 3.0 and m1.count("GAP") == 1
+    # neither sensor usable over the gap (VINS missing at the first scan): the pose is held, the teleport is not adopted
+    pf2, x, m2 = _gap_run(1.0, vins_after=False)
+    assert m2.count("GAP_HOLD") == 1 and x - 40.0 < pf2[0] < x + 1.0
+    # no gap in the data: identical to the rule being off, step for step
+    for kw in (dict(teleport=0.0, k0=0, k1=0), dict(teleport=0.0, k0=10**6, k1=10**6)):
+        pa, _, _ = _gap_run(1.0, **kw)
+        pb, _, _ = _gap_run(0.0, **kw)
+        assert np.array_equal(pa, pb)
