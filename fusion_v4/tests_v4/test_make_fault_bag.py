@@ -33,6 +33,8 @@ def test_windows():
     assert M.windows("none", 0, 100) == []
     w = M.windows("C10", 0, 100); assert [round(a) for a, b in w] == [30, 55, 80] and all(abs(b - a - 10) < 1e-9 for a, b in w)
     w = M.windows("L30", 0, 100); assert [round(a) for a, b in w] == [40, 75] and all(abs(b - a - 30) < 1e-9 for a, b in w)
+    w = M.windows("L10B", 0, 100); assert [round(a) for a, b in w] == [15, 42, 68] and all(abs(b - a - 10) < 1e-9 for a, b in w)
+    w = M.windows("L30B", 0, 100); assert [round(a) for a, b in w] == [20, 60] and all(abs(b - a - 30) < 1e-9 for a, b in w)
 
 def test_camera_drop():
     d = tempfile.mkdtemp(); STORE.clear()

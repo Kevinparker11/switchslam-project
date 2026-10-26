@@ -162,6 +162,11 @@ class VioConsistency:
         self.s = 1.0
         self.xt, self.s_loc = [], 1.0                           # (t_end, x) of the windows ending in the last T_loc s
 
+    def restart_windows(self):
+        """Forget the stored poses, so that no window spans the next step (a LiDAR gap): the gate state and the statistics
+        gathered so far are kept, and new windows form once T s of poses have been stored again."""
+        self.ts, self.A, self.V, self.i0 = [], [], [], 0
+
     def scale_local(self):
         """Local VIO scale: median |LiDAR displacement| / |VIO displacement| of the 10 s windows that ended in the last T_loc s
         (chord lengths, so per-scan jitter of either source does not inflate it); held when there is no motion."""
@@ -239,6 +244,10 @@ class VioChecks:
     def update(self, *a):
         for c in self.checks:
             c.update(*a)
+
+    def restart_windows(self):
+        for c in self.checks:
+            c.restart_windows()
 
     def gamma(self):
         return min(c.gamma() for c in self.checks)
@@ -351,7 +360,8 @@ class FusionCore:
                  hess_frame="world", jump_max=1.0, rot_jump_max=0.5, gate_trans=False, kth_t=1e9,
                  w_mode="schur", alpha=0.7, tau_R=0.0, c_Rb=1.0, bias_axis="all", clip_R=0.0, vio_adapt=None,
                  vio_scale_T=0.0, vio_scale_dmin=1.0, vio_scale_proj=False, vio_scale_seg=False,
-                 lidar_guard_T=0.0, lidar_guard_ex=0.0, vio_scale_along=False, gamma_min=0.0):
+                 lidar_guard_T=0.0, lidar_guard_ex=0.0, vio_scale_along=False, gamma_min=0.0,
+                 gap_T=0.0, gap_vmax=5.0, gap_wmax=2.0):
         assert w_mode in W_MODES, w_mode
         # vio_adapt: None (unit VIO information, the original rule) or a VioConsistency; its gamma scales the VIO
         # information in both Schur weights (W_t and W_R).  The R / T / SAH structure is unchanged.
@@ -388,6 +398,13 @@ class FusionCore:
         self.byaw = 0.0
         self.clip_R = clip_R          # bounded influence: per-step innovation clipped to +-clip_R rad (0 = off)
         self.t_prev = None
+        # gap_T > 0: LiDAR-gap rule.  A scan interval longer than gap_T s means the LiDAR delivered nothing (sensor outage, dropped
+        # packets).  The LiDAR front end dead-reckons through the gap and can re-enter with a pose that is wrong by tens or hundreds
+        # of metres, and the VIO displacement over the gap would look like a VINS jump (more than jump_max per step).  For that one
+        # step: the jump limits of the VIO are scaled by the gap (gap_vmax m/s, gap_wmax rad/s), the LiDAR increment is ignored
+        # (W = 0, the VIO carries the step), no consistency window spans the gap (the trust earned before it is kept), the scale
+        # and guard buffers restart, and if the VIO is also unusable the pose is held.  0 = off (the behaviour of G20, bit for bit).
+        self.gap_T, self.gap_vmax, self.gap_wmax, self.t_last = gap_T, gap_vmax, gap_wmax, None
         self.w_mode, self.alpha = w_mode, alpha
         self.R_IL, self.t_IL = np.asarray(R_IL, float), np.asarray(t_IL, float)
         self.c_t, self.c_R, self.t_warm, self.hess_frame = c_t, c_R, t_warm, hess_frame
@@ -425,21 +442,29 @@ class FusionCore:
             self.Rf, self.pf = Ra.copy(), pa.copy()
             self.prev_a = (Ra, pa)
             self.prev_v = vins
+            self.t_last = t
             return self.Rf, self.pf, info
 
         dR_a, dt_a = rel_body(self.prev_a[0], self.prev_a[1], Ra, pa)
         vins_ok = vins is not None and not vo_fail
         jump = False
+        is_gap = self.gap_T > 0 and self.t_last is not None and (t - self.t_last) > self.gap_T
+        thr_t, thr_R = self.jump_max, self.rot_jump_max
+        if is_gap:
+            thr_t = max(thr_t, self.gap_vmax * (t - self.t_last))
+            thr_R = max(thr_R, self.gap_wmax * (t - self.t_last))
         if vins_ok and self.prev_v is not None:
             dR_I, dt_I = rel_body(self.prev_v[0], self.prev_v[1], vins[0], vins[1])
             dR_v, dt_v = imu_to_lidar_increment(dR_I, dt_I, self.R_IL, self.t_IL)
-            jump = np.linalg.norm(dt_v) > self.jump_max or np.linalg.norm(so3_log(dR_v)) > self.rot_jump_max
+            jump = np.linalg.norm(dt_v) > thr_t or np.linalg.norm(so3_log(dR_v)) > thr_R
         have_v = vins_ok and self.prev_v is not None and not jump
         lost = self.t_vins0 is not None and self.prev_v is not None and (not vins_ok or jump)
         info["dta"] = float(np.linalg.norm(dt_a))
         lidar_bad = False
+        if is_gap:
+            self.gbuf, self.guard_on, self.shist, self.sbuf = [], False, [], []
         if self.lidar_guard_T > 0 and self.vio_adapt is not None:
-            if have_v:
+            if have_v and not is_gap:
                 # raw VINS motion: the guard must not depend on a scale estimate that the failing LiDAR itself feeds
                 self.gbuf.append((t, float(np.linalg.norm(dt_a)), float(np.linalg.norm(dt_v))))
                 while self.gbuf and self.gbuf[0][0] <= t - self.lidar_guard_T:
@@ -458,7 +483,7 @@ class FusionCore:
                 self.gbuf, self.guard_on, self.shist = [], False, []
         info["lidar_bad"] = int(lidar_bad)
         if self.vio_scale_T > 0:
-            if have_v and not lidar_bad:
+            if have_v and not lidar_bad and not is_gap:
                 if self.vio_scale_proj and H is not None:
                     Wp = info_weight(schur_blocks(H, self.hess_frame, self.prev_a[0])[1], self.c_t)
                     self.sbuf.append((t, float(np.linalg.norm(Wp @ dt_a)), float(np.linalg.norm(Wp @ dt_v))))
@@ -486,7 +511,9 @@ class FusionCore:
                 self.shist.pop(0)
         gam = 1.0
         if self.vio_adapt is not None:
-            if have_v and not lidar_bad:
+            if is_gap:
+                self.vio_adapt.restart_windows()      # trust earned before the gap is kept; no window spans the LiDAR gap
+            elif have_v and not lidar_bad:
                 self.vio_adapt.update(t, (Ra, pa), (np.asarray(vins[0], float), np.asarray(vins[1], float)), self.R_IL, self.t_IL)
             elif lost:
                 self.vio_adapt.reset()
@@ -503,7 +530,17 @@ class FusionCore:
                 self.s_vio = 1.0
         info["gamma"] = gam
 
-        if not have_v:
+        if is_gap:
+            info["gap"] = 1
+            W_t = W_R = np.zeros((3, 3))
+            if have_v:
+                mode = "GAP"                              # the VIO carries the step over the gap
+            else:
+                mode = "GAP_HOLD"                         # neither sensor can be trusted over the gap: hold the pose
+                dR_v, dt_v = I3, np.zeros(3)
+                if lost:
+                    self.t_vins0 = None
+        elif not have_v:
             # VINS absent, still starting, jumped or re-initialised: LiDAR carries this step.
             # After a loss the VIO warm-up restarts, because a re-initialised VINS has the same
             # start-up transient as at the beginning of the run.
@@ -572,6 +609,7 @@ class FusionCore:
         self.prev_a = (Ra, pa)
         self.prev_v = vins
         self.t_prev = t
+        self.t_last = t
         info["mode"] = mode
         info["bR"] = float(abs(self.byaw)) if self.bias_axis == "yaw" else float(np.linalg.norm(self.bR))
         return self.Rf, self.pf, info
