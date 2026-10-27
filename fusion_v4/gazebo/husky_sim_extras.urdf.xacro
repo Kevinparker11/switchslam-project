@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<!-- Sensors for the Gazebo simulation tests (24-25 Oct 2026): VLP-16 on top, forward-facing mono camera, same Husky IMU as the
+     generation-1 farm study (husky_200hz_imu, 200 Hz). Used as HUSKY_URDF_EXTRAS. Changes from the farm sim, all deliberate:
+       - LiDAR 1800 samples per ring (real VLP-16 at 10 Hz); the farm used 440 to save CPU. Override: GZ_LIDAR_SAMPLES.
+       - camera faces forward (the farm camera looked sideways), 20 Hz, 8-bit mono (bags stay about 6 MB/s). Override: GZ_CAM_HZ.
+     Nothing here is tuned on a result. -->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:include filename="$(find velodyne_description)/urdf/VLP-16.urdf.xacro"/>
+  <xacro:VLP-16 parent="base_link" name="velodyne" topic="/velodyne_points" hz="10" samples="$(optenv GZ_LIDAR_SAMPLES 1800)">
+    <origin xyz="0 0 0.4" rpy="0 0 0" />
+  </xacro:VLP-16>
+
+  <link name="camera_link">
+    <inertial><mass value="0.1"/><origin xyz="0 0 0"/><inertia ixx="1e-6" ixy="0" ixz="0" iyy="1e-6" iyz="0" izz="1e-6"/></inertial>
+    <visual><geometry><box size="0.05 0.05 0.05"/></geometry></visual>
+    <collision><geometry><box size="0.05 0.05 0.05"/></geometry></collision>
+  </link>
+  <joint name="camera_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="camera_link"/>
+    <origin xyz="0.3 0 0.3" rpy="0 0 0"/>
+  </joint>
+  <gazebo reference="camera_link">
+    <sensor type="camera" name="camera1">
+      <update_rate>$(optenv GZ_CAM_HZ 20.0)</update_rate>
+      <camera name="head">
+        <horizontal_fov>1.3962634</horizontal_fov>
+        <image><width>640</width><height>480</height><format>L8</format></image>
+        <clip><near>0.02</near><far>300</far></clip>
+      </camera>
+      <plugin name="camera_controller" filename="libgazebo_ros_camera.so">
+        <alwaysOn>true</alwaysOn>
+        <updateRate>$(optenv GZ_CAM_HZ 20.0)</updateRate>
+        <cameraName>camera</cameraName>
+        <imageTopicName>image_raw</imageTopicName>
+        <cameraInfoTopicName>camera_info</cameraInfoTopicName>
+        <frameName>camera_link</frameName>
+      </plugin>
+    </sensor>
+  </gazebo>
+</robot>

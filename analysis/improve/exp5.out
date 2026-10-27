@@ -1,0 +1,16 @@
+windows per sequence: {'MF': 2378, 'LC': 1562, 'C02': 1949}
+
+== MF: 2378 windows of 10 s (>=2 m travelled)
+   median |dir agreement| Schur-weak vs T-weak eigvec: 1.00
+   error/m (all)                  Spearman: Schur lam_min +0.25 | alt-T l1 +0.35 | alt-T along Schur-weak dir +0.33 || partial alt-T l1 | Schur +0.24 [0.15,0.32]; partial T_vv | Schur +0.20
+   error/m along Schur-weak dir   Spearman: Schur lam_min +0.12 | alt-T l1 +0.20 | alt-T along Schur-weak dir +0.19 || partial alt-T l1 | Schur +0.14 [0.04,0.22]; partial T_vv | Schur +0.13
+
+== LC: 1562 windows of 10 s (>=2 m travelled)
+   median |dir agreement| Schur-weak vs T-weak eigvec: 0.99
+   error/m (all)                  Spearman: Schur lam_min -0.07 | alt-T l1 -0.18 | alt-T along Schur-weak dir -0.15 || partial alt-T l1 | Schur -0.18 [-0.28,-0.06]; partial T_vv | Schur -0.15
+   error/m along Schur-weak dir   Spearman: Schur lam_min +0.28 | alt-T l1 +0.07 | alt-T along Schur-weak dir +0.17 || partial alt-T l1 | Schur -0.14 [-0.23,-0.04]; partial T_vv | Schur -0.07
+
+== C02: 1949 windows of 10 s (>=2 m travelled)
+   median |dir agreement| Schur-weak vs T-weak eigvec: 0.99
+   error/m (all)                  Spearman: Schur lam_min +0.03 | alt-T l1 +0.04 | alt-T along Schur-weak dir +0.05 || partial alt-T l1 | Schur +0.02 [-0.08,0.13]; partial T_vv | Schur +0.04
+   error/m along Schur-weak dir   Spearman: Schur lam_min -0.03 | alt-T l1 -0.08 | alt-T along Schur-weak dir -0.09 || partial alt-T l1 | Schur -0.08 [-0.16,0.01]; partial T_vv | Schur -0.10

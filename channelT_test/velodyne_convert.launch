@@ -1,0 +1,14 @@
+<!-- VLP-16 packets -> /multifloor/velodyne_points for any SubT-MRS bag.
+     packets: the bag's packet topic (rosbag info), e.g. /cmu_sp1/velodyne_packets -->
+<launch>
+  <arg name="packets" default="/cmu_sp1/velodyne_packets"/>
+  <node pkg="nodelet" type="nodelet" name="degen_nodelet_manager" args="manager" output="screen"/>
+  <node pkg="nodelet" type="nodelet" name="degen_transform_nodelet"
+        args="load velodyne_pointcloud/TransformNodelet degen_nodelet_manager" output="screen">
+    <param name="calibration" value="$(find velodyne_pointcloud)/params/VLP16db.yaml"/>
+    <param name="min_range" value="0.4"/>
+    <param name="max_range" value="130.0"/>
+    <remap from="velodyne_packets" to="$(arg packets)"/>
+    <remap from="velodyne_points" to="/multifloor/velodyne_points"/>
+  </node>
+</launch>

@@ -1,0 +1,10 @@
+# Host-side Python (scoring, replay, back end, analysis, statistics).
+# Versions are those of the original machine (Ubuntu 22.04, Python 3.10.12), captured 22 Oct 2026.
+numpy==2.2.6
+scipy==1.15.3
+pandas==2.3.3
+scikit-learn==1.7.2
+matplotlib==3.10.8
+pyyaml>=5.4          # original machine: 5.4.1
+gtsam                # offline loop-closure back end (fusion_v3/run_backend.py); version not recorded - any 4.x wheel
+pytest               # unit tests

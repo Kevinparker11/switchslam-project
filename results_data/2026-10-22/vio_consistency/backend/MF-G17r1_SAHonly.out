@@ -1,0 +1,10 @@
+run /tmp/claude-0/-home-claude/3f90fe9f-923e-500d-a688-dedb31fbfbe6/scratchpad/adapt/bk/MF-G17r1_SAHonly.csv: 4136 scans, 535 keyframes (535 matched to the log), median 1717 points per keyframe
+odometry noise per keyframe step (given): rotation 1.460 deg, translation 0.054 m
+none        loops   0 | full 0.529 / 1.28 | bag0 nan / nan | bags1-2 0.529 / 1.28   (0 s)
+  round 1: 204 accepted loops, 204 kept after the chi2 check
+iso         loops 204 | full 0.238 / 0.62 | bag0 nan / nan | bags1-2 0.238 / 0.62   (127 s)
+            loops connect t+122<->152, 123<->153, 123<->154, 123<->154, 124<->154, 125<->156, 125<->156, 126<->157, 123<->158, 125<->158, 123<->159, 120<->161 s ...
+
+model       loops   drop_t   drop_R |    full RMSE/max |   bag 0 RMSE/max | bags 1-2 RMSE/max
+none            0        0        0 |    0.529 /  1.28 |      nan /   nan |    0.529 /  1.28
+iso           204        0        0 |    0.238 /  0.62 |      nan /   nan |    0.238 /  0.62

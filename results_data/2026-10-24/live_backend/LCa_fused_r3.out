@@ -1,0 +1,10 @@
+run /tmp/claude-0/-home-claude/3f90fe9f-923e-500d-a688-dedb31fbfbe6/scratchpad/lapres/runs_corridor_A_L_genz/switching_log_v2_G19_kf_run3.csv: 2774 scans, 551 keyframes (551 matched to the log), median 1884 points per keyframe
+odometry noise per keyframe step (given): rotation 1.460 deg, translation 0.054 m
+none        loops   0 | full 1.758 / 3.82 | bag0 nan / nan | bags1-2 1.758 / 3.82   (0 s)
+  round 1: 263 accepted loops, 263 kept after the chi2 check
+iso         loops 263 | full 1.351 / 3.40 | bag0 nan / nan | bags1-2 1.351 / 3.40   (130 s)
+            loops connect t+120<->150, 121<->151, 121<->151, 122<->152, 120<->152, 120<->153, 119<->153, 121<->153, 119<->154, 118<->154, 119<->155, 119<->155 s ...
+
+model       loops   drop_t   drop_R |    full RMSE/max |   bag 0 RMSE/max | bags 1-2 RMSE/max
+none            0        0        0 |    1.758 /  3.82 |      nan /   nan |    1.758 /  3.82
+iso           263        0        0 |    1.351 /  3.40 |      nan /   nan |    1.351 /  3.40

@@ -1,0 +1,12 @@
+seq LC runs 3
+object None  r_min 5      1.828 2.130 2.316 mean 2.091
+object None  r_min 6      1.846 2.215 2.564 mean 2.209
+object None  r_min 8      2.006 2.167 2.536 mean 2.236
+seq C02 runs 3
+object None  r_min 5      1.829 1.734 1.837 mean 1.800
+object None  r_min 6      1.796 1.739 1.870 mean 1.802
+object None  r_min 8      1.814 1.733 1.777 mean 1.775
+seq MF runs 6
+object None  r_min 5      0.495 0.393 0.526 0.472 0.451 0.571 mean 0.485
+object None  r_min 6      0.494 0.417 0.497 0.502 0.482 0.590 mean 0.497
+object None  r_min 8      0.523 0.444 0.515 0.451 0.466 0.518 mean 0.486

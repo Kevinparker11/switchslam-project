@@ -1,0 +1,104 @@
+##### Multi Floor G20 x4   17:50:43
+bags: /bags/multifloor_0.bag /bags/multifloor_1.bag /bags/multifloor_2.bag 
+=== G20_kf_run1 : FUSION_MODE=fused C_T=3e-6 C_R=5e-6 KAPPA_TH=1e9 SAH=1 VIO_CHECK=1 VIO_SCALE_T=10 VIO_CHECK_FAST=5 LIDAR_GUARD_T=2  (17:50:43)
+    GenZ-LIO LiDAR topic: /multifloor/velodyne_points   IMU topic: /cmu_sp1/imu/data
+SAH=1 KF_DIST=1 KF_ROT=0.2 SAH_RMIN=1 SAH_RMAX=60 SAH_VOXEL=0.25 SAH_MAXPTS=6000 SAH_MAX_STEP=0.25 deg
+VIO_CHECK=1 VIO_CHECK_REF=0.156 VIO_CHECK_NMIN=200 VIO_SCALE_T=10 VIO_CHECK_FAST=5 VIO_CHECK_FAST_REF=0.278 LIDAR_GUARD_T=2 LIDAR_GUARD_EX=2.16 GAMMA_MIN=0
+FUSION_MODE=fused C_T=3e-06 C_R=5e-06 KAPPA_MODE=fixed KAPPA_TH=1e+09 T_WARM=20 HESS_TOPIC=/laser_hessian PREDICT_WITH_VINS=1 RUN_TAG=G20_kf_run1 WEIGHT_MODE=schur W_ALPHA=0.7
+    keyframes saved: /home/kavinkumar/runs_v2_genz/keyframes_G20_kf_run1.npz (5.0M)
+    rows=4136  full-span ATE (RMSE,max) = 0.26,0.54
+starts   0.3 s after bag start, ends   0.1 s before bag end
+  full span of this run: n= 4130  GT path  272.8 m  RMSE =   0.26 m   Max =   0.54 m
+  common window (>= 1660857413): n= 3934  GT path  271.7 m  RMSE =   0.25 m   Max =   0.51 m
+=== G20_kf_run2 : FUSION_MODE=fused C_T=3e-6 C_R=5e-6 KAPPA_TH=1e9 SAH=1 VIO_CHECK=1 VIO_SCALE_T=10 VIO_CHECK_FAST=5 LIDAR_GUARD_T=2  (18:00:24)
+    GenZ-LIO LiDAR topic: /multifloor/velodyne_points   IMU topic: /cmu_sp1/imu/data
+SAH=1 KF_DIST=1 KF_ROT=0.2 SAH_RMIN=1 SAH_RMAX=60 SAH_VOXEL=0.25 SAH_MAXPTS=6000 SAH_MAX_STEP=0.25 deg
+VIO_CHECK=1 VIO_CHECK_REF=0.156 VIO_CHECK_NMIN=200 VIO_SCALE_T=10 VIO_CHECK_FAST=5 VIO_CHECK_FAST_REF=0.278 LIDAR_GUARD_T=2 LIDAR_GUARD_EX=2.16 GAMMA_MIN=0
+FUSION_MODE=fused C_T=3e-06 C_R=5e-06 KAPPA_MODE=fixed KAPPA_TH=1e+09 T_WARM=20 HESS_TOPIC=/laser_hessian PREDICT_WITH_VINS=1 RUN_TAG=G20_kf_run2 WEIGHT_MODE=schur W_ALPHA=0.7
+    keyframes saved: /home/kavinkumar/runs_v2_genz/keyframes_G20_kf_run2.npz (5.0M)
+    rows=4136  full-span ATE (RMSE,max) = 0.32,0.78
+starts   0.3 s after bag start, ends   0.1 s before bag end
+  full span of this run: n= 4130  GT path  272.8 m  RMSE =   0.32 m   Max =   0.78 m
+  common window (>= 1660857413): n= 3934  GT path  271.7 m  RMSE =   0.32 m   Max =   0.79 m
+=== G20_kf_run3 : FUSION_MODE=fused C_T=3e-6 C_R=5e-6 KAPPA_TH=1e9 SAH=1 VIO_CHECK=1 VIO_SCALE_T=10 VIO_CHECK_FAST=5 LIDAR_GUARD_T=2  (18:09:18)
+    GenZ-LIO LiDAR topic: /multifloor/velodyne_points   IMU topic: /cmu_sp1/imu/data
+SAH=1 KF_DIST=1 KF_ROT=0.2 SAH_RMIN=1 SAH_RMAX=60 SAH_VOXEL=0.25 SAH_MAXPTS=6000 SAH_MAX_STEP=0.25 deg
+VIO_CHECK=1 VIO_CHECK_REF=0.156 VIO_CHECK_NMIN=200 VIO_SCALE_T=10 VIO_CHECK_FAST=5 VIO_CHECK_FAST_REF=0.278 LIDAR_GUARD_T=2 LIDAR_GUARD_EX=2.16 GAMMA_MIN=0
+FUSION_MODE=fused C_T=3e-06 C_R=5e-06 KAPPA_MODE=fixed KAPPA_TH=1e+09 T_WARM=20 HESS_TOPIC=/laser_hessian PREDICT_WITH_VINS=1 RUN_TAG=G20_kf_run3 WEIGHT_MODE=schur W_ALPHA=0.7
+    keyframes saved: /home/kavinkumar/runs_v2_genz/keyframes_G20_kf_run3.npz (5.0M)
+    rows=4136  full-span ATE (RMSE,max) = 0.26,0.59
+starts   0.3 s after bag start, ends   0.1 s before bag end
+  full span of this run: n= 4130  GT path  272.8 m  RMSE =   0.26 m   Max =   0.59 m
+  common window (>= 1660857413): n= 3934  GT path  271.7 m  RMSE =   0.26 m   Max =   0.57 m
+=== G20_kf_run4 : FUSION_MODE=fused C_T=3e-6 C_R=5e-6 KAPPA_TH=1e9 SAH=1 VIO_CHECK=1 VIO_SCALE_T=10 VIO_CHECK_FAST=5 LIDAR_GUARD_T=2  (18:18:14)
+    GenZ-LIO LiDAR topic: /multifloor/velodyne_points   IMU topic: /cmu_sp1/imu/data
+SAH=1 KF_DIST=1 KF_ROT=0.2 SAH_RMIN=1 SAH_RMAX=60 SAH_VOXEL=0.25 SAH_MAXPTS=6000 SAH_MAX_STEP=0.25 deg
+VIO_CHECK=1 VIO_CHECK_REF=0.156 VIO_CHECK_NMIN=200 VIO_SCALE_T=10 VIO_CHECK_FAST=5 VIO_CHECK_FAST_REF=0.278 LIDAR_GUARD_T=2 LIDAR_GUARD_EX=2.16 GAMMA_MIN=0
+FUSION_MODE=fused C_T=3e-06 C_R=5e-06 KAPPA_MODE=fixed KAPPA_TH=1e+09 T_WARM=20 HESS_TOPIC=/laser_hessian PREDICT_WITH_VINS=1 RUN_TAG=G20_kf_run4 WEIGHT_MODE=schur W_ALPHA=0.7
+    keyframes saved: /home/kavinkumar/runs_v2_genz/keyframes_G20_kf_run4.npz (5.0M)
+    rows=4136  full-span ATE (RMSE,max) = 0.38,0.84
+starts   0.3 s after bag start, ends   0.1 s before bag end
+  full span of this run: n= 4130  GT path  272.8 m  RMSE =   0.38 m   Max =   0.84 m
+  common window (>= 1660857413): n= 3934  GT path  271.7 m  RMSE =   0.36 m   Max =   0.76 m
+done 18:26:45. Index: /home/kavinkumar/runs_v2_genz/results_index.csv
+##### Long Corridor G20 x4   18:26:45
+bags: /bags/raw_data_core_2023-07-25-03-01-44.bag 
+=== G20_kf_run1 : FUSION_MODE=fused C_T=3e-6 C_R=5e-6 KAPPA_TH=1e9 SAH=1 VIO_CHECK=1 VIO_SCALE_T=10 VIO_CHECK_FAST=5 LIDAR_GUARD_T=2  (18:26:45)
+    GenZ-LIO LiDAR topic: /corridor/velodyne_points   IMU topic: /imu/data
+SAH=1 KF_DIST=1 KF_ROT=0.2 SAH_RMIN=1 SAH_RMAX=60 SAH_VOXEL=0.25 SAH_MAXPTS=6000 SAH_MAX_STEP=0.25 deg
+VIO_CHECK=1 VIO_CHECK_REF=0.156 VIO_CHECK_NMIN=200 VIO_SCALE_T=10 VIO_CHECK_FAST=5 VIO_CHECK_FAST_REF=0.278 LIDAR_GUARD_T=2 LIDAR_GUARD_EX=2.16 GAMMA_MIN=0
+FUSION_MODE=fused C_T=3e-06 C_R=5e-06 KAPPA_MODE=fixed KAPPA_TH=1e+09 T_WARM=20 HESS_TOPIC=/laser_hessian PREDICT_WITH_VINS=1 RUN_TAG=G20_kf_run1 WEIGHT_MODE=schur W_ALPHA=0.7
+    keyframes saved: /home/kavinkumar/runs_corridor_G20_L_genz/keyframes_G20_kf_run1.npz (4.2M)
+    rows=2774  full-span ATE (RMSE,max) = 1.75,3.79
+GT span 1517157219.8..1517157499.0, log span 1517157219.4..1517157499.1, 2768 of 2774 poses inside GT span
+full span of this run: n= 2768  GT path  579.2 m  RMSE =   1.75 m   Max =   3.79 m
+=== G20_kf_run2 : FUSION_MODE=fused C_T=3e-6 C_R=5e-6 KAPPA_TH=1e9 SAH=1 VIO_CHECK=1 VIO_SCALE_T=10 VIO_CHECK_FAST=5 LIDAR_GUARD_T=2  (18:38:10)
+    GenZ-LIO LiDAR topic: /corridor/velodyne_points   IMU topic: /imu/data
+SAH=1 KF_DIST=1 KF_ROT=0.2 SAH_RMIN=1 SAH_RMAX=60 SAH_VOXEL=0.25 SAH_MAXPTS=6000 SAH_MAX_STEP=0.25 deg
+VIO_CHECK=1 VIO_CHECK_REF=0.156 VIO_CHECK_NMIN=200 VIO_SCALE_T=10 VIO_CHECK_FAST=5 VIO_CHECK_FAST_REF=0.278 LIDAR_GUARD_T=2 LIDAR_GUARD_EX=2.16 GAMMA_MIN=0
+FUSION_MODE=fused C_T=3e-06 C_R=5e-06 KAPPA_MODE=fixed KAPPA_TH=1e+09 T_WARM=20 HESS_TOPIC=/laser_hessian PREDICT_WITH_VINS=1 RUN_TAG=G20_kf_run2 WEIGHT_MODE=schur W_ALPHA=0.7
+    keyframes saved: /home/kavinkumar/runs_corridor_G20_L_genz/keyframes_G20_kf_run2.npz (4.2M)
+    rows=2774  full-span ATE (RMSE,max) = 1.64,3.71
+GT span 1517157219.8..1517157499.0, log span 1517157219.4..1517157499.1, 2768 of 2774 poses inside GT span
+full span of this run: n= 2768  GT path  579.2 m  RMSE =   1.64 m   Max =   3.71 m
+=== G20_kf_run3 : FUSION_MODE=fused C_T=3e-6 C_R=5e-6 KAPPA_TH=1e9 SAH=1 VIO_CHECK=1 VIO_SCALE_T=10 VIO_CHECK_FAST=5 LIDAR_GUARD_T=2  (18:48:49)
+    GenZ-LIO LiDAR topic: /corridor/velodyne_points   IMU topic: /imu/data
+SAH=1 KF_DIST=1 KF_ROT=0.2 SAH_RMIN=1 SAH_RMAX=60 SAH_VOXEL=0.25 SAH_MAXPTS=6000 SAH_MAX_STEP=0.25 deg
+VIO_CHECK=1 VIO_CHECK_REF=0.156 VIO_CHECK_NMIN=200 VIO_SCALE_T=10 VIO_CHECK_FAST=5 VIO_CHECK_FAST_REF=0.278 LIDAR_GUARD_T=2 LIDAR_GUARD_EX=2.16 GAMMA_MIN=0
+FUSION_MODE=fused C_T=3e-06 C_R=5e-06 KAPPA_MODE=fixed KAPPA_TH=1e+09 T_WARM=20 HESS_TOPIC=/laser_hessian PREDICT_WITH_VINS=1 RUN_TAG=G20_kf_run3 WEIGHT_MODE=schur W_ALPHA=0.7
+    keyframes saved: /home/kavinkumar/runs_corridor_G20_L_genz/keyframes_G20_kf_run3.npz (4.2M)
+    rows=2774  full-span ATE (RMSE,max) = 1.64,3.76
+GT span 1517157219.8..1517157499.0, log span 1517157219.4..1517157499.1, 2768 of 2774 poses inside GT span
+full span of this run: n= 2768  GT path  579.2 m  RMSE =   1.64 m   Max =   3.76 m
+=== G20_kf_run4 : FUSION_MODE=fused C_T=3e-6 C_R=5e-6 KAPPA_TH=1e9 SAH=1 VIO_CHECK=1 VIO_SCALE_T=10 VIO_CHECK_FAST=5 LIDAR_GUARD_T=2  (18:59:14)
+    GenZ-LIO LiDAR topic: /corridor/velodyne_points   IMU topic: /imu/data
+SAH=1 KF_DIST=1 KF_ROT=0.2 SAH_RMIN=1 SAH_RMAX=60 SAH_VOXEL=0.25 SAH_MAXPTS=6000 SAH_MAX_STEP=0.25 deg
+VIO_CHECK=1 VIO_CHECK_REF=0.156 VIO_CHECK_NMIN=200 VIO_SCALE_T=10 VIO_CHECK_FAST=5 VIO_CHECK_FAST_REF=0.278 LIDAR_GUARD_T=2 LIDAR_GUARD_EX=2.16 GAMMA_MIN=0
+FUSION_MODE=fused C_T=3e-06 C_R=5e-06 KAPPA_MODE=fixed KAPPA_TH=1e+09 T_WARM=20 HESS_TOPIC=/laser_hessian PREDICT_WITH_VINS=1 RUN_TAG=G20_kf_run4 WEIGHT_MODE=schur W_ALPHA=0.7
+    keyframes saved: /home/kavinkumar/runs_corridor_G20_L_genz/keyframes_G20_kf_run4.npz (4.2M)
+    rows=2774  full-span ATE (RMSE,max) = 1.67,3.76
+GT span 1517157219.8..1517157499.0, log span 1517157219.4..1517157499.1, 2768 of 2774 poses inside GT span
+full span of this run: n= 2768  GT path  579.2 m  RMSE =   1.67 m   Max =   3.76 m
+done 19:09:29. Index: /home/kavinkumar/runs_corridor_G20_L_genz/results_index.csv
+##### Cave02 G20 x2   19:09:29
+bags: /bags/cave02.bag 
+=== G20_kf_run1 : FUSION_MODE=fused C_T=3e-6 C_R=5e-6 KAPPA_TH=1e9 SAH=1 VIO_CHECK=1 VIO_SCALE_T=10 VIO_CHECK_FAST=5 LIDAR_GUARD_T=2  (19:09:29)
+    GenZ-LIO LiDAR topic: /velodyne_points   IMU topic: /imu/data
+SAH=1 KF_DIST=1 KF_ROT=0.2 SAH_RMIN=1 SAH_RMAX=60 SAH_VOXEL=0.25 SAH_MAXPTS=6000 SAH_MAX_STEP=0.25 deg
+VIO_CHECK=1 VIO_CHECK_REF=0.156 VIO_CHECK_NMIN=200 VIO_SCALE_T=10 VIO_CHECK_FAST=5 VIO_CHECK_FAST_REF=0.278 LIDAR_GUARD_T=2 LIDAR_GUARD_EX=2.16 GAMMA_MIN=0
+FUSION_MODE=fused C_T=3e-06 C_R=5e-06 KAPPA_MODE=fixed KAPPA_TH=1e+09 T_WARM=20 HESS_TOPIC=/laser_hessian PREDICT_WITH_VINS=1 RUN_TAG=G20_kf_run1 WEIGHT_MODE=schur W_ALPHA=0.7
+    keyframes saved: /home/kavinkumar/runs_cave02_rate05_L_genz/keyframes_G20_kf_run1.npz (6.3M)
+    rows=9468  full-span ATE (RMSE,max) = 0.30,0.81
+GT span 1681498134.6..1681499088.9, log span 1681498134.2..1681499089.0, 9462 of 9468 poses inside GT span
+full span of this run: n= 9462  GT path  475.0 m  RMSE =   0.30 m   Max =   0.81 m
+=== G20_kf_run2 : FUSION_MODE=fused C_T=3e-6 C_R=5e-6 KAPPA_TH=1e9 SAH=1 VIO_CHECK=1 VIO_SCALE_T=10 VIO_CHECK_FAST=5 LIDAR_GUARD_T=2  (19:46:29)
+    GenZ-LIO LiDAR topic: /velodyne_points   IMU topic: /imu/data
+SAH=1 KF_DIST=1 KF_ROT=0.2 SAH_RMIN=1 SAH_RMAX=60 SAH_VOXEL=0.25 SAH_MAXPTS=6000 SAH_MAX_STEP=0.25 deg
+VIO_CHECK=1 VIO_CHECK_REF=0.156 VIO_CHECK_NMIN=200 VIO_SCALE_T=10 VIO_CHECK_FAST=5 VIO_CHECK_FAST_REF=0.278 LIDAR_GUARD_T=2 LIDAR_GUARD_EX=2.16 GAMMA_MIN=0
+FUSION_MODE=fused C_T=3e-06 C_R=5e-06 KAPPA_MODE=fixed KAPPA_TH=1e+09 T_WARM=20 HESS_TOPIC=/laser_hessian PREDICT_WITH_VINS=1 RUN_TAG=G20_kf_run2 WEIGHT_MODE=schur W_ALPHA=0.7
+    keyframes saved: /home/kavinkumar/runs_cave02_rate05_L_genz/keyframes_G20_kf_run2.npz (6.3M)
+    rows=9468  full-span ATE (RMSE,max) = 0.28,0.80
+GT span 1681498134.6..1681499088.9, log span 1681498134.2..1681499089.0, 9462 of 9468 poses inside GT span
+full span of this run: n= 9462  GT path  475.0 m  RMSE =   0.28 m   Max =   0.80 m
+done 20:22:44. Index: /home/kavinkumar/runs_cave02_rate05_L_genz/results_index.csv
+##### ALL DONE   20:22:44

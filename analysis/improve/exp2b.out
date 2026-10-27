@@ -1,0 +1,18 @@
+MF   F8 (no SAH)                          0.77 0.73 0.62 0.58 0.59 0.47 | mean 0.626 sd 0.107
+MF   F16 (SAH FUSED only, tw20)           0.54 0.47 0.57 0.62 0.58 0.59 | mean 0.562 sd 0.049
+MF   SAH also in WARMUP, tw20             0.48 0.42 0.62 0.65 0.51 0.74 | mean 0.569 sd 0.121
+MF   F16 tw10                             0.48 0.39 0.63 0.64 0.58 0.74 | mean 0.577 sd 0.126
+MF   F16 tw0                              0.48 0.48 0.72 0.67 0.64 0.75 | mean 0.623 sd 0.116
+MF   SAH in WARMUP + tw0 (same as tw0)    0.48 0.48 0.72 0.67 0.64 0.75 | mean 0.623 sd 0.116
+LC   F8 (no SAH)                          4.74 4.85 3.95 | mean 4.515 sd 0.495
+LC   F16 (SAH FUSED only, tw20)           1.67 1.99 2.15 | mean 1.940 sd 0.245
+LC   SAH also in WARMUP, tw20             1.37 1.59 2.84 | mean 1.935 sd 0.793
+LC   F16 tw10                             1.39 1.61 1.83 | mean 1.607 sd 0.222
+LC   F16 tw0                              1.36 1.56 1.84 | mean 1.587 sd 0.237
+LC   SAH in WARMUP + tw0 (same as tw0)    1.36 1.56 1.84 | mean 1.587 sd 0.237
+C02  F8 (no SAH)                          2.12 2.14 2.24 | mean 2.168 sd 0.063
+C02  F16 (SAH FUSED only, tw20)           1.70 1.73 1.82 | mean 1.749 sd 0.060
+C02  SAH also in WARMUP, tw20             1.62 1.66 1.73 | mean 1.668 sd 0.054
+C02  F16 tw10                             1.66 1.72 1.81 | mean 1.730 sd 0.074
+C02  F16 tw0                              1.61 1.65 1.72 | mean 1.663 sd 0.053
+C02  SAH in WARMUP + tw0 (same as tw0)    1.61 1.65 1.72 | mean 1.663 sd 0.053

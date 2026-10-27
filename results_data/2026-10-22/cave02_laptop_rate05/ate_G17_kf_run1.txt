@@ -1,0 +1,2 @@
+GT span 1681498134.6..1681499088.9, log span 1681498134.2..1681499089.0, 9462 of 9468 poses inside GT span
+full span of this run: n= 9462  GT path  475.0 m  RMSE =   3.65 m   Max =   8.63 m

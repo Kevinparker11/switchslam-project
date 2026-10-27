@@ -1,0 +1,64 @@
+diff --git a/feature_tracker/src/feature_tracker_node.cpp b/feature_tracker/src/feature_tracker_node.cpp
+index 5a5261c..78536a8 100644
+--- a/feature_tracker/src/feature_tracker_node.cpp
++++ b/feature_tracker/src/feature_tracker_node.cpp
+@@ -27,6 +27,7 @@ bool init_pub = 0;
+ 
+ void img_callback(const sensor_msgs::ImageConstPtr &img_msg)
+ {
++    printf("IMG_CALLBACK FIRED, seq=%d\n", img_msg->header.seq);
+     if(first_image_flag)
+     {
+         first_image_flag = false;
+diff --git a/vins_estimator/src/estimator.cpp b/vins_estimator/src/estimator.cpp
+index cc19876..7bd84c1 100644
+--- a/vins_estimator/src/estimator.cpp
++++ b/vins_estimator/src/estimator.cpp
+@@ -1,4 +1,6 @@
+ #include "estimator.h"
++#include <std_msgs/Float64MultiArray.h>
++#include <ros/ros.h>
+ 
+ Estimator::Estimator(): f_manager{Rs}
+ {
+@@ -816,6 +818,40 @@ void Estimator::optimization()
+     TicToc t_solver;
+     ceres::Solver::Summary summary;
+     ceres::Solve(options, &problem, &summary);
++
++    // --- Hv (visual Hessian, newest pose only) extraction ---
++    {
++        static ros::Publisher pubVinsMonoHessian;
++        static bool pub_initialized = false;
++        if (!pub_initialized) {
++            ros::NodeHandle nh_hess;
++            pubVinsMonoHessian = nh_hess.advertise<std_msgs::Float64MultiArray>("/vins_mono_hessian", 100);
++            pub_initialized = true;
++        }
++
++        ceres::Problem::EvaluateOptions eval_options;
++        eval_options.parameter_blocks.push_back(para_Pose[WINDOW_SIZE]);
++        ceres::CRSMatrix jacobian_crs;
++        double cost_val;
++        problem.Evaluate(eval_options, &cost_val, nullptr, nullptr, &jacobian_crs);
++
++        if (jacobian_crs.num_rows > 0 && jacobian_crs.num_cols == 6) {
++            Eigen::MatrixXd Jv = Eigen::MatrixXd::Zero(jacobian_crs.num_rows, jacobian_crs.num_cols);
++            for (int row = 0; row < jacobian_crs.num_rows; ++row) {
++                for (int idx = jacobian_crs.rows[row]; idx < jacobian_crs.rows[row + 1]; ++idx) {
++                    Jv(row, jacobian_crs.cols[idx]) = jacobian_crs.values[idx];
++                }
++            }
++            Eigen::MatrixXd Hv = Jv.transpose() * Jv;
++
++            std_msgs::Float64MultiArray hv_msg;
++            hv_msg.data.resize(Hv.rows() * Hv.cols());
++            for (int r = 0; r < Hv.rows(); ++r)
++                for (int c = 0; c < Hv.cols(); ++c)
++                    hv_msg.data[r * Hv.cols() + c] = Hv(r, c);
++            pubVinsMonoHessian.publish(hv_msg);
++        }
++    }
+     //cout << summary.BriefReport() << endl;
+     ROS_DEBUG("Iterations : %d", static_cast<int>(summary.iterations.size()));
+     ROS_DEBUG("solver costs: %f", t_solver.toc());

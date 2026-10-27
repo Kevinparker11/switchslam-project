@@ -1,0 +1,379 @@
+# SwitchSLAM environment capture  2026-10-22T09:49:19+05:30
+
+## host
+Linux JARVIS 6.8.0-138-generic #138~22.04.1-Ubuntu SMP PREEMPT_DYNAMIC Fri Aug  7 13:43:15 UTC  x86_64 x86_64 x86_64 GNU/Linux
+Distributor ID:	Ubuntu
+Description:	Ubuntu 22.04.5 LTS
+Release:	22.04
+Codename:	jammy
+Python 3.10.12
+numpy      2.2.6
+scipy      1.15.3
+pandas     2.3.3
+sklearn    1.7.2
+matplotlib 3.10.8
+yaml       5.4.1
+gtsam      installed
+rosbag     MISSING (ImportError)
+
+## docker
+client 29.1.3 server 29.1.3
+NAMES               IMAGE                           STATUS
+switchslam_gpu_v2   switchslam_working_v2           Exited (0) 3 hours ago
+vinsmono_test       osrf/ros:kinetic-desktop-full   Exited (0) 3 hours ago
+
+REPOSITORY              TAG                    IMAGE ID       SIZE      DIGEST
+vinsmono_test           baseline-2026-10-09    0e9784b69fc5   10.7GB    sha256:0e9784b69fc54ed32b0feb90c3dd4d546a905ebc0e6a24058544d6a2cc6bc6db
+switchslam_gpu_v2       baseline-2026-10-09    76b7e5bc7e09   9.33GB    sha256:76b7e5bc7e09392abd08e978c11a8b986b7152eba409d73d5a22067779483d64
+switchslam_working_v3   latest                 ca786e5bec69   8.7GB     sha256:ca786e5bec69e9f917ea6620f72e9fe364dee3ea3391e4bc43a907df74c8327e
+switchslam_working_v2   latest                 1ca736faa142   7.09GB    sha256:1ca736faa142bc83d0bdbcca21658eabcae2bf51a90329a9019579cbdac31676
+osrf/ros                noetic-desktop-full    7dbfb9576d8e   6.01GB    sha256:7dbfb9576d8e6d226c31e06129a82aaab8702695f38eca2116918cb9b9308797
+osrf/ros                kinetic-desktop-full   fa1d77aa0dea   4.45GB    sha256:fa1d77aa0dea8632dd665498c5106a2a1db5a50e22d4bfd6ed5e21f2c37f3168
+ros                     noetic                 72b8bc59035d   2.94GB    sha256:72b8bc59035dc0a5b8e07aae28c16caa84192971d72d207c72ed734fb1d5e97d
+
+## network
+NETWORK ID     NAME          DRIVER    SCOPE
+99f165446a4c   bridge        bridge    local
+34c19610b958   host          host      local
+c4cd6cd1db22   none          null      local
+eb5b65d3d472   vins_bridge   bridge    local
+[
+    {
+        "Name": "vins_bridge",
+        "Id": "eb5b65d3d4729b18a6cdd503979fa1840ad4d3539cc5822d2a17004d798404c4",
+        "Created": "2026-09-08T16:06:46.185441092+05:30",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv4": true,
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": {},
+            "Config": [
+                {
+                    "Subnet": "172.17.0.0/16",
+                    "IPRange": "",
+                    "Gateway": "172.17.0.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Options": {},
+        "Labels": {},
+        "Containers": {},
+        "Status": {
+            "IPAM": {
+                "Subnets": {
+                    "172.17.0.0/16": {
+                        "IPsInUse": 3,
+                        "DynamicIPsAvailable": 65533
+                    }
+                }
+            }
+        }
+
+## nvidia
+name, driver_version
+NVIDIA GeForce GTX 1650, 595.99.02
+
+################ container switchslam_gpu_v2
+image=switchslam_working_v2  cmd=[bash]  entrypoint=[/ros_entrypoint.sh]  net=bridge vins_bridge 
+-- mounts/env:
+/home/kavinkumar/catkin_ws_rebuild -> /root/catkin_ws
+/tmp/.X11-unix -> /tmp/.X11-unix
+NVIDIA_VISIBLE_DEVICES=all
+NVIDIA_DRIVER_CAPABILITIES=all
+DISPLAY=:1
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+LANG=C.UTF-8
+LC_ALL=C.UTF-8
+ROS_DISTRO=noetic
+
+-- history (how the image was built):
+bash
+RUN /bin/sh -c apt-get update && apt-get install -y --no-install-recommends     ros-noetic-desktop-full=1.5.0-1*     && rm -rf /var/lib/apt/lists/* # buildkit
+RUN /bin/sh -c apt-get update && apt-get install -y --no-install-recommends     ros-noetic-desktop=1.5.0-1*     && rm -rf /var/lib/apt/lists/* # buildkit
+RUN /bin/sh -c apt-get update && apt-get install -y --no-install-recommends     ros-noetic-robot=1.5.0-1*     && rm -rf /var/lib/apt/lists/* # buildkit
+RUN /bin/sh -c apt-get update && apt-get install -y --no-install-recommends     ros-noetic-ros-base=1.5.0-1*     && rm -rf /var/lib/apt/lists/* # buildkit
+RUN /bin/sh -c rosdep init &&   rosdep update --rosdistro $ROS_DISTRO # buildkit
+RUN /bin/sh -c apt-get update && apt-get install --no-install-recommends -y     build-essential     python3-rosdep     python3-rosinstall     python3-vcstools     && rm -rf /var/lib/apt/lists/* # buildkit
+CMD ["bash"]
+ENTRYPOINT ["/ros_entrypoint.sh"]
+COPY ./ros_entrypoint.sh / # buildkit
+RUN /bin/sh -c apt-get update && apt-get install -y --no-install-recommends     ros-noetic-ros-core=1.5.0-1*     && rm -rf /var/lib/apt/lists/* # buildkit
+ENV ROS_DISTRO=noetic
+ENV LC_ALL=C.UTF-8
+ENV LANG=C.UTF-8
+RUN /bin/sh -c echo "deb [ signed-by=/usr/share/keyrings/ros1-snapshots-archive-keyring.gpg ] http://snapshots.ros.org/noetic/final/ubuntu focal main" > /etc/apt/sources.list.d/ros1-snapshots.list # buildkit
+RUN /bin/sh -c set -eux;        key='4B63CF8FDE49746E98FA01DDAD19BAB3CBF125EA';        export GNUPGHOME="$(mktemp -d)";        gpg --batch --keyserver keyserver.ubuntu.com --recv-keys "$key";        mkdir -p /usr/share/keyrings;        gpg --batch --export "$key" > /usr/share/keyrings/ros1-snapshots-archive-keyring.gpg;        gpgconf --kill all;        rm -rf "$GNUPGHOME" # buildkit
+RUN /bin/sh -c apt-get update && apt-get install -q -y --no-install-recommends     ca-certificates     curl     dirmngr     gnupg2     && rm -rf /var/lib/apt/lists/* # buildkit
+RUN /bin/sh -c echo 'Etc/UTC' > /etc/timezone &&     ln -s /usr/share/zoneinfo/Etc/UTC /etc/localtime &&     apt-get update &&     apt-get install -q -y --no-install-recommends tzdata &&     rm -rf /var/lib/apt/lists/* # buildkit
+/bin/sh -c #(nop)  CMD ["/bin/bash"]
+/bin/sh -c #(nop) ADD file:f9ee450324e6ff2c946bc9aae5cf7e35e240dbd387d8b9f5ee1ed5b8434b9894 in / 
+/bin/sh -c #(nop)  LABEL org.opencontainers.image.version=20.04
+/bin/sh -c #(nop)  LABEL org.opencontainers.image.ref.name=ubuntu
+/bin/sh -c #(nop)  ARG LAUNCHPAD_BUILD_ARCH
+/bin/sh -c #(nop)  ARG RELEASE
+-- os:
+Ubuntu 20.04.6 LTS
+ros: noetic
+-- tools:
+gcc (Ubuntu 9.4.0-1ubuntu1~20.04.2) 9.4.0
+cmake version 3.16.3
+Python 3.8.10
+bash: line 3: python: command not found
+-- workspaces:
+/root/catkin_ws
+/root/catkin_ws
+/root/genz_ws
+/root/genz_ws
+-- git revisions of every source repo under /root:
+/root/genz_ws/src/genz-lio      dirty=0
+/root/eigen34/src      dirty=0
+/root/catkin_ws/src/A-LOAM  e51f88c  https://github.com/HKUST-Aerial-Robotics/A-LOAM.git  dirty=6
+/root/catkin_ws/src/cpr_gazebo  509afbe  https://github.com/clearpathrobotics/cpr_gazebo.git  dirty=0
+-- ros packages we depend on:
+aloam_velodyne: [rospack] Error: package 'aloam_velodyne' not found
+vins_estimator: [rospack] Error: package 'vins_estimator' not found
+feature_tracker: [rospack] Error: package 'feature_tracker' not found
+velodyne_pointcloud: /opt/ros/noetic/share/velodyne_pointcloud
+genz_lio: [rospack] Error: package 'genz_lio' not found
+compressed_image_transport: /opt/ros/noetic/share/compressed_image_transport
+-- libs:
+libeigen3-dev 3.3.7-2
+libgoogle-glog-dev 0.4.0-1build1
+libgoogle-glog0v5 0.4.0-1build1
+libopencv-dev 4.2.0+dfsg-5
+libpcl-dev 1.10.0+dfsg-5ubuntu1
+ros-noetic-compressed-depth-image-transport 1.15.0-1focal.20250521.004155
+ros-noetic-compressed-image-transport 1.15.0-1focal.20250521.004234
+ros-noetic-cv-bridge 1.16.2-1focal.20250519.235655
+ros-noetic-image-transport 1.12.1-1focal.20250519.235437
+ros-noetic-image-transport-plugins 1.15.0-1focal.20250521.012022
+ros-noetic-pcl-conversions 1.7.4-1focal.20250520.005606
+ros-noetic-pcl-msgs 0.3.0-1focal.20250520.005335
+ros-noetic-pcl-ros 1.7.4-1focal.20250521.004323
+ros-noetic-velodyne 1.7.0-1focal.20250521.010417
+ros-noetic-velodyne-description 1.0.13-1focal.20250519.234247
+ros-noetic-velodyne-driver 1.7.0-1focal.20250521.003741
+ros-noetic-velodyne-gazebo-plugins 1.0.13-1focal.20250521.012018
+ros-noetic-velodyne-laserscan 1.7.0-1focal.20250521.004110
+ros-noetic-velodyne-msgs 1.7.0-1focal.20250426.013011
+ros-noetic-velodyne-pointcloud 1.7.0-1focal.20250521.004448
+eigen in /usr/local: 3.4.0.
+-- /root and /root/thr:
+aloam_fresh.log
+aloam_launch.log
+aloam_only_logger.py
+aloam_pristine_run1.csv
+aloam_pristine_run2.csv
+aloam_pristine_run3.csv
+aloam_xvfb.log
+catkin_ws
+cave02_aloam.launch
+ceres-solver-1.14.0
+ceres-solver-1.14.0.tar.gz
+corridor2_aloam.launch
+corridor_aloam.launch
+corridor_velodyne_convert.launch
+eigen34
+farm_fresh_gazebo.log
+farm_fresh_gazebo2.log
+farm_gazebo_launch.log
+farm_gazebo_launch2.log
+farm_gazebo_launch3.log
+farm_xvfb.log
+genz_ws
+geode_aloam.launch
+gzserver_verbose.log
+lidar_only_detector.py
+multifloor_aloam.launch
+multifloor_aloam_standalone.launch
+multifloor_velodyne_convert.launch
+patch_revert_bounded_history.py
+roscore_debug.log
+run1_baseline
+run2_timedecay
+run_logs
+switching_log_threeway_rawlog.csv
+switching_node_dualconf.py
+switching_node_farm_rawlog.log
+switching_node_multifloor.py
+switching_node_multifloor_gt.py
+switching_node_multifloor_timedecay.py
+switching_node_multifloor_verbose.py
+switching_node_schurbingham.py
+switching_node_threeway.py
+switching_node_timedecay.py
+switching_node_v9.py
+switching_node_xvfb.log
+thr
+waypoint_driver_farm_run.log
+waypoint_driver_fastrotate.py
+waypoint_driver_fastrotate_lpath.py
+waypoint_driver_panels.py
+waypoint_driver_v4.py
+waypoint_driver_xvfb.log
+ws_aloam_pristine
+xvfb.log
+__pycache__
+cave02_extrinsics.yaml
+corridor2_extrinsics.yaml
+corridor_extrinsics.yaml
+degeneracy_rules.py
+fusion_core.py
+fusion_node_v2.py
+genz_build.out
+genz_diag.out
+genz_frozen.yaml
+geode_extrinsics.yaml
+hz_Odometry.txt
+hz_aft_mapped_to_init.txt
+hz_cloud_registered.txt
+hz_imu_data.txt
+hz_laser_hessian.txt
+hz_multifloor_velodyne_points.txt
+keyframe_recorder.py
+keyframes_F16_kf_run1.npz
+keyframes_F16_kf_run2.npz
+keyframes_F16_kf_run3.npz
+keyframes_F16_kf_run4.npz
+keyframes_F16_kf_run5.npz
+keyframes_F16_kf_run6.npz
+keyframes_F4_kf_run1.npz
+keyframes_F7_kf_run1.npz
+keyframes_F8_kf_run1.npz
+keyframes_F8_kf_run2.npz
+keyframes_F8_kf_run3.npz
+keyframes_F8_kf_run4.npz
+keyframes_F8_kf_run5.npz
+keyframes_F8_kf_run6.npz
+keyframes_F8_kf_run7.npz
+keyframes_F8_kf_run8.npz
+keyframes_F8_kf_run9.npz
+keyframes_F9_kf_run1.npz
+keyframes_F9_kf_run2.npz
+keyframes_F9_kf_run3.npz
+keyframes_G0_kf_run1.npz
+keyframes_G0_kf_run2.npz
+keyframes_G0_kf_run3.npz
+keyframes_G17_kf_run1.npz
+kf_F16_kf_run1.out
+kf_F16_kf_run2.out
+kf_F16_kf_run3.out
+kf_F16_kf_run4.out
+kf_F16_kf_run5.out
+kf_F16_kf_run6.out
+kf_F4_kf_run1.out
+kf_F7_kf_run1.out
+-- pip:
+matplotlib                    3.1.2     
+numpy                         1.24.4    
+PyYAML                        5.3.1     
+scipy                         1.10.1    
+
+################ container vinsmono_test
+image=osrf/ros:kinetic-desktop-full  cmd=[bash]  entrypoint=[/ros_entrypoint.sh]  net=bridge vins_bridge 
+-- mounts/env:
+/tmp/.X11-unix -> /tmp/.X11-unix
+/home/kavinkumar/catkin_ws_mono -> /root/catkin_ws
+DISPLAY=:1
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+LANG=C.UTF-8
+LC_ALL=C.UTF-8
+ROS_DISTRO=kinetic
+
+-- history (how the image was built):
+RUN /bin/sh -c apt-get update && apt-get install -y --no-install-recommends     ros-kinetic-desktop-full=1.3.2-0*     && rm -rf /var/lib/apt/lists/* # buildkit
+RUN /bin/sh -c apt-get update && apt-get install -y --no-install-recommends     ros-kinetic-desktop=1.3.2-0*     && rm -rf /var/lib/apt/lists/* # buildkit
+RUN /bin/sh -c apt-get update && apt-get install -y --no-install-recommends     ros-kinetic-robot=1.3.2-0*     && rm -rf /var/lib/apt/lists/* # buildkit
+RUN /bin/sh -c apt-get update && apt-get install -y --no-install-recommends     ros-kinetic-ros-base=1.3.2-0*     && rm -rf /var/lib/apt/lists/* # buildkit
+RUN /bin/sh -c rosdep init &&   rosdep update --rosdistro $ROS_DISTRO # buildkit
+RUN /bin/sh -c apt-get update && apt-get install --no-install-recommends -y     build-essential     python-rosdep     python-rosinstall     python-vcstools     && rm -rf /var/lib/apt/lists/* # buildkit
+CMD ["bash"]
+ENTRYPOINT ["/ros_entrypoint.sh"]
+COPY ./ros_entrypoint.sh / # buildkit
+RUN /bin/sh -c apt-get update && apt-get install -y --no-install-recommends     ros-kinetic-ros-core=1.3.2-0*     && rm -rf /var/lib/apt/lists/* # buildkit
+ENV ROS_DISTRO=kinetic
+ENV LC_ALL=C.UTF-8
+ENV LANG=C.UTF-8
+RUN /bin/sh -c echo "deb http://snapshots.ros.org/kinetic/final/ubuntu xenial main" > /etc/apt/sources.list.d/ros1-snapshots.list # buildkit
+RUN /bin/sh -c apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 4B63CF8FDE49746E98FA01DDAD19BAB3CBF125EA # buildkit
+RUN /bin/sh -c apt-get update && apt-get install -q -y --no-install-recommends     dirmngr     gnupg2     && rm -rf /var/lib/apt/lists/* # buildkit
+/bin/sh -c #(nop)  CMD ["/bin/bash"]
+/bin/sh -c mkdir -p /run/systemd && echo 'docker' > /run/systemd/container
+/bin/sh -c rm -rf /var/lib/apt/lists/*
+/bin/sh -c set -xe   && echo '#!/bin/sh' > /usr/sbin/policy-rc.d  && echo 'exit 101' >> /usr/sbin/policy-rc.d  && chmod +x /usr/sbin/policy-rc.d   && dpkg-divert --local --rename --add /sbin/initctl  && cp -a /usr/sbin/policy-rc.d /sbin/initctl  && sed -i 's/^exit.*/exit 0/' /sbin/initctl   && echo 'force-unsafe-io' > /etc/dpkg/dpkg.cfg.d/docker-apt-speedup   && echo 'DPkg::Post-Invoke { "rm -f /var/cache/apt/archives/*.deb /var/cache/apt/archives/partial/*.deb /var/cache/apt/*.bin || true"; };' > /etc/apt/apt.conf.d/docker-clean  && echo 'APT::Update::Post-Invoke { "rm -f /var/cache/apt/archives/*.deb /var/cache/apt/archives/partial/*.deb /var/cache/apt/*.bin || true"; };' >> /etc/apt/apt.conf.d/docker-clean  && echo 'Dir::Cache::pkgcache ""; Dir::Cache::srcpkgcache "";' >> /etc/apt/apt.conf.d/docker-clean   && echo 'Acquire::Languages "none";' > /etc/apt/apt.conf.d/docker-no-languages   && echo 'Acquire::GzipIndexes "true"; Acquire::CompressionTypes::Order:: "gz";' > /etc/apt/apt.conf.d/docker-gzip-indexes   && echo 'Apt::AutoRemove::SuggestsImportant "false";' > /etc/apt/apt.conf.d/docker-autoremove-suggests
+/bin/sh -c #(nop) ADD file:11b425d4c08e81a3e0cb2e0345d27cd5fc844dd83f1096af4cc05f635824ff5d in / 
+-- os:
+Ubuntu 16.04.7 LTS
+ros: kinetic
+-- tools:
+gcc (Ubuntu 5.4.0-6ubuntu1~16.04.12) 5.4.0 20160609
+cmake version 3.5.1
+Python 3.5.2
+Python 2.7.12
+-- workspaces:
+/root/catkin_ws
+/root/catkin_ws
+-- git revisions of every source repo under /root:
+/root/catkin_ws/src/VINS-Mono  90dabb5  https://github.com/HKUST-Aerial-Robotics/VINS-Mono.git  dirty=9
+-- ros packages we depend on:
+aloam_velodyne: [rospack] Error: package 'aloam_velodyne' not found
+vins_estimator: [rospack] Error: package 'vins_estimator' not found
+feature_tracker: [rospack] Error: package 'feature_tracker' not found
+velodyne_pointcloud: [rospack] Error: package 'velodyne_pointcloud' not found
+genz_lio: [rospack] Error: package 'genz_lio' not found
+compressed_image_transport: /opt/ros/kinetic/share/compressed_image_transport
+-- libs:
+libeigen3-dev 3.3~beta1-2
+libgoogle-glog-dev 0.3.4-0.1
+libgoogle-glog0v5 0.3.4-0.1
+libopencv-dev 2.4.9.1+dfsg-1.5ubuntu1.1
+libpcl-dev 1.7.2-14ubuntu0.1
+ros-kinetic-compressed-depth-image-transport 1.9.5-0xenial-20210503-155016-0800
+ros-kinetic-compressed-image-transport 1.9.5-0xenial-20210503-155018-0800
+ros-kinetic-cv-bridge 1.12.8-0xenial-20210503-113734-0800
+ros-kinetic-image-transport 1.11.13-0xenial-20210503-113745-0800
+ros-kinetic-image-transport-plugins 1.9.5-0xenial-20210503-161336-0800
+ros-kinetic-pcl-conversions 0.2.1-0xenial-20210503-113550-0800
+ros-kinetic-pcl-msgs 0.2.0-0xenial-20210503-112922-0800
+ros-kinetic-pcl-ros 1.4.4-0xenial-20210503-130753-0800
+-- /root and /root/thr:
+MH_01_easy.bag
+catkin_ws
+ceres-solver-1.14.0
+ceres-solver-1.14.0.tar.gz
+feature_tracker_fresh.log
+feature_tracker_xvfb.log
+gt_leica.bag.active
+gt_leica.csv
+gt_leica.orig.bag
+patch_vinsmono_hessian.py
+run_logs
+save_leica_gt.py
+thr
+vins_estimator_fresh.log
+vins_estimator_xvfb.log
+vins_launch.log
+vins_output
+vins_output_cave02
+vins_output_corridor
+vins_output_corridor2
+vins_output_geode
+vins_output_multifloor
+ws_vins_pristine
+ft.out
+geode_republish.py
+pre.out
+vins.out
+-- pip:
+
+## repository
+fatal: not a git repository (or any of the parent directories): .git

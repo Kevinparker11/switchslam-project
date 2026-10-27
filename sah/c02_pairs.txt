@@ -1,0 +1,1 @@
+data_in8/switching_log_v2_F8_kf_run1.csv:/home/claude/data_kf/C02_keyframes_F8_kf_run1.npz data_in8/switching_log_v2_F8_kf_run2.csv:/home/claude/data_kf/C02_keyframes_F8_kf_run2.npz data_in8/switching_log_v2_F8_kf_run3.csv:/home/claude/data_kf/C02_keyframes_F8_kf_run3.npz

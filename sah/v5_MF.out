@@ -1,0 +1,8 @@
+F8 no SAH                            0.766 0.731 0.619 0.576 0.587 0.475 mean 0.626 | log1 {}
+SAH                                  0.450 0.428 0.775 0.416 0.403 0.458 mean 0.488 | log1 {'acc': 356, 'rej_struct': 59, 'rej_nis': 0, 'new': 18, 'pruned': 7, 'ambiguous': 196, 'kf': 471}
+SAH unstructured (random normals)    0.766 0.731 0.619 0.576 0.587 0.475 mean 0.626 | log1 {'acc': 0, 'rej_struct': 471, 'rej_nis': 0, 'new': 0, 'pruned': 0, 'ambiguous': 0, 'kf': 471}
+SAH structure lost after 40%         0.469 0.527 0.686 0.447 0.430 0.426 mean 0.497 | log1 {'acc': 144, 'rej_struct': 312, 'rej_nis': 0, 'new': 15, 'pruned': 4, 'ambiguous': 30, 'kf': 471}
+SAH structure only after 40%         0.645 0.792 0.713 0.712 0.542 0.460 mean 0.644 | log1 {'acc': 206, 'rej_struct': 218, 'rej_nis': 0, 'new': 14, 'pruned': 3, 'ambiguous': 161, 'kf': 471}
+SAH 30% outlier normals              0.494 0.482 0.681 0.457 0.426 0.436 mean 0.496 | log1 {'acc': 273, 'rej_struct': 103, 'rej_nis': 0, 'new': 17, 'pruned': 6, 'ambiguous': 262, 'kf': 471}
+SAH 20% of points                    0.488 0.417 0.491 0.475 0.465 0.599 mean 0.489 | log1 {'acc': 175, 'rej_struct': 263, 'rej_nis': 0, 'new': 9, 'pruned': 2, 'ambiguous': 98, 'kf': 471}
+SAH strong spurious direction        0.469 0.388 0.807 0.461 0.435 0.437 mean 0.500 | log1 {'acc': 364, 'rej_struct': 71, 'rej_nis': 0, 'new': 71, 'pruned': 41, 'ambiguous': 127, 'kf': 471}

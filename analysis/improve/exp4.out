@@ -1,0 +1,6 @@
+Schur R channel: replay of logged F8 runs, ATE RMSE (m), mean over runs; c_t=0.03, no gate; rotation weight W_R=(c_R S_RR+I)^-1 c_R S_RR
+seq   n | cR=0      cR=0.003  cR=0.03   cR=0.3    cR=3      cR=30    
+MF    9 | 0.618     1.337     1.793     1.968     1.993     1.995    
+LC    3 | 4.515     2.339     1.936     1.941     1.942     1.942    
+C02   3 | 2.168     4.076     3.444     3.472     3.478     3.479    
+CAVE  3 | 4.508     5.695     8.188     8.755     8.813     8.819    
