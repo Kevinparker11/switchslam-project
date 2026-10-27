@@ -39,3 +39,30 @@ Checked against `switchslam_v1/farm/`: the old L-shape runs used `waypoint_drive
 What is the same: the L waypoints (0,0)-(0,-40)-(-20,-40)-(-40,-40), the robot reset to (0, 0, 0.2), Husky with VLP-16, a monocular camera and a 200 Hz IMU, exact Gazebo ground truth, an L of about 80 m.
 What is not: the new recording is driven by `gz_driver.py` at 0.5 m/s (177 s, 1773 scans, route completed), twice the old nominal speed; the sensor description is `husky_sim_extras.urdf.xacro`, not the old xacro; the methods are replayed from a bag (exact for GenZ-LIO and VINS-Mono, which take no feedback) instead of live in a GUI session; and the world launch (`agriculture_world.launch`) is assumed, not confirmed. So this is the same route and a similar world, not a re-run of the old session.
 To remove the speed difference the bag can be re-recorded at the old nominal speed: `GZ_SPEED=0.25 ./gz_record.sh farm 1` (about 6 min of bag). Both recordings would be reported; the choice of which is the main one is made before any score is looked at.
+
+## Results of the first recording (27 Oct 2026, GZ_SPEED=0.25, 340 s, 3401 scans, 80.6 m of ground-truth path; one live run each, nothing changed after seeing a score)
+Full-span ATE RMSE / max (m), Umeyama SE(3), exact ground truth:
+
+| Method | ATE / max | How obtained |
+|---|---|---|
+| F5 A-LOAM alone | **0.10 / 0.19** | live, A-LOAM stack |
+| F8 (C_T 0.03, no gate) | **0.99 / 2.71** | live, A-LOAM stack |
+| GenZ-LIO alone | 7.34 / 15.73 | replay of the G20 log |
+| VINS-Mono alone | 4.14 / 10.53 | replay |
+| G8 / G16 | 7.84 / 7.92 | replay |
+| G9 / G17 (RTS-core without / with SAH) | 2.49 / 2.51 | replay |
+| G18 / G19 | 6.41 / 6.32 | replay |
+| **G20 (RTS-Fusion)** | **6.46 / 14.49** | live (replay 6.462 equals the live value) |
+| G21 (G20 + VINS information floor 1e-3, defined 24 Oct) | 6.38 / 14.33 | replay |
+| G22-type (c_T 3e-5 on the G20 settings) | 6.74 | replay |
+| Switch-SLAM rule re-run (SW, SWR) | 4.14 / 10.53 | replay; identical to VINS-Mono alone: the rule never took the LiDAR translation |
+Generation-1 switching node on the same L route: 5.02 / 5.79 / 5.18 m (A-LOAM alone 0.32 / 0.44 / 0.48 m).
+
+Rules (fixed before the recording):
+- **P1 (replication check) not met as written:** F5 is 0.10 m, 0.22 m below the lowest old value (0.32 m), outside the 0.2 m window. The new A-LOAM-alone run is better than the old live ones; the old runs were live, in real time with a GUI, and could drop scans (different driver and speed too). This recording is therefore not a replica of the old session, and nothing in the old numbers is reproduced exactly.
+- **P2:** F8 0.99 m (one run) is below 2.5 m; **G20 6.46 m is not.** G9 passes by 0.007 m, G17 misses by 0.007 m.
+- **P3 (fusion at or below the LiDAR alone):** not met, as predicted: F8 is 0.99 against 0.10 for A-LOAM alone; G20 6.46 against 7.34 for GenZ-LIO alone (there the fusion is below the front end, but the front end failed).
+- **P4:** the loop-closure back end has not been run; the route never revisits a place.
+
+Why G20 fails (log analysis): on leg 2 (40 m west) GenZ-LIO moved 17.5 m in x (true about 40) and 6.5 m sideways, VINS-Mono moved 49.5 m (scale +24 %, leg 1 +9 %); the Hessian showed two weak translation directions (c_T x eigenvalue 0.24 and 0.38), but the VINS consistency check compared the path lengths, closed the VINS prior (gamma = 0) for 89 % of leg 2 and the LiDAR weight became 1 in every direction. The check cannot tell which sensor is wrong; it assumes the LiDAR is the metric reference. The G17 / G9 structure without the check reaches 2.5 m; the check that was added for GEODE (where VINS-Mono scale fails, G17 17.6 m) costs 4 m here. A-LOAM, by contrast, tracks the route to 0.10 m, so the failing component is our GenZ-LIO configuration on this world, not the world itself.
+Limits: one recording, one live run per method (GenZ-LIO alone differed by up to 0.6 m between runs of the same bag on Multi Floor); simulation; the driver and speed differ from the generation-1 session. No setting has been changed. This recording is now held-out data for any later change to G20.
