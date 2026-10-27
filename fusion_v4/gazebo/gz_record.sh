@@ -18,7 +18,7 @@ docker cp "$HERE/routes/$ROUTE" $C:/root/$ROUTE
 docker cp "$HERE/gz_driver.py" $C:/root/gz_driver.py
 docker cp "$HERE/gz_record_inner.sh" $C:/root/gz_record_inner.sh
 TAG=gazebo_${WORLD}_$(date +%Y%m%d_%H%M); BAG=/root/gz_bags/$TAG.bag
-docker exec $C bash /root/gz_record_inner.sh "$WORLD" /root/$ROUTE "$LAPS" "$BAG" 2>&1 | tee ~/gz_record_$WORLD.txt
+docker exec -e GZ_SPEED=${GZ_SPEED:-0.5} $C bash /root/gz_record_inner.sh "$WORLD" /root/$ROUTE "$LAPS" "$BAG" 2>&1 | tee ~/gz_record_$WORLD.txt
 grep -q "RECORD $WORLD: DONE" ~/gz_record_$WORLD.txt || { echo "recording failed, see ~/gz_record_$WORLD.txt"; exit 1; }
 DEST="$BAGS_ROOT/gazebo_$WORLD"; mkdir -p "$DEST"
 docker cp $C:$BAG "$DEST/$TAG.bag" && echo "bag copied: $DEST/$TAG.bag ($(du -h "$DEST/$TAG.bag" | cut -f1))"

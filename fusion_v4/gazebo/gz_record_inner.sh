@@ -31,7 +31,7 @@ if [ "$WORLD" = farm ]; then   # generation-1 protocol: the husky is reset to (0
 fi
 nohup rosbag record -O $BAG /velodyne_points /imu/data /camera/image_raw /camera/camera_info /gt/husky_pose __name:=gzrec >$LOGD/rosbag.log 2>&1 &
 sleep 3
-python3 /root/gz_driver.py $ROUTE $LAPS 0.5; DR=$?
+python3 /root/gz_driver.py $ROUTE $LAPS ${GZ_SPEED:-0.5}; DR=$?
 sleep 3
 rosnode kill /gzrec >/dev/null 2>&1; sleep 6
 pkill -f roslaunch; pkill gzserver; pkill gzclient; pkill rosmaster; sleep 2
