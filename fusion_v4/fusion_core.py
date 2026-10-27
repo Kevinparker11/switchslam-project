@@ -361,8 +361,11 @@ class FusionCore:
                  w_mode="schur", alpha=0.7, tau_R=0.0, c_Rb=1.0, bias_axis="all", clip_R=0.0, vio_adapt=None,
                  vio_scale_T=0.0, vio_scale_dmin=1.0, vio_scale_proj=False, vio_scale_seg=False,
                  lidar_guard_T=0.0, lidar_guard_ex=0.0, vio_scale_along=False, gamma_min=0.0,
-                 gap_T=0.0, gap_vmax=5.0, gap_wmax=2.0):
+                 gap_T=0.0, gap_vmax=5.0, gap_wmax=2.0, switch_rot=False):
         assert w_mode in W_MODES, w_mode
+        # switch_rot (w_mode 'switch_ss' only): the rotation follows the same all-or-nothing switch as the translation (the whole
+        # 6-DoF increment from the LiDAR, or from the VIO when the Switch-SLAM rule fires); False = rotation always from the VIO (F12)
+        self.switch_rot = switch_rot
         # vio_adapt: None (unit VIO information, the original rule) or a VioConsistency; its gamma scales the VIO
         # information in both Schur weights (W_t and W_R).  The R / T / SAH structure is unchanged.
         self.vio_adapt = vio_adapt
@@ -566,7 +569,7 @@ class FusionCore:
                     # ablation variants: no kappa gate, rotation always from VIO
                     W_t = translation_weight(self.w_mode, np.asarray(H, float).reshape(6, 6), S_tt, S_RR,
                                              self.c_t, kR, kth=self.gate.kth, alpha=self.alpha)
-                    W_R = np.zeros((3, 3))
+                    W_R = I3.copy() if (self.switch_rot and self.w_mode == "switch_ss" and float(np.abs(W_t - I3).max()) < 1e-12) else np.zeros((3, 3))
                 elif self.w_mode != "schur":
                     W_t = W_R = np.zeros((3, 3))
                 elif ok and np.linalg.norm(dt_a) <= self.jump_max and not lidar_bad:

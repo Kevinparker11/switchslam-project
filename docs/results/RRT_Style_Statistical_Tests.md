@@ -139,3 +139,7 @@ Bags: C02_L30B_r1, LC_L10B_r1, LC_L10B_r2, LC_L30B_r1, LC_L30B_r2, MF_L10B_r1, M
 
 ## Files
 Scripts `analysis/rrt_style/` (`rrt_tests.py`, `rrt_outage.py`, `vins_one.py` for the VINS-Mono-alone ATE of every recording); tables and the VINS-alone values `results_data/2026-10-27/rrt_style/`. Inputs: the replay JSONs of `analysis/improve/universal/out*` and the gap-test score JSONs.
+
+
+## Update 27 Oct: see RTS_Table3_Hypothesis_Tests.md
+The same test in the exact format of the paper's Table 3 (four parameters, Switch-SLAM added, G20 renamed RTS-Fusion) is in `RTS_Table3_Hypothesis_Tests.md`.
