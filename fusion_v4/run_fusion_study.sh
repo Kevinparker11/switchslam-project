@@ -57,12 +57,20 @@ fi
 # FRONT=aloam reproduces the master stack. GenZ results go to <OUT_DIR>_genz so they never mix with the master's.
 FRONT=${FRONT:-genz}
 GENZ_WS=/root/genz_ws
+# FRONT=iglio runs iG-LIO (Chen et al., RA-L 2024; patched to export its LiDAR information, ig_lio/) + lio_bridge.py. Results go to <OUT_DIR>_iglio.
+# The LiDAR information scale of iG-LIO differs from GenZ-LIO and A-LOAM; it is chosen on Multi Floor ONLY (an I0 recording, offline replay) and
+# frozen. There is no default: the I20 configuration refuses to run until IGLIO_C_T and IGLIO_C_R are set.
+IGLIO_WS=/root/iglio_ws
+IGLIO_C_T=${IGLIO_C_T:-}
+IGLIO_C_R=${IGLIO_C_R:-}
+LIO=0; { [ "$FRONT" = genz ] || [ "$FRONT" = iglio ]; } && LIO=1      # a LiDAR-inertial front end behind lio_bridge.py
 # LiDAR information scales for GenZ-LIO. Chosen on Multi Floor ONLY (3 G0 runs, 21 Oct 2026, offline replay, which is exact for
 # GenZ-LIO) and FROZEN: the same values are used on every other sequence. Rule: smallest mean full-span ATE, plateau middle.
 GENZ_C_T=${GENZ_C_T:-3e-6}        # translation weight, G9 / G17 (Schur S_tt)
 GENZ_C_R=${GENZ_C_R:-5e-6}        # rotation weight,    G9 / G17 (Schur S_RR)
 GENZ_C_T_F8=${GENZ_C_T_F8:-1e-4}  # translation weight for the F8-rule ablation G8 / G16 (rotation from VINS-Mono), plateau middle 1e-5..1e-3
 [ "$FRONT" = genz ] && OUT_DIR="${OUT_DIR}_genz"
+[ "$FRONT" = iglio ] && OUT_DIR="${OUT_DIR}_iglio"
 if [ -n "${BAG_DIR_OVERRIDE:-}" ]; then
   BAG_DIR=$BAG_DIR_OVERRIDE
   BAGS=$(cd "$BAG_DIR" 2>/dev/null && ls -1 *.bag 2>/dev/null | sort | sed 's|^|/bags/|' | tr '\n' ' ')
@@ -72,7 +80,7 @@ start_stack() {
   docker exec -d -e ROS_IP=$GPU $GPU_C bash -c "$ROS1 && roscore > /root/thr/roscore.out 2>&1"; sleep 6
   docker exec $GPU_C bash -c "$ROS1 && rosparam set /use_sim_time true"
   local VEL_USE=$VEL_LAUNCH GLT=""
-  if [ "$FRONT" = genz ]; then
+  if [ "$LIO" = 1 ]; then
     # (a) GenZ-LIO deskews with per-point time, which velodyne_pointcloud only computes when it knows the sensor model.
     #     The master converter launch sets no model (warning "No Velodyne Sensor Model ... NO TIMING OFFSETS"), so a COPY
     #     with model=VLP16 is used here; the master's launch file is not touched.
@@ -88,7 +96,7 @@ start_stack() {
     # IMU topic: the one VINS-Mono is configured with for this sequence (built from the bag by setup_sequence.sh / the Multi Floor config)
     GIT=$(docker exec $VINS_C grep -E '^imu_topic' "$VINS_CFG" 2>/dev/null | head -1 | sed 's/^[^:]*: *//; s/#.*//; s/["'"'"' \r]//g')
     [ -z "$GIT" ] && GIT=${IMU_TOPIC_USED:-/imu/data}
-    echo "    GenZ-LIO LiDAR topic: $GLT   IMU topic: $GIT"
+    echo "    $FRONT LiDAR topic: $GLT   IMU topic: $GIT"
   fi
   [ -n "$VEL_USE" ] && docker exec -d -e ROS_IP=$GPU $GPU_C bash -c "$ROS1 && roslaunch $VEL_USE > /root/thr/velodyne.out 2>&1"
   if [ "$FRONT" = genz ]; then
@@ -96,6 +104,12 @@ start_stack() {
       "$ROS1 && python3 /root/thr/make_genz_config.py $GENZ_WS/src/genz-lio /root/thr/genz_frozen.yaml" > $OUT/genz_config_$tag.out 2>&1
     docker exec -d -e ROS_IP=$GPU -e PYTHONUNBUFFERED=1 $GPU_C bash -c "$ROS1 && source $GENZ_WS/devel/setup.bash && roslaunch genz_lio odometry.launch config:=/root/thr/genz_frozen.yaml rviz:=false > /root/thr/genz.out 2>&1"
     docker exec -d -e ROS_IP=$GPU ${EXTRINSIC_YAML:+-e EXTRINSIC_YAML=/root/thr/$(basename "${EXTRINSIC_YAML:-x}")} $GPU_C \
+      bash -c "$ROS1 && cd /root/thr && python3 -u lio_bridge.py > /root/thr/bridge.out 2>&1"
+  elif [ "$FRONT" = iglio ]; then
+    docker exec -e IGLIO_LIDAR_TOPIC=$GLT -e IGLIO_IMU_TOPIC=$GIT ${EXTRINSIC_YAML:+-e EXTRINSIC_YAML=/root/thr/$(basename "${EXTRINSIC_YAML:-x}")} $GPU_C bash -c \
+      "$ROS1 && python3 /root/thr/make_iglio_config.py $IGLIO_WS/src/ig_lio /root/thr/iglio_frozen.yaml" > $OUT/iglio_config_$tag.out 2>&1
+    docker exec -d -e ROS_IP=$GPU $GPU_C bash -c "$ROS1 && source $IGLIO_WS/devel/setup.bash && rosparam load /root/thr/iglio_frozen.yaml && rosrun ig_lio ig_lio_node > /root/thr/iglio.out 2>&1"
+    docker exec -d -e ROS_IP=$GPU -e BRIDGE_ODOM=/lio_odom -e BRIDGE_CLOUD=/current_scan ${EXTRINSIC_YAML:+-e EXTRINSIC_YAML=/root/thr/$(basename "${EXTRINSIC_YAML:-x}")} $GPU_C \
       bash -c "$ROS1 && cd /root/thr && python3 -u lio_bridge.py > /root/thr/bridge.out 2>&1"
   else
     docker exec -d -e ROS_IP=$GPU $GPU_C bash -c "$ROS1 && roslaunch $ALOAM_LAUNCH > /root/thr/aloam.out 2>&1"
@@ -143,12 +157,15 @@ declare -A CFG=(
   [G20]="FUSION_MODE=fused C_T=$GENZ_C_T C_R=$GENZ_C_R KAPPA_TH=1e9 SAH=1 VIO_CHECK=1 VIO_SCALE_T=10 VIO_CHECK_FAST=5 LIDAR_GUARD_T=2"  # G19 + fast VINS check + LiDAR blow-up guard
   [G21]="FUSION_MODE=fused C_T=$GENZ_C_T C_R=$GENZ_C_R KAPPA_TH=1e9 SAH=1 VIO_CHECK=1 VIO_SCALE_T=10 VIO_CHECK_FAST=5 LIDAR_GUARD_T=2 GAMMA_MIN=1e-3"  # G20 + VINS information floor (for degenerate-LiDAR tests)
   [G22]="FUSION_MODE=fused C_T=${GENZ_C_T_G22:-1e-5} C_R=$GENZ_C_R KAPPA_TH=1e9 SAH=1 VIO_CHECK=1 VIO_SCALE_T=10 VIO_CHECK_FAST=5 LIDAR_GUARD_T=2"  # G20 with the T-channel scale 3.3x larger (1e-5): candidate frozen 25 Oct 2026 after the Gazebo office result; chosen on development data, to be confirmed on new recordings
+  [I0]="FUSION_MODE=lidar"                                               # iG-LIO alone (FRONT=iglio); also the recording from which I20 is replayed
+  [I20]="FUSION_MODE=fused C_T=$IGLIO_C_T C_R=$IGLIO_C_R KAPPA_TH=1e9 SAH=1 VIO_CHECK=1 VIO_SCALE_T=10 VIO_CHECK_FAST=5 LIDAR_GUARD_T=2"  # the G20 settings on iG-LIO (FRONT=iglio); only the information scale is new
   [G23]="FUSION_MODE=fused C_T=$GENZ_C_T C_R=$GENZ_C_R KAPPA_TH=1e9 SAH=1 VIO_CHECK=1 VIO_SCALE_T=10 VIO_CHECK_FAST=5 LIDAR_GUARD_T=2 GAP_T=1"  # G20 + LiDAR-gap rule (26 Oct 2026); developed on the outage logs of 26 Oct, so those recordings are development data for it
   [M0]="FUSION_MODE=vins HESS_TOPIC=/mapping_hessian"
   [M1]="FUSION_MODE=fused C_T=$MAP_C_T KAPPA_MODE=fixed KAPPA_TH=15.7 HESS_TOPIC=/mapping_hessian"
 )
 ORDER="F0 F1 F2 F3 F4 F5"
 [ "$FRONT" = genz ] && ORDER="G0 GV"
+[ "$FRONT" = iglio ] && ORDER="I0"
 DRY=0; SEL=()
 for a in "$@"; do [ "$a" = "--dry" ] && DRY=1 || SEL+=("$a"); done
 [ ${#SEL[@]} -eq 0 ] && SEL=($ORDER)
@@ -164,6 +181,15 @@ if [ "$FRONT" = genz ]; then
   done
   docker exec $GPU_C bash -c "test -f $GENZ_WS/devel/setup.bash && grep -q GENZ_INFO_PATCH $GENZ_WS/src/genz-lio/ros/src/OdometryServer.cpp" \
     || { echo "patched GenZ-LIO not found in $GPU_C:$GENZ_WS - run genz/install_genz.sh first"; exit 1; }
+fi
+if [ "$FRONT" = iglio ]; then
+  [ -f "$FUSION_DIR/ig_lio/make_iglio_config.py" ] || { echo "missing $FUSION_DIR/ig_lio/make_iglio_config.py"; exit 1; }
+  for s in "${SEL[@]}"; do
+    case "$s" in I0) ;; I20) [ -n "$IGLIO_C_T" ] && [ -n "$IGLIO_C_R" ] || { echo "I20 needs IGLIO_C_T and IGLIO_C_R (chosen on Multi Floor only, from an I0 recording; see docs/results/IgLIO_Feasibility_Protocol.md)"; exit 1; } ;;
+      *) echo "FRONT=iglio runs the I configs (I0 I20); $s belongs to another stack"; exit 1 ;; esac
+  done
+  docker exec $GPU_C bash -c "test -f $IGLIO_WS/devel/setup.bash && grep -q IGLIO_INFO_PATCH $IGLIO_WS/src/ig_lio/src/ig_lio_node.cpp" \
+    || { echo "patched iG-LIO not found in $GPU_C:$IGLIO_WS - run ig_lio/install_iglio.sh first"; exit 1; }
 fi
 echo "bags: $BAGS"
 OUT=$OUT_DIR; mkdir -p $OUT; RES=$OUT/results_index.csv
@@ -197,10 +223,11 @@ run_one() {
     [ "$(docker inspect -f '{{.State.Running}}' $c 2>/dev/null)" = "true" ] || { echo "    container $c is not running after restart (see $OUT/restart_$tag.out; try: docker start $c; docker logs --tail 20 $c), abort"; exit 1; }
   done
   echo "$GPU $VINS" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+ [0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' || { echo "    no vins_bridge IPs after restart (got: $GPU $VINS), abort"; exit 1; }
-  docker exec $GPU_C bash -c "mkdir -p /root/thr; pkill -9 -f '[s]witching_node'; pkill -9 -f '[f]usion_node_v2'; pkill -9 -f '[k]eyframe_recorder'; pkill -9 -f '[l]io_bridge'; pkill -9 -f '[g]enz_lio_node'; rm -f /root/thr/switching_log_v2_$tag.csv /root/thr/keyframes_$tag.npz /root/thr/aloam.out /root/thr/genz.out /root/thr/bridge.out /root/thr/velodyne.out"
+  docker exec $GPU_C bash -c "mkdir -p /root/thr; pkill -9 -f '[s]witching_node'; pkill -9 -f '[f]usion_node_v2'; pkill -9 -f '[k]eyframe_recorder'; pkill -9 -f '[l]io_bridge'; pkill -9 -f '[g]enz_lio_node'; pkill -9 -f '[i]g_lio_node'; rm -f /root/thr/switching_log_v2_$tag.csv /root/thr/keyframes_$tag.npz /root/thr/aloam.out /root/thr/genz.out /root/thr/iglio.out /root/thr/bridge.out /root/thr/velodyne.out"
   for f in fusion_core.py fusion_node_v2.py keyframe_recorder.py structure_heading.py lio_bridge.py genz/make_genz_config.py; do
     docker cp $FUSION_DIR/$f $GPU_C:/root/thr/ || { echo "    docker cp $f failed"; exit 1; }
   done
+  [ "$FRONT" = iglio ] && { docker cp $FUSION_DIR/ig_lio/make_iglio_config.py $GPU_C:/root/thr/ || { echo "    docker cp make_iglio_config.py failed"; exit 1; }; }
   if [ -n "${EXTRINSIC_YAML:-}" ]; then
     docker cp "$EXTRINSIC_YAML" $GPU_C:/root/thr/$(basename "$EXTRINSIC_YAML") || { echo "    docker cp extrinsics failed"; exit 1; }
   fi
@@ -231,15 +258,15 @@ run_one() {
   docker cp $GPU_C:/root/thr/switching_log_v2_$tag.csv $OUT/ || { echo "    no log produced"; return 1; }
   docker cp $GPU_C:/root/thr/node_$tag.out $OUT/node_$tag.out 2>/dev/null
   # only this run's stage logs (a stale aloam.out of an earlier A-LOAM run is ~700 MB and must not be copied for GenZ runs)
-  local outs="aloam velodyne"; [ "$FRONT" = genz ] && outs="velodyne genz bridge"
+  local outs="aloam velodyne"; [ "$FRONT" = genz ] && outs="velodyne genz bridge"; [ "$FRONT" = iglio ] && outs="velodyne iglio bridge"
   for c in $outs; do docker cp $GPU_C:/root/thr/$c.out $OUT/${c}_$tag.out 2>/dev/null; done
   for c in ft vins; do docker cp $VINS_C:/root/thr/$c.out $OUT/${c}_$tag.out 2>/dev/null; done
   local rows=$(($(wc -l < $OUT/switching_log_v2_$tag.csv) - 1))
   if [ $SMOKE = 1 ]; then
     echo "    log rows in ${SMOKE_SECS:-70} s of bag: $rows (expect a few hundred)"
-    if [ "$rows" -lt 10 ] && [ "$FRONT" = genz ]; then
+    if [ "$rows" -lt 10 ] && [ "$LIO" = 1 ]; then
       echo "    NO ROWS. Last lines of each stage (velodyne converter, GenZ-LIO, bridge):"
-      for c in velodyne genz bridge; do echo "    --- $c"; tail -n 6 $OUT/${c}_$tag.out 2>/dev/null | sed 's/^/    /'; done
+      for c in $outs; do echo "    --- $c"; tail -n 6 $OUT/${c}_$tag.out 2>/dev/null | sed 's/^/    /'; done
     fi
     python3 - "$OUT/switching_log_v2_$tag.csv" <<'PY'
 import sys, pandas as pd

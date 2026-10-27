@@ -104,10 +104,12 @@ def main():
         msg.header.frame_id = "camera_init"
         pub_c.publish(msg)
 
-    rospy.Subscriber("/Odometry", Odometry, odom_cb, queue_size=200)
-    rospy.Subscriber("/cloud_registered", PointCloud2, cloud_cb, queue_size=20, buff_size=2 ** 24)
-    print("lio_bridge listening: /Odometry, /cloud_registered -> /aft_mapped_to_init, /laser_hessian, "
-          "/velodyne_cloud_registered; t_IL = %s" % np.round(t_IL, 3), flush=True)
+    # defaults = GenZ-LIO; iG-LIO (FRONT=iglio) sets BRIDGE_ODOM=/lio_odom BRIDGE_CLOUD=/current_scan
+    odom_topic, cloud_topic = E("BRIDGE_ODOM", "/Odometry"), E("BRIDGE_CLOUD", "/cloud_registered")
+    rospy.Subscriber(odom_topic, Odometry, odom_cb, queue_size=200)
+    rospy.Subscriber(cloud_topic, PointCloud2, cloud_cb, queue_size=20, buff_size=2 ** 24)
+    print("lio_bridge listening: %s, %s -> /aft_mapped_to_init, /laser_hessian, "
+          "/velodyne_cloud_registered; t_IL = %s" % (odom_topic, cloud_topic, np.round(t_IL, 3)), flush=True)
     rospy.spin()
 
 
