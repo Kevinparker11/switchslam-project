@@ -6,7 +6,9 @@ iG-LIO "keeps identical parameters across all datasets", so one file for every s
 and adds no tuning on our test sequences. Only these are changed, for every sequence alike:
   - extrinsic: our own laser_to_imu (EXTRINSIC_YAML, the file fusion_node_v2 uses; default Multi Floor values), so that
     iG-LIO and the fusion node use the same calibration;
-  - topics: IGLIO_LIDAR_TOPIC (default /velodyne_points), IGLIO_IMU_TOPIC (default /imu/data).
+  - topics: IGLIO_LIDAR_TOPIC (default /velodyne_points), IGLIO_IMU_TOPIC (default /imu/data);
+  - optional, pre-declared overrides in IGLIO_SET="key=value,key=value" (unset = the authors' file unchanged). Only keys that
+    already exist in the authors' file are accepted; each override is printed. Used for the declared resolution attempt.
 Everything else (resolutions, iterations, gains, noise) stays as the authors set it.
 usage: python3 make_iglio_config.py <ig_lio source dir> <output yaml>
 """
@@ -39,6 +41,12 @@ cfg["imu_topic"] = os.environ.get("IGLIO_IMU_TOPIC", "/imu/data")
 cfg["lidar_type"] = "velodyne"
 cfg["t_imu_lidar"] = [float(x) for x in T[:3, 3]]
 cfg["R_imu_lidar"] = [float(x) for x in R.ravel()]
+for kv in [x for x in os.environ.get("IGLIO_SET", "").split(",") if x.strip()]:
+    k, v = [x.strip() for x in kv.split("=", 1)]
+    if k not in cfg:
+        sys.exit("IGLIO_SET key %r not in the authors' file; keys: %s" % (k, sorted(cfg)))
+    new = type(cfg[k])(float(v)) if isinstance(cfg[k], (int, float)) and not isinstance(cfg[k], bool) else v
+    print("OVERRIDE %s: %r -> %r" % (k, cfg[k], new)); cfg[k] = new
 with open(out, "w") as f:
     f.write("# fusion_v4 frozen iG-LIO config, generated from %s by make_iglio_config.py\n" % base)
     yaml.safe_dump(cfg, f, sort_keys=False)

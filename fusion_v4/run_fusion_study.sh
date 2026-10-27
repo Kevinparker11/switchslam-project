@@ -106,7 +106,7 @@ start_stack() {
     docker exec -d -e ROS_IP=$GPU ${EXTRINSIC_YAML:+-e EXTRINSIC_YAML=/root/thr/$(basename "${EXTRINSIC_YAML:-x}")} $GPU_C \
       bash -c "$ROS1 && cd /root/thr && python3 -u lio_bridge.py > /root/thr/bridge.out 2>&1"
   elif [ "$FRONT" = iglio ]; then
-    docker exec -e IGLIO_LIDAR_TOPIC=$GLT -e IGLIO_IMU_TOPIC=$GIT ${EXTRINSIC_YAML:+-e EXTRINSIC_YAML=/root/thr/$(basename "${EXTRINSIC_YAML:-x}")} $GPU_C bash -c \
+    docker exec -e IGLIO_LIDAR_TOPIC=$GLT -e IGLIO_IMU_TOPIC=$GIT ${IGLIO_SET:+-e IGLIO_SET=$IGLIO_SET} ${EXTRINSIC_YAML:+-e EXTRINSIC_YAML=/root/thr/$(basename "${EXTRINSIC_YAML:-x}")} $GPU_C bash -c \
       "$ROS1 && python3 /root/thr/make_iglio_config.py $IGLIO_WS/src/ig_lio /root/thr/iglio_frozen.yaml" > $OUT/iglio_config_$tag.out 2>&1
     docker exec -d -e ROS_IP=$GPU $GPU_C bash -c "$ROS1 && source $IGLIO_WS/devel/setup.bash && rosparam load /root/thr/iglio_frozen.yaml && rosrun ig_lio ig_lio_node > /root/thr/iglio.out 2>&1"
     docker exec -d -e ROS_IP=$GPU -e BRIDGE_ODOM=/lio_odom -e BRIDGE_CLOUD=/current_scan ${EXTRINSIC_YAML:+-e EXTRINSIC_YAML=/root/thr/$(basename "${EXTRINSIC_YAML:-x}")} $GPU_C \
