@@ -10,6 +10,7 @@ case $WORLD in
   office)       PKG=cpr_office_gazebo;      L=office_world.launch ;;
   construction) PKG=cpr_office_gazebo;      L=office_construction_world.launch ;;
   empty)        PKG=cpr_empty_gazebo;       L=empty_world.launch ;;
+  farm)         PKG=cpr_agriculture_gazebo; L=agriculture_world.launch ;;   # generation-1 farm world (L route); confirm with gz_smoke.sh agriculture
   *) echo "no route for world $WORLD yet"; exit 2 ;;
 esac
 LOGD=/root/gz_logs; mkdir -p $LOGD $(dirname $BAG)
@@ -24,6 +25,10 @@ for i in $(seq 1 75); do
 done
 sleep 10
 echo "== world up, sim time $(rostopic echo -n1 /clock 2>/dev/null | grep -m1 secs | awk '{print $2}') s"
+if [ "$WORLD" = farm ]; then   # generation-1 protocol: the husky is reset to (0, 0, 0.2) before the drive
+  rosservice call /gazebo/set_model_state '{model_state: {model_name: husky, pose: {position: {x: 0.0, y: 0.0, z: 0.2}, orientation: {x: 0, y: 0, z: 0, w: 1}}, twist: {linear: {x: 0, y: 0, z: 0}, angular: {x: 0, y: 0, z: 0}}, reference_frame: world}}' | head -2
+  sleep 6
+fi
 nohup rosbag record -O $BAG /velodyne_points /imu/data /camera/image_raw /camera/camera_info /gt/husky_pose __name:=gzrec >$LOGD/rosbag.log 2>&1 &
 sleep 3
 python3 /root/gz_driver.py $ROUTE $LAPS 0.5; DR=$?
