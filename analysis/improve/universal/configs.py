@@ -61,3 +61,10 @@ for _k, _c in (("S03", 1e-6), ("S3", 1e-5), ("S10", 3e-5), ("S30", 1e-4)):
 CFG["G20b"] = _G20
 # --- G23 (26 Oct 2026) = G20 + LiDAR-gap rule (gap_T = 1 s): fusion_core.FusionCore(gap_T=...), developed on the outage logs of 26 Oct
 CFG["G23"] = lambda fc4: dict(_G20(fc4), gap_T=1.0)
+
+# --- Switch-SLAM baselines (27 Oct 2026): the detection rule of Lee et al. (RA-L 2024, Sec. III-C) as published (three smallest normalised
+# eigenvalues of the 6x6 Hessian against 0.12 / 0.27 / 0.48) as an all-or-nothing switch between GenZ-LIO and VINS-Mono; no SAH, no consistency
+# check, no guard.  SW = translation switched, rotation always from the VIO (the project's F12, defined on 13 Oct, so fixed before this test);
+# SWR = the whole 6-DoF increment switched (variant; mixes LiDAR rotation with VIO translation increments, which is much worse).
+CFG["SW"] = lambda fc4: dict(sah=False, w_mode="switch_ss")
+CFG["SWR"] = lambda fc4: dict(sah=False, w_mode="switch_ss", switch_rot=True)
