@@ -100,3 +100,24 @@ Change (option (b), taken from the GenZ-LIO paper's own protocol, Sec. VII-B: vo
 - **Verdict:** the rule is met; the configuration above is frozen for iG-LIO on every sequence. iG-LIO alone on Multi Floor is now of the order of our GenZ-LIO alone (0.57 +- 0.29 m) and the GenZ-LIO paper's iG-LIO value (0.25 m), run 2 (0.23 m) inside it, run 1 (0.75 m) about three times above it.
 - **Limits:** the change was chosen after the frozen configuration failed on this sequence and is tested only here (Multi Floor is development data); two parameters changed together, so their separate effects are unknown; three recordings; the information scale c_T, c_R of Stage 3 was set at 0.5 m resolution and must be recalibrated on these recordings before any fused (I20) run.
 - **Next:** calibrate c_T, c_R by offline replay on these three recordings with the Phase A rule, freeze them, then I20 live on Multi Floor, then the held-out sequences with the frozen configuration.
+
+### Phase A3 (27 Oct 2026): calibration of c_T, c_R on the three 0.25 m recordings (`ig_lio/calib_iglio.py`)
+Rule from Phase A: G9 structure (R and T channels, no gate, no SAH), grid c_T in {1, 2, 3, 4, 6, 10, 20, 30} x 1e-6, c_R in {2, 5, 10, 20} x 1e-6, mean full-span ATE over the three Multi Floor I0 recordings, exact replay (the replay of iG-LIO alone reproduces the live values 0.748 / 0.228 / 0.318 m).
+
+Mean ATE (m), rows c_T, columns c_R = 2e-6, 5e-6, 1e-5, 2e-5:
+
+| c_T | 2e-6 | 5e-6 | 1e-5 | 2e-5 |
+|---|---|---|---|---|
+| 1e-6 | 0.595 | 0.503 | 0.429 | **0.362** |
+| 2e-6 | 0.637 | 0.543 | 0.466 | 0.397 |
+| 3e-6 | 0.658 | 0.563 | 0.487 | 0.417 |
+| 4e-6 | 0.672 | 0.576 | 0.499 | 0.429 |
+| 6e-6 | 0.688 | 0.592 | 0.514 | 0.445 |
+| 1e-5 | 0.706 | 0.608 | 0.530 | 0.461 |
+| 2e-5 | 0.724 | 0.626 | 0.548 | 0.480 |
+| 3e-5 | 0.733 | 0.634 | 0.557 | 0.489 |
+
+- **The minimum is a corner of the grid** (c_T = 1e-6, c_R = 2e-5; runs 0.477 / 0.318 / 0.290 m, mean 0.362), and the only point within 5 % of it. Unlike GenZ-LIO (flat valley, 0.42-0.46 over 1e-6..1e-5 x 2e-6..3e-5) there is no plateau to take the middle of; the GenZ-LIO values 3e-6 / 5e-6 give 0.563. The rule as written does not say what to do at the boundary.
+- **Applied literally, the rule gives c_T = 1e-6, c_R = 2e-5.** These are recorded as the calibration result. Against iG-LIO alone (0.748 / 0.228 / 0.318, mean 0.431, median 0.318) the fused replay is better on run 1, worse on run 2 (0.228 to 0.318) and level on run 3: mean 0.362, median 0.318, so on this development sequence prediction I1 (median lower by more than 0.05 m and 10 %) is **not** met by the literal choice.
+- **Diagnostic extension outside the grid (not used to choose):** c_T = 0 (VINS-Mono translation only) 0.82-0.88; 1e-7: 0.51-0.55; 3e-7: 0.35-0.37; 1e-6: 0.362 at c_R 2e-5, 0.318 at 4e-5, 0.295 at 1e-4, 0.288 at 1e-3. So c_T has its valley near 1e-6 to 3e-7 (the grid edge is close to the true optimum), while the error keeps falling as c_R grows (more LiDAR rotation, i.e. iG-LIO's rotation is the reliable part); at c_R = 1e-4 the per-run values are 0.42 / 0.25 / 0.22 (median 0.25, which would meet I1 in-sample). Choosing c_R = 1e-4 after seeing this would be a change of the declared grid made on development data; it is listed, not adopted.
+- **Decision needed from the owner of the thesis before Phase B:** (1) freeze the literal rule result (1e-6, 2e-5), or (2) widen the grid on c_R in a stated way and re-apply the rule, disclosing it as a deviation. Until then I20 uses (1e-6, 2e-5). The C_T of the other front ends is 3e-6 (GenZ-LIO) and 3e-2 (A-LOAM), so iG-LIO's smaller value reflects its larger registration information (gains 100 / 1000), as the Stage 3 trace comparison suggested.
