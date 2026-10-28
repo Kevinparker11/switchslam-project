@@ -105,3 +105,16 @@ Two variants, one run each first (each from a full clean restart), both reported
 Score: full-span ATE RMSE and max, Umeyama SE(3), no scale, from the later of the reset and the first A-LOAM output; the scan-to-map output (`aft`) is the result, the scan-to-scan odometry is reported beside it; `gazebo/live/score_standalone.py`.
 Fixed now: A-LOAM counts as failed on a run if ATE > 2.5 m or the end-point error is > 5 m (the same 2.5 m used in Step 2; Switch-SLAM's own failure rule is not stated in the text we hold).
 Predictions: (C-P1) C2 ATE < 1 m, as the bag recording (0.10 m) and the in-loop outputs (0.32-0.48 m) suggest; if so, this world and route do not make A-LOAM fail, unlike the Switch-SLAM Farm, and the Farm comparison with their table is not like for like. (C-P2) C1 is not better than C2; a C1 failure is the teleport, not LiDAR degeneracy, and is reported as such. If A-LOAM does fail (ATE > 2.5 m) in C2, the world does reproduce the paper's LiDAR failure, and the F8 result 0.49 m is then a result against a failing A-LOAM. Nothing is changed after seeing a score; further runs of the same variant are replicates.
+
+### Step 3, first standalone run (28 Oct 2026, live, Gazebo GUI, A-LOAM unfed; numbers copied from the owner's `score_standalone.py` printout, the three log files were not attached, so they were not re-scored here)
+GT file starts at t = 223.21 s with no reset jump (0.02 m largest step), so the loggers were started after the reset; the whole file is scored: 7297 GT samples, 80.6 m of path, end (-38.5, -40.0) (route completed). Which variant (C1 or C2) this run was was not stated with the printout, so it is not assigned to either yet.
+
+| Output | n | ATE / max (m) | end-point error (m) |
+|---|---|---|---|
+| **A-LOAM scan-to-map, nothing feeding it** | 3498 | **0.478 / 0.977** | 0.831 |
+| A-LOAM scan-to-scan odometry alone | 3498 | 7.241 / 11.903 | 11.610 |
+| (Step 2, run 1) F8 fused | 3525 | 0.490 / 0.750 | |
+| (Step 2, run 1) A-LOAM output fed by F8 predictions | | 0.385 / 0.905 | |
+| (bag recording) A-LOAM alone | | 0.10 / 0.19 | |
+
+Against the rules fixed above: A-LOAM is not failed (0.478 < 2.5 m; end-point error 0.83 < 5 m); C-P1 (< 1 m) holds for this run. Standalone A-LOAM (0.478) and F8 (0.490) are tied on RMSE (one run each); F8 has the lower maximum (0.75 against 0.98). The raw scan-to-scan odometry drifts to 7.2 m, so the accuracy comes from A-LOAM's scan-to-map step, which does not fail on this route. So this world and route do not reproduce the Switch-SLAM Farm failure of LOAM, and the live farm test does not show an advantage of F8 over A-LOAM alone; it shows that F8 does not damage it, unlike the generation-1 switching node (5.0-5.8 m). One run; run-to-run spread of A-LOAM on this world is unknown until replicates exist.
