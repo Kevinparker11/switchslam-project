@@ -46,7 +46,7 @@ UNGATED_C_T_TOP=${UNGATED_C_T_TOP:-1e-1} # config F9
 LASER_C_R=${LASER_C_R:-0}         # LiDAR rotation weight, from calibrate_c.py --c-r-grid (config F6)
 VEL_LAUNCH=/root/multifloor_velodyne_convert.launch
 ALOAM_LAUNCH=/root/multifloor_aloam.launch
-OUT_DIR=~/runs_v2; MIN_ROWS=3000; SCORER=multifloor; NODE_EXTRA=""; SUMMARY_EXTRA=""
+OUT_DIR=${OUT_DIR_OVERRIDE:-$HOME/runs_v2}; MIN_ROWS=3000; SCORER=multifloor; NODE_EXTRA=""; SUMMARY_EXTRA=""
 # Another sequence: SEQ_ENV=~/runs_corridor/seq.env (written by setup_sequence.sh) overrides the lines above
 if [ -n "${SEQ_ENV:-}" ]; then
   [ -f "$SEQ_ENV" ] || { echo "SEQ_ENV $SEQ_ENV not found"; exit 1; }
