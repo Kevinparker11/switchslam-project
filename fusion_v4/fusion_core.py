@@ -321,6 +321,51 @@ SWITCH_SLAM_LT = np.array([0.12, 0.27, 0.48])     # Switch-SLAM Eq. 12 threshold
 W_MODES = ("schur", "diag", "iso", "const", "proj", "switch_ss", "switch_kR", "lidar", "vins")
 
 
+def orientation_tensor(pts, k=12, subsample=400, rng=None):
+    """Channel T (additional T): T = (1/n) sum n n^T over local-PCA normals of a random subsample of a scan's planar points,
+    computed from the raw points alone (no scan matching, no solver state).  Same recipe as channelT_test/degen_logger.py
+    (k nearest neighbours including the point itself, subsample cap), in numpy only (brute-force neighbours).
+    Returns (T 3x3 with trace 1, n) or None when there are too few points."""
+    pts = np.asarray(pts, float)
+    if len(pts) < k + 1:
+        return None
+    rng = rng if rng is not None else np.random.default_rng(0)
+    m = min(len(pts), subsample)
+    idx = rng.choice(len(pts), m, replace=False)
+    q = pts[idx]
+    d2 = (q * q).sum(1)[:, None] + (pts * pts).sum(1)[None, :] - 2.0 * q @ pts.T
+    nn = np.argpartition(d2, k - 1, axis=1)[:, :k]
+    nb = pts[nn]
+    nb = nb - nb.mean(axis=1, keepdims=True)
+    cov = np.einsum("mki,mkj->mij", nb, nb) / (k - 1)
+    _, v = np.linalg.eigh(cov)
+    n = v[:, :, 0]
+    return n.T @ n / len(n), len(n)
+
+
+def t_cap_info(H, S_tt, T, hess_frame="world", R_wb=None):
+    """Additional-T fail-safe (design fixed 28 Oct 2026, docs/results/ChannelT_MultiFloor_Single_Test.md).
+    The Hessian says how much translational information the SOLVER believes it has along each Schur eigen-direction v_i
+    (lambda_i of S_tt).  T says how much the RAW SCAN normals support along the same direction: N * v_i^T T v_i, with
+    N = tr(H_tt) (the same total mass as the Hessian, so no free scale: if the Hessian were N*T itself the cap would never
+    bind, because S_tt <= H_tt).  The information used for the weight is the smaller of the two, direction by direction:
+        lambda_i' = min(lambda_i, N v_i^T T v_i)
+    Returns (S_tt', min_i lambda_i'/lambda_i)."""
+    H = np.asarray(H, float).reshape(6, 6)
+    Hr = D_RAD @ (0.5 * (H + H.T)) @ D_RAD
+    Htt = Hr[3:, 3:]
+    if hess_frame == "world" and R_wb is not None:
+        Htt = R_wb.T @ Htt @ R_wb
+    N = float(np.trace(Htt))
+    S = 0.5 * (S_tt + S_tt.T)
+    lam, V = np.linalg.eigh(S)
+    lam = np.clip(lam, 0.0, None)
+    cap = N * np.einsum("ij,jk,ki->i", V.T, np.asarray(T, float), V)
+    lam2 = np.minimum(lam, np.clip(cap, 0.0, None))
+    ratio = float(np.min(lam2 / np.maximum(lam, 1e-300)))
+    return (V * lam2) @ V.T, ratio
+
+
 def switch_slam_degenerate(H):
     """Switch-SLAM detection rule (Lee et al. RA-L 2024, Sec. III-C) as published: the three smallest
     eigenvalues of the 6x6 scan-matching Hessian (here in radians), normalised to unit norm, compared with
@@ -421,8 +466,12 @@ class FusionCore:
                  vio_scale_T=0.0, vio_scale_dmin=1.0, vio_scale_proj=False, vio_scale_seg=False,
                  lidar_guard_T=0.0, lidar_guard_ex=0.0, vio_scale_along=False, gamma_min=0.0,
                  gap_T=0.0, gap_vmax=5.0, gap_wmax=2.0, switch_rot=False,
-                 rot_adapt=None, rot_c_fail=1.0, rot_gamma_min=1e-3):
+                 rot_adapt=None, rot_c_fail=1.0, rot_gamma_min=1e-3, t_cap=False):
         assert w_mode in W_MODES, w_mode
+        # t_cap: the additional-T fail-safe (t_cap_info): the translation information of the Schur weight is capped, direction by
+        # direction, by what the raw-scan orientation tensor T supports.  False = F8/F16 exactly (bit for bit); with no T for a
+        # scan the weight is the uncapped one.
+        self.t_cap = t_cap
         # switch_rot (w_mode 'switch_ss' only): the rotation follows the same all-or-nothing switch as the translation (the whole
         # 6-DoF increment from the LiDAR, or from the VIO when the Switch-SLAM rule fires); False = rotation always from the VIO (F12)
         self.switch_rot = switch_rot
@@ -499,7 +548,7 @@ class FusionCore:
             return self.Rf, self.pf
         return compose(self.Rf, self.pf, dR, dt)
 
-    def step(self, t, aft, vins=None, H=None, vo_fail=False):
+    def step(self, t, aft, vins=None, H=None, vo_fail=False, T3=None):
         """aft = (R, p) LiDAR pose in the A-LOAM map frame; vins = (R, p) IMU pose in the VINS world
         frame at the same time (or None); H = 6x6 Hessian (or None). Returns (R, p, info)."""
         Ra, pa = np.asarray(aft[0], float), np.asarray(aft[1], float)
@@ -650,7 +699,10 @@ class FusionCore:
                 elif self.w_mode != "schur":
                     W_t = W_R = np.zeros((3, 3))
                 elif ok and np.linalg.norm(dt_a) <= self.jump_max and not lidar_bad:
-                    W_t = info_weight(S_tt, self.c_t, gam)
+                    S_use = S_tt
+                    if self.t_cap and T3 is not None:
+                        S_use, info["tcap_ratio"] = t_cap_info(H, S_tt, T3, self.hess_frame, self.prev_a[0])
+                    W_t = info_weight(S_use, self.c_t, gam)
                     W_R = info_weight(S_RR, self.c_R, gam)
                     if self.rot_adapt is not None:
                         if rot_bad:
