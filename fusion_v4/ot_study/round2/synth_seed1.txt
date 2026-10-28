@@ -1,0 +1,37 @@
+seed 1
+/tmp/claude-0/-home-claude/3f90fe9f-923e-500d-a688-dedb31fbfbe6/scratchpad/otstudy/synth_scenes.py:49: RuntimeWarning: invalid value encountered in multiply
+  P = D * tt[:, None]
+/tmp/claude-0/-home-claude/3f90fe9f-923e-500d-a688-dedb31fbfbe6/scratchpad/otstudy/synth_scenes.py:80: RuntimeWarning: invalid value encountered in multiply
+  P = D * rngs[:, None]
+corridor     edges   978 surf 26606 kf  2668  weak/strong 0.022 | tau/lam min: T 0.03 G 0.20 G3 0.21 GS 0.20 | cap loss G 0.724
+   weight on the weak axis, honest: none 0.179 min 0.179 smin 0.179 gmin 0.179 psum 0.242 agm 0.264 ci 0.329 wprod 0.067 wmean 0.275 gmax 0.371
+   weight on the weak axis, FAULT : none 0.789 min 0.385 smin 0.215 gmin 0.371 psum 0.505 agm 0.597 ci 0.789 wprod 0.293 wmean 0.580 gmax 0.789
+   by tensor (honest weak / fault weak / honest strong): min-T 0.02/0.03/0.25 | smin-T 0.02/0.01/0.24 | min-G 0.18/0.39/0.67 | smin-G 0.18/0.21/0.70 | min-G3 0.18/0.43/0.68 | smin-G3 0.18/0.25/0.71 | min-GS 0.18/0.39/0.67 | smin-GS 0.18/0.25/0.75 | min-GRF 0.18/0.24/0.63 | smin-GRF 0.18/0.12/0.66
+tunnel       edges   996 surf 26498 kf  3713  weak/strong 0.021 | tau/lam min: T 0.02 G 0.32 G3 0.32 GS 0.32 | cap loss G 0.640
+   weight on the weak axis, honest: none 0.177 min 0.177 smin 0.177 gmin 0.177 psum 0.231 agm 0.246 ci 0.316 wprod 0.059 wmean 0.255 gmax 0.333
+   weight on the weak axis, FAULT : none 0.783 min 0.579 smin 0.442 gmin 0.333 psum 0.467 agm 0.573 ci 0.783 wprod 0.260 wmean 0.558 gmax 0.783
+   by tensor (honest weak / fault weak / honest strong): min-T 0.01/0.46/0.72 | smin-T 0.01/0.31/0.76 | min-G 0.18/0.58/0.76 | smin-G 0.18/0.44/0.82 | min-G3 0.18/0.58/0.76 | smin-G3 0.18/0.45/0.82 | min-GS 0.18/0.58/0.76 | smin-GS 0.18/0.49/0.85 | min-GRF 0.18/0.56/0.76 | smin-GRF 0.18/0.42/0.81
+room         edges  1130 surf 26720 kf  2086  weak/strong 0.028 | tau/lam min: T 0.08 G 0.20 G3 0.20 GS 0.20 | cap loss G 0.759
+   weight on the weak axis, honest: none 0.218 min 0.218 smin 0.218 gmin 0.218 psum 0.342 agm 0.510 ci 0.763 wprod 0.173 wmean 0.507 gmax 0.796
+   weight on the weak axis, FAULT : none 0.781 min 0.750 smin 0.694 gmin 0.781 psum 0.788 agm 0.789 ci 0.781 wprod 0.622 wmean 0.789 gmax 0.796
+   by tensor (honest weak / fault weak / honest strong): min-T 0.22/0.73/0.46 | smin-T 0.22/0.64/0.61 | min-G 0.22/0.75/0.67 | smin-G 0.22/0.69/0.81 | min-G3 0.22/0.75/0.67 | smin-G3 0.22/0.70/0.81 | min-GS 0.22/0.75/0.67 | smin-GS 0.22/0.69/0.81 | min-GRF 0.22/0.73/0.58 | smin-GRF 0.22/0.66/0.73
+poles        edges  1673 surf 13924 kf  3143  weak/strong 0.054 | tau/lam min: T 0.55 G 0.52 G3 0.52 GS 0.52 | cap loss G 0.428
+   weight on the weak axis, honest: none 0.352 min 0.352 smin 0.352 gmin 0.352 psum 0.478 agm 0.559 ci 0.747 wprod 0.263 wmean 0.549 gmax 0.747
+   weight on the weak axis, FAULT : none 0.789 min 0.751 smin 0.689 gmin 0.747 psum 0.767 agm 0.769 ci 0.788 wprod 0.589 wmean 0.768 gmax 0.789
+   by tensor (honest weak / fault weak / honest strong): min-T 0.23/0.41/0.91 | smin-T 0.23/0.22/0.91 | min-G 0.35/0.75/0.84 | smin-G 0.35/0.69/0.91 | min-G3 0.35/0.75/0.84 | smin-G3 0.35/0.69/0.91 | min-GS 0.35/0.75/0.84 | smin-GS 0.35/0.69/0.91 | min-GRF 0.35/0.77/0.81 | smin-GRF 0.35/0.75/0.91
+vegetation   edges  1313 surf 16111 kf  4030  weak/strong 0.044 | tau/lam min: T 0.65 G 0.49 G3 0.45 GS 0.49 | cap loss G 0.466
+   weight on the weak axis, honest: none 0.309 min 0.309 smin 0.309 gmin 0.309 psum 0.438 agm 0.540 ci 0.755 wprod 0.233 wmean 0.532 gmax 0.755
+   weight on the weak axis, FAULT : none 0.786 min 0.785 smin 0.784 gmin 0.755 psum 0.771 agm 0.771 ci 0.785 wprod 0.594 wmean 0.771 gmax 0.786
+   by tensor (honest weak / fault weak / honest strong): min-T 0.31/0.78/0.87 | smin-T 0.31/0.78/0.91 | min-G 0.31/0.78/0.83 | smin-G 0.31/0.78/0.91 | min-G3 0.31/0.79/0.82 | smin-G3 0.31/0.78/0.91 | min-GS 0.31/0.78/0.83 | smin-GS 0.31/0.78/0.91 | min-GRF 0.31/0.79/0.81 | smin-GRF 0.31/0.79/0.91
+single_wall  edges  1216 surf 18701 kf  3691  weak/strong 0.029 | tau/lam min: T 0.04 G 0.35 G3 0.35 GS 0.26 | cap loss G 0.601
+   weight on the weak axis, honest: none 0.225 min 0.225 smin 0.225 gmin 0.225 psum 0.327 agm 0.398 ci 0.596 wprod 0.135 wmean 0.412 gmax 0.600
+   weight on the weak axis, FAULT : none 0.786 min 0.615 smin 0.503 gmin 0.600 psum 0.681 agm 0.701 ci 0.780 wprod 0.472 wmean 0.693 gmax 0.786
+   by tensor (honest weak / fault weak / honest strong): min-T 0.01/0.16/0.61 | smin-T 0.01/0.07/0.62 | min-G 0.22/0.61/0.78 | smin-G 0.22/0.50/0.86 | min-G3 0.22/0.62/0.78 | smin-G3 0.22/0.51/0.86 | min-GS 0.22/0.61/0.72 | smin-GS 0.22/0.50/0.82 | min-GRF 0.22/0.37/0.69 | smin-GRF 0.22/0.21/0.73
+stairwell    edges   845 surf 26720 kf   506  weak/strong 0.022 | tau/lam min: T 0.17 G 0.33 G3 0.33 GS 0.26 | cap loss G 0.642
+   weight on the weak axis, honest: none 0.183 min 0.183 smin 0.183 gmin 0.183 psum 0.290 agm 0.420 ci 0.679 wprod 0.127 wmean 0.437 gmax 0.700
+   weight on the weak axis, FAULT : none 0.779 min 0.757 smin 0.727 gmin 0.689 psum 0.732 agm 0.738 ci 0.779 wprod 0.539 wmean 0.735 gmax 0.782
+   by tensor (honest weak / fault weak / honest strong): min-T 0.18/0.75/0.63 | smin-T 0.18/0.69/0.75 | min-G 0.18/0.76/0.77 | smin-G 0.18/0.73/0.87 | min-G3 0.18/0.76/0.77 | smin-G3 0.18/0.73/0.87 | min-GS 0.18/0.73/0.73 | smin-GS 0.18/0.71/0.85 | min-GRF 0.18/0.75/0.74 | smin-GRF 0.18/0.70/0.84
+open_ground  edges   906 surf 13360 kf  2827  weak/strong 0.028 | tau/lam min: T 0.00 G 0.58 G3 0.58 GS 0.58 | cap loss G 0.394
+   weight on the weak axis, honest: none 0.222 min 0.222 smin 0.222 gmin 0.222 psum 0.338 agm 0.452 ci 0.704 wprod 0.157 wmean 0.463 gmax 0.704
+   weight on the weak axis, FAULT : none 0.781 min 0.707 smin 0.596 gmin 0.704 psum 0.741 agm 0.744 ci 0.780 wprod 0.550 wmean 0.743 gmax 0.781
+   by tensor (honest weak / fault weak / honest strong): min-T 0.00/0.05/0.91 | smin-T 0.00/0.02/0.91 | min-G 0.22/0.71/0.86 | smin-G 0.22/0.60/0.91 | min-G3 0.22/0.71/0.86 | smin-G3 0.22/0.60/0.91 | min-GS 0.22/0.71/0.86 | smin-GS 0.22/0.60/0.91 | min-GRF 0.00/0.07/0.91 | smin-GRF 0.00/0.02/0.91
