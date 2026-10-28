@@ -19,6 +19,7 @@ ap = argparse.ArgumentParser()
 ap.add_argument("logs", nargs="+")
 ap.add_argument("--w", default="2,10", help="window lengths in s, comma separated")
 ap.add_argument("--ext", default=None)
+ap.add_argument("--step", type=int, default=0, help="rows between windows; 0 = about 1 s (default), 1 = every scan, as the node evaluates it")
 a = ap.parse_args()
 
 T_LI = np.array([[0.999945562, 0.009074807, 0.005149763, 0.080], [-0.009060897, 0.999955255, -0.002718066, 0.029],
@@ -46,7 +47,7 @@ for path in a.logs:
     for W in [float(x) for x in a.w.split(",")]:
         es, ey, et, an = [], [], [], []
         i0 = 0
-        step = max(1, int(np.searchsorted(t, t[0] + 1.0)))        # about 1 s between windows
+        step = a.step if a.step > 0 else max(1, int(np.searchsorted(t, t[0] + 1.0)))        # default about 1 s between windows; --step 1 = every scan (the node)
         for i in range(0, len(t), step):
             j = int(np.searchsorted(t, t[i] + W))
             if j >= len(t) or not ok[i:j + 1].all() or RA[i] is None or RV[i] is None or RA[j] is None or RV[j] is None:
