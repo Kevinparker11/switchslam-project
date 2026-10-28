@@ -51,6 +51,11 @@ Environment (all optional):
                 values 1.0 and 1e-3, not tuned).  ROT_GUARD > 0: a LiDAR rotation above ROT_GUARD rad in 2 s is treated as failed
                 (the VINS carries the rotation); OFF (0) in F17: the 3 x rule gives 6.5 rad, above the pi limit of a rotation angle, so it could never fire.  Default off:
                 F0-F16 are unchanged bit for bit.  Three columns (rot_gamma, rot_e2, rot_e10) are appended to the log only when on.
+  TCAP          1: additional-T fail-safe (fusion_core.t_cap_info).  The orientation tensor T of the planar points of the scan
+                (/laser_cloud_surf_last, k=12 PCA normals, 400-point subsample, fixed seed) caps the Schur translation information
+                direction by direction: lambda_i' = min(lambda_i, tr(H_tt) v_i^T T v_i).  No free constant.  T is paired with the mapped
+                scan by time stamp; a scan without T is weighted exactly as in F8/F16.  Three columns (T_l1, T_ms, tcap_ratio) are
+                appended to the log only when on.  Default off: F0-F17 are unchanged bit for bit.  T_KNN, T_SUB: the recipe (12, 400).
 Extrinsic: SubT-MRS Multi Floor 'laser_to_imu' (override with EXTRINSIC_YAML=path to the same format).
 """
 import os
@@ -103,6 +108,8 @@ ROT_CHECK = E("ROT_CHECK", "0") == "1"
 ROT_REF_FAST, ROT_REF_SLOW = float(E("ROT_REF_FAST", "0.402")), float(E("ROT_REF_SLOW", "0.585"))
 ROT_GUARD = float(E("ROT_GUARD", "0"))
 ROT_C_FAIL, ROT_GAMMA_MIN = float(E("ROT_C_FAIL", "1.0")), float(E("ROT_GAMMA_MIN", "1e-3"))
+TCAP = E("TCAP", "0") == "1"
+T_KNN, T_SUB = int(E("T_KNN", "12")), int(E("T_SUB", "400"))
 VINS_GAP = 1.0            # s without VINS -> treated as lost (warm-up restarts)
 
 # SubT-MRS Hawkins Multi Floor laser_to_imu (x_imu = R x_laser + t)
@@ -128,7 +135,7 @@ core = fc.FusionCore(R_IL, t_IL, c_t=C_T, c_R=C_R, gate=gate, t_warm=T_WARM, hes
                      lidar_guard_T=LIDAR_GUARD_T if vio_check is not None else 0.0, lidar_guard_ex=LIDAR_GUARD_EX,
                      gamma_min=GAMMA_MIN if vio_check is not None else 0.0, gap_T=GAP_T,
                      rot_adapt=fc.RotConsistency(ROT_REF_FAST, ROT_REF_SLOW, guard=ROT_GUARD) if ROT_CHECK else None,
-                     rot_c_fail=ROT_C_FAIL, rot_gamma_min=ROT_GAMMA_MIN)
+                     rot_c_fail=ROT_C_FAIL, rot_gamma_min=ROT_GAMMA_MIN, t_cap=TCAP)
 if MODE == "lidar":
     core.t_warm = 1e12                     # every step is WARMUP = LiDAR only
 
@@ -141,6 +148,8 @@ sah_state = dict(last_kf=None, pending={}, clouds=deque(maxlen=30), todo=0.0, ap
                  busy=False, dropped=0)
 sah_q = queue.Queue(maxsize=2)
 latest_H = [None, None, None]              # H, cost, m
+t_buf = deque(maxlen=40)                   # (scan stamp, T 3x3, T smallest eigenvalue, compute ms) from /laser_cloud_surf_last
+t_rng = np.random.default_rng(0)
 pub = [None]
 
 log_path = "switching_log_v2_%s.csv" % RUN_TAG
@@ -151,7 +160,7 @@ w.writerow(["time", "mode", "fused_x", "fused_y", "fused_z", "fused_qx", "fused_
             "aft_x", "aft_y", "aft_z", "aft_qx", "aft_qy", "aft_qz", "aft_qw",
             "v_px", "v_py", "v_pz", "v_qx", "v_qy", "v_qz", "v_qw",
             "gate", "kappa_R", "kappa_t", "kth", "wt0", "wt1", "wt2", "wR0", "wR1", "wR2", "dta", "dtv",
-            "hess_src", "cost", "m_res"] + HCOLS + ["sah_corr_deg", "sah_total_deg", "sah_acc", "vio_gamma", "s_vio"] + (["rot_gamma", "rot_e2", "rot_e10"] if ROT_CHECK else []))
+            "hess_src", "cost", "m_res"] + HCOLS + ["sah_corr_deg", "sah_total_deg", "sah_acc", "vio_gamma", "s_vio"] + (["rot_gamma", "rot_e2", "rot_e10"] if ROT_CHECK else []) + (["T_l1", "T_ms", "tcap_ratio"] if TCAP else []))
 cnt = [0]
 
 
@@ -269,6 +278,33 @@ def vins_cb(msg):
         vins_buf.append((msg.header.stamp.to_sec(), R, p))
 
 
+def surf_cb(msg):
+    """additional T: orientation tensor of this scan's planar points, stored under the scan's time stamp"""
+    import time as _time
+    t0 = _time.perf_counter()
+    try:
+        res = fc.orientation_tensor(cloud_xyz(msg), T_KNN, T_SUB, t_rng)
+    except Exception as ex:                                     # never let T break the estimator
+        rospy.logwarn("T failed: %s", ex)
+        return
+    if res is None:
+        return
+    T = res[0]
+    ms = (_time.perf_counter() - t0) * 1e3
+    with lock:
+        t_buf.append((msg.header.stamp.to_sec(), T, float(np.linalg.eigvalsh(T)[0]), ms))
+
+
+def t_at(t):
+    """T of the scan with time stamp t (A-LOAM's mapping uses the odometry's stamp), or None"""
+    for st, T, l1, ms in reversed(t_buf):
+        if abs(st - t) < 1e-3:
+            return T, l1, ms
+        if st < t - 1e-3:
+            break
+    return None
+
+
 def hess_cb(msg):
     d = np.array(msg.data, float)
     with lock:
@@ -347,7 +383,8 @@ def aft_cb(msg):
     with lock:
         v = vins_at(t)
         H = latest_H[0]
-        R, p, info = core.step(t, (Ra, pa), v, H)
+        Tm = t_at(t) if TCAP else None
+        R, p, info = core.step(t, (Ra, pa), v, H, T3=(Tm[0] if Tm is not None else None))
         cost, mres = latest_H[1], latest_H[2]
         if SAH:
             try:
@@ -364,7 +401,8 @@ def aft_cb(msg):
                 info["dta"], info["dtv"], HESS_TOPIC, cost, mres] + Hrow +
                [np.degrees(corr_now), np.degrees(sah_state["applied"]), (sah.stats["acc"] if SAH else 0),
                 info.get("gamma", 1.0), info.get("s_vio", 1.0)] +
-               ([info.get("rot_gamma", 1.0), info.get("rot_e2", np.nan), info.get("rot_e10", np.nan)] if ROT_CHECK else []))
+               ([info.get("rot_gamma", 1.0), info.get("rot_e2", np.nan), info.get("rot_e10", np.nan)] if ROT_CHECK else []) +
+               ([Tm[1] if Tm is not None else np.nan, Tm[2] if Tm is not None else np.nan, info.get("tcap_ratio", np.nan)] if TCAP else []))
     cnt[0] += 1
     if cnt[0] % 50 == 0:
         log.flush()
@@ -382,6 +420,9 @@ def main():
     rospy.Subscriber(HESS_TOPIC, Float64MultiArray, hess_cb, queue_size=50)
     rospy.Subscriber("/laser_odom_to_init", Odometry, laser_odom_cb, queue_size=50)
     rospy.Subscriber("/aft_mapped_to_init", Odometry, aft_cb, queue_size=50)
+    if TCAP:
+        from sensor_msgs.msg import PointCloud2
+        rospy.Subscriber("/laser_cloud_surf_last", PointCloud2, surf_cb, queue_size=20, buff_size=2 ** 24)
     if SAH:
         from sensor_msgs.msg import PointCloud2
         rospy.Subscriber("/velodyne_cloud_registered", PointCloud2, sah_cloud_cb, queue_size=20, buff_size=2 ** 24)
@@ -389,6 +430,7 @@ def main():
             threading.Thread(target=sah_worker, daemon=True).start()
         print("SAH=1 KF_DIST=%g KF_ROT=%g SAH_RMIN=%g SAH_RMAX=%g SAH_VOXEL=%g SAH_MAXPTS=%d SAH_MAX_STEP=%.2f deg"
               % (KF_DIST, KF_ROT, SAH_RMIN, SAH_RMAX, SAH_VOXEL, SAH_MAXPTS, np.degrees(SAH_MAX_STEP)))
+    print("TCAP=%d T_KNN=%d T_SUB=%d" % (TCAP, T_KNN, T_SUB))
     print("ROT_CHECK=%d ROT_REF_FAST=%g ROT_REF_SLOW=%g ROT_GUARD=%g ROT_C_FAIL=%g ROT_GAMMA_MIN=%g" % (ROT_CHECK, ROT_REF_FAST, ROT_REF_SLOW, ROT_GUARD, ROT_C_FAIL, ROT_GAMMA_MIN))
     print("VIO_CHECK=%d VIO_CHECK_REF=%g VIO_CHECK_NMIN=%d VIO_SCALE_T=%g VIO_CHECK_FAST=%g VIO_CHECK_FAST_REF=%g LIDAR_GUARD_T=%g LIDAR_GUARD_EX=%g GAMMA_MIN=%g GAP_T=%g"
           % (VIO_CHECK, VIO_CHECK_REF, VIO_CHECK_NMIN, VIO_SCALE_T, VIO_CHECK_FAST, VIO_CHECK_FAST_REF, LIDAR_GUARD_T, LIDAR_GUARD_EX, GAMMA_MIN, GAP_T))
