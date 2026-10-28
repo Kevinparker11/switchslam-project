@@ -6,3 +6,5 @@ Results and reading: `docs/results/OT_Channel_Study.md`. Selection rules, writte
 - `batch.sh TAG "SETTINGS"` runs it on the 12 logs (MF F8 kf 1-6, LC F8 kf 1-3, C02 F8 kf 1-3); `summ.py TAGS...` scores them
   (ATE RMSE full span, Umeyama SE(3), no scale); `be_batch.sh TAG` runs the loop back end (none / iso / ot) on a tag; `be_summ.py`.
 - Data paths are those of the analysis sandbox (/home/claude/data_in*, uploads); on another machine edit the LOGS list in batch.sh / be_batch.sh.
+- `batch.sh` sets each sequence's LiDAR-IMU extrinsic (EXTRINSIC_YAML: `configs/corridor/corridor_extrinsics.yaml` for LC, `configs/corridor2/corridor2_extrinsics.yaml` for C02; copy them next to batch.sh); `ONLY="LC C02"` limits a batch to some sequences.
+- `be_batch2.sh` / `be_summ2.py` (PFX=be2): back end with the stage-4 model `iso_sah`; `run_chain2.sh`: the corridor rerun with the right extrinsics.
