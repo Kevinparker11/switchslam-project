@@ -18,7 +18,7 @@ R = np.array([[1 - 2*(y*y + z*z), 2*(x*y - z*w), 2*(x*z + y*w)],
               [2*(x*z - y*w), 2*(y*z + x*w), 1 - 2*(x*x + y*y)]])
 T = np.eye(4); T[:3, :3] = R; T[:3, 3] = [tr.translation.x, tr.translation.y, tr.translation.z]
 with open(sys.argv[1], "w") as f:
-    f.write("%YAML 1.2\n---\n# Gazebo Husky (generation-1 rig as launched): LiDAR frame '%s' in base_link = IMU frame. x_imu = R x_sensor + t.\n" % frame)
+    f.write("%%YAML 1.2\n---\n# Gazebo Husky (generation-1 rig as launched): LiDAR frame '%s' in base_link = IMU frame. x_imu = R x_sensor + t.\n" % frame)
     f.write("laser_to_imu:\n  rows: 4\n  cols: 4\n  data: [" + ",\n         ".join(", ".join("%.8f" % v for v in row) for row in T) + "]\n")
 print("frame %s -> base_link, t = %s" % (frame, np.round(T[:3, 3], 4)), flush=True)
 print("R =\n%s" % np.round(R, 4))
