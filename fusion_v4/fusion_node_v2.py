@@ -49,7 +49,7 @@ Environment (all optional):
                 the largest values on the A-LOAM-stack Multi Floor F8/F16 recordings: 0.340 / 0.570) the R weight is C_R (0 = rotation
                 from the VINS, i.e. F16); when it does not, the LiDAR rotation carries the step (ROT_C_FAIL, ROT_GAMMA_MIN: design
                 values 1.0 and 1e-3, not tuned).  ROT_GUARD > 0: a LiDAR rotation above ROT_GUARD rad in 2 s is treated as failed
-                (the VINS carries the rotation); off until its value is fixed from the Multi Floor recordings.  Default off:
+                (the VINS carries the rotation); OFF (0) in F17: the 3 x rule gives 6.5 rad, above the pi limit of a rotation angle, so it could never fire.  Default off:
                 F0-F16 are unchanged bit for bit.  Three columns (rot_gamma, rot_e2, rot_e10) are appended to the log only when on.
 Extrinsic: SubT-MRS Multi Floor 'laser_to_imu' (override with EXTRINSIC_YAML=path to the same format).
 """
