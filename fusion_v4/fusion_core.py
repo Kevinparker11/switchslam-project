@@ -258,6 +258,65 @@ class VioChecks:
         return self.checks[0].trusted()
 
 
+class RotConsistency:
+    """Rotation analogue of VioConsistency (design B of docs/results/R_Channel_Rotation_Aware_Test_Protocol.md).
+    Over windows of T_fast and T_slow seconds inside one continuous VIO segment it forms the rotation increment of the LiDAR
+    output, dRa = R_a(i)^T R_a(j), and of the VIO moved to the LiDAR frame, dRv = R_IL^T (R_I(i)^T R_I(j)) R_IL, and takes
+    e = || log(dRa^T dRv) || (rad).  The check is open (gamma_R = 1) while the latest e of both windows is <= its reference
+    (the largest value on the A-LOAM-stack Multi Floor F8/F16 recordings), closed (gamma_R = 0) otherwise; it is open until
+    the first window of a segment exists.  The LiDAR is the rotation reference, as for the translation check: the check cannot
+    tell which sensor is wrong.
+    guard > 0: a LiDAR rotation of more than `guard` rad over the last T_fast s marks the LiDAR step as failed (lidar_bad()).
+    The estimate restarts whenever the VIO is lost or re-initialised."""
+
+    def __init__(self, ref_fast, ref_slow, T_fast=2.0, T_slow=10.0, guard=0.0):
+        self.ref_fast, self.ref_slow, self.T_fast, self.T_slow, self.guard = ref_fast, ref_slow, T_fast, T_slow, guard
+        self.reset()
+
+    def reset(self):
+        self.ts, self.RA, self.RV = [], [], []
+        self.e_fast = self.e_slow = float("nan")
+        self.ang_fast = 0.0
+
+    def restart_windows(self):
+        self.ts, self.RA, self.RV = [], [], []
+
+    def _win(self, t, T):
+        """index of the newest stored pose at least T s old (None if the segment is shorter than T)"""
+        if not self.ts or self.ts[0] > t - T + 1e-6:
+            return None
+        j = 0
+        while j + 1 < len(self.ts) and self.ts[j + 1] <= t - T + 1e-6:
+            j += 1
+        return j
+
+    def update(self, t, Ra, Rv_imu, R_IL):
+        self.ts.append(t); self.RA.append(np.asarray(Ra, float)); self.RV.append(np.asarray(Rv_imu, float))
+        for T in (self.T_fast, self.T_slow):
+            j = self._win(t, T)
+            if j is None or j >= len(self.ts) - 1:
+                continue
+            dRa = self.RA[j].T @ Ra
+            dRv = R_IL.T @ (self.RV[j].T @ Rv_imu) @ R_IL
+            e = float(np.linalg.norm(so3_log(dRa.T @ dRv)))
+            if T == self.T_fast:
+                self.e_fast, self.ang_fast = e, float(np.linalg.norm(so3_log(dRa)))
+            else:
+                self.e_slow = e
+        while len(self.ts) > 2 and self.ts[1] <= t - self.T_slow - 1.0:      # keep the buffers short
+            self.ts.pop(0); self.RA.pop(0); self.RV.pop(0)
+
+    def lidar_bad(self):
+        return self.guard > 0 and self.ang_fast > self.guard
+
+    def gamma(self):
+        if np.isfinite(self.e_fast) and self.e_fast > self.ref_fast:
+            return 0.0
+        if np.isfinite(self.e_slow) and self.e_slow > self.ref_slow:
+            return 0.0
+        return 1.0
+
+
 SWITCH_SLAM_LT = np.array([0.12, 0.27, 0.48])     # Switch-SLAM Eq. 12 thresholds (as published)
 W_MODES = ("schur", "diag", "iso", "const", "proj", "switch_ss", "switch_kR", "lidar", "vins")
 
@@ -361,11 +420,18 @@ class FusionCore:
                  w_mode="schur", alpha=0.7, tau_R=0.0, c_Rb=1.0, bias_axis="all", clip_R=0.0, vio_adapt=None,
                  vio_scale_T=0.0, vio_scale_dmin=1.0, vio_scale_proj=False, vio_scale_seg=False,
                  lidar_guard_T=0.0, lidar_guard_ex=0.0, vio_scale_along=False, gamma_min=0.0,
-                 gap_T=0.0, gap_vmax=5.0, gap_wmax=2.0, switch_rot=False):
+                 gap_T=0.0, gap_vmax=5.0, gap_wmax=2.0, switch_rot=False,
+                 rot_adapt=None, rot_c_fail=1.0, rot_gamma_min=1e-3):
         assert w_mode in W_MODES, w_mode
         # switch_rot (w_mode 'switch_ss' only): the rotation follows the same all-or-nothing switch as the translation (the whole
         # 6-DoF increment from the LiDAR, or from the VIO when the Switch-SLAM rule fires); False = rotation always from the VIO (F12)
         self.switch_rot = switch_rot
+        # rot_adapt: None (rotation weight exactly as before) or a RotConsistency (design B).  While its check is open the R weight
+        # is the usual info_weight(S_RR, c_R, gamma) (zero for c_R = 0, i.e. rotation from the VIO, as in F8/F16); while it is
+        # closed (the VIO rotation disagrees with the LiDAR beyond the reference) the LiDAR rotation carries the step in every
+        # direction with LiDAR information: info_weight(S_RR, rot_c_fail, rot_gamma_min).  A LiDAR rotation flagged by the
+        # guard gives W_R = 0 (the VIO carries the rotation).  rot_c_fail and rot_gamma_min are design values, not tuned.
+        self.rot_adapt, self.rot_c_fail, self.rot_gamma_min = rot_adapt, rot_c_fail, rot_gamma_min
         # vio_adapt: None (unit VIO information, the original rule) or a VioConsistency; its gamma scales the VIO
         # information in both Schur weights (W_t and W_R).  The R / T / SAH structure is unchanged.
         self.vio_adapt = vio_adapt
@@ -532,6 +598,17 @@ class FusionCore:
             elif self.vio_scale_seg and lost:
                 self.s_vio = 1.0
         info["gamma"] = gam
+        rot_gam, rot_bad = 1.0, False
+        if self.rot_adapt is not None:
+            if is_gap:
+                self.rot_adapt.restart_windows()
+            elif have_v:
+                self.rot_adapt.update(t, Ra, vins[0], self.R_IL)
+                rot_bad = self.rot_adapt.lidar_bad()
+            elif lost:
+                self.rot_adapt.reset()
+            rot_gam = self.rot_adapt.gamma()
+            info["rot_gamma"], info["rot_e2"], info["rot_e10"] = rot_gam, self.rot_adapt.e_fast, self.rot_adapt.e_slow
 
         if is_gap:
             info["gap"] = 1
@@ -575,6 +652,11 @@ class FusionCore:
                 elif ok and np.linalg.norm(dt_a) <= self.jump_max and not lidar_bad:
                     W_t = info_weight(S_tt, self.c_t, gam)
                     W_R = info_weight(S_RR, self.c_R, gam)
+                    if self.rot_adapt is not None:
+                        if rot_bad:
+                            W_R = np.zeros((3, 3))
+                        elif rot_gam < 0.5:
+                            W_R = info_weight(S_RR, self.rot_c_fail, self.rot_gamma_min)
                     if self.tau_R > 0 and self.t_prev is not None:
                         g = min(1.0, max(0.0, t - self.t_prev) / self.tau_R)
                         z = so3_log(dR_a) - so3_log(dR_v)

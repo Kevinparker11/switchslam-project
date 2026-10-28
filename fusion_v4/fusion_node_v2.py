@@ -44,6 +44,13 @@ Environment (all optional):
   GAP_T         > 0: LiDAR-gap rule (fusion_core, gap_T).  A scan interval longer than GAP_T s (a LiDAR outage) is bridged by the VIO:
                 the LiDAR increment over the gap is ignored, the VIO jump limits are scaled by the gap, no consistency window spans
                 the gap, and the pose is held if the VIO cannot be used either.  1.0 for G23; 0 = off (G20 exactly, default).
+  ROT_CHECK     1: rotation-consistency check, design B (docs/results/R_Channel_Rotation_Aware_Test_Protocol.md; fusion_core.RotConsistency).
+                While the VINS rotation agrees with the LiDAR rotation over 2 s and 10 s windows (e <= ROT_REF_FAST / ROT_REF_SLOW rad,
+                the largest values on the A-LOAM-stack Multi Floor F8/F16 recordings: 0.340 / 0.570) the R weight is C_R (0 = rotation
+                from the VINS, i.e. F16); when it does not, the LiDAR rotation carries the step (ROT_C_FAIL, ROT_GAMMA_MIN: design
+                values 1.0 and 1e-3, not tuned).  ROT_GUARD > 0: a LiDAR rotation above ROT_GUARD rad in 2 s is treated as failed
+                (the VINS carries the rotation); off until its value is fixed from the Multi Floor recordings.  Default off:
+                F0-F16 are unchanged bit for bit.  Three columns (rot_gamma, rot_e2, rot_e10) are appended to the log only when on.
 Extrinsic: SubT-MRS Multi Floor 'laser_to_imu' (override with EXTRINSIC_YAML=path to the same format).
 """
 import os
@@ -92,6 +99,10 @@ LIDAR_GUARD_T = float(E("LIDAR_GUARD_T", "0"))
 LIDAR_GUARD_EX = float(E("LIDAR_GUARD_EX", "2.16"))
 GAMMA_MIN = float(E("GAMMA_MIN", "0"))
 GAP_T = float(E("GAP_T", "0"))
+ROT_CHECK = E("ROT_CHECK", "0") == "1"
+ROT_REF_FAST, ROT_REF_SLOW = float(E("ROT_REF_FAST", "0.340")), float(E("ROT_REF_SLOW", "0.570"))
+ROT_GUARD = float(E("ROT_GUARD", "0"))
+ROT_C_FAIL, ROT_GAMMA_MIN = float(E("ROT_C_FAIL", "1.0")), float(E("ROT_GAMMA_MIN", "1e-3"))
 VINS_GAP = 1.0            # s without VINS -> treated as lost (warm-up restarts)
 
 # SubT-MRS Hawkins Multi Floor laser_to_imu (x_imu = R x_laser + t)
@@ -115,7 +126,9 @@ if vio_check is not None and VIO_CHECK_FAST > 0:
 core = fc.FusionCore(R_IL, t_IL, c_t=C_T, c_R=C_R, gate=gate, t_warm=T_WARM, hess_frame=HESS_FRAME,
                      jump_max=JUMP_MAX, w_mode=WEIGHT_MODE, alpha=W_ALPHA, vio_adapt=vio_check, vio_scale_T=VIO_SCALE_T,
                      lidar_guard_T=LIDAR_GUARD_T if vio_check is not None else 0.0, lidar_guard_ex=LIDAR_GUARD_EX,
-                     gamma_min=GAMMA_MIN if vio_check is not None else 0.0, gap_T=GAP_T)
+                     gamma_min=GAMMA_MIN if vio_check is not None else 0.0, gap_T=GAP_T,
+                     rot_adapt=fc.RotConsistency(ROT_REF_FAST, ROT_REF_SLOW, guard=ROT_GUARD) if ROT_CHECK else None,
+                     rot_c_fail=ROT_C_FAIL, rot_gamma_min=ROT_GAMMA_MIN)
 if MODE == "lidar":
     core.t_warm = 1e12                     # every step is WARMUP = LiDAR only
 
@@ -138,7 +151,7 @@ w.writerow(["time", "mode", "fused_x", "fused_y", "fused_z", "fused_qx", "fused_
             "aft_x", "aft_y", "aft_z", "aft_qx", "aft_qy", "aft_qz", "aft_qw",
             "v_px", "v_py", "v_pz", "v_qx", "v_qy", "v_qz", "v_qw",
             "gate", "kappa_R", "kappa_t", "kth", "wt0", "wt1", "wt2", "wR0", "wR1", "wR2", "dta", "dtv",
-            "hess_src", "cost", "m_res"] + HCOLS + ["sah_corr_deg", "sah_total_deg", "sah_acc", "vio_gamma", "s_vio"])
+            "hess_src", "cost", "m_res"] + HCOLS + ["sah_corr_deg", "sah_total_deg", "sah_acc", "vio_gamma", "s_vio"] + (["rot_gamma", "rot_e2", "rot_e10"] if ROT_CHECK else []))
 cnt = [0]
 
 
@@ -350,7 +363,8 @@ def aft_cb(msg):
                 info["gate"], info["kappa_R"], info["kappa_t"], info["kth"], *info["wt"], *info["wR"],
                 info["dta"], info["dtv"], HESS_TOPIC, cost, mres] + Hrow +
                [np.degrees(corr_now), np.degrees(sah_state["applied"]), (sah.stats["acc"] if SAH else 0),
-                info.get("gamma", 1.0), info.get("s_vio", 1.0)])
+                info.get("gamma", 1.0), info.get("s_vio", 1.0)] +
+               ([info.get("rot_gamma", 1.0), info.get("rot_e2", np.nan), info.get("rot_e10", np.nan)] if ROT_CHECK else []))
     cnt[0] += 1
     if cnt[0] % 50 == 0:
         log.flush()
@@ -375,6 +389,7 @@ def main():
             threading.Thread(target=sah_worker, daemon=True).start()
         print("SAH=1 KF_DIST=%g KF_ROT=%g SAH_RMIN=%g SAH_RMAX=%g SAH_VOXEL=%g SAH_MAXPTS=%d SAH_MAX_STEP=%.2f deg"
               % (KF_DIST, KF_ROT, SAH_RMIN, SAH_RMAX, SAH_VOXEL, SAH_MAXPTS, np.degrees(SAH_MAX_STEP)))
+    print("ROT_CHECK=%d ROT_REF_FAST=%g ROT_REF_SLOW=%g ROT_GUARD=%g ROT_C_FAIL=%g ROT_GAMMA_MIN=%g" % (ROT_CHECK, ROT_REF_FAST, ROT_REF_SLOW, ROT_GUARD, ROT_C_FAIL, ROT_GAMMA_MIN))
     print("VIO_CHECK=%d VIO_CHECK_REF=%g VIO_CHECK_NMIN=%d VIO_SCALE_T=%g VIO_CHECK_FAST=%g VIO_CHECK_FAST_REF=%g LIDAR_GUARD_T=%g LIDAR_GUARD_EX=%g GAMMA_MIN=%g GAP_T=%g"
           % (VIO_CHECK, VIO_CHECK_REF, VIO_CHECK_NMIN, VIO_SCALE_T, VIO_CHECK_FAST, VIO_CHECK_FAST_REF, LIDAR_GUARD_T, LIDAR_GUARD_EX, GAMMA_MIN, GAP_T))
     print("FUSION_MODE=%s C_T=%g C_R=%g KAPPA_MODE=%s KAPPA_TH=%g T_WARM=%g HESS_TOPIC=%s PREDICT_WITH_VINS=%d RUN_TAG=%s WEIGHT_MODE=%s W_ALPHA=%g"

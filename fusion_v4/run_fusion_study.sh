@@ -149,6 +149,7 @@ declare -A CFG=(
   [G0]="FUSION_MODE=lidar"                                               # GenZ-LIO alone (LiDAR-inertial baseline); logs VINS + H for replay
   [GV]="FUSION_MODE=vins"                                                # VINS-Mono control in the GenZ stack
   [G8]="FUSION_MODE=fused C_T=$GENZ_C_T_F8 KAPPA_TH=1e9"                   # ablation: F8 rule on GenZ (rotation from VINS-Mono, Schur S_RR only monitored)
+  [F17]="FUSION_MODE=fused C_T=3e-2 C_R=${ROT_C_R_HEALTHY:-0} KAPPA_TH=1e9 SAH=1 ROT_CHECK=1"  # F16 + rotation-aware R channel (design B); healthy-state c_R from the grid of the protocol (0 = exactly F16 while the check is open)
   [G16]="FUSION_MODE=fused C_T=$GENZ_C_T_F8 KAPPA_TH=1e9 SAH=1"            # ablation: F16 rule on GenZ (+ SAH)
   [G9]="FUSION_MODE=fused C_T=$GENZ_C_T C_R=$GENZ_C_R KAPPA_TH=1e9"         # R and T both from Schur: S_RR and S_tt active weights
   [G17]="FUSION_MODE=fused C_T=$GENZ_C_T C_R=$GENZ_C_R KAPPA_TH=1e9 SAH=1"  # G9 + SAH (the additional T)
