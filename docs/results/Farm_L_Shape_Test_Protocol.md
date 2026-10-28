@@ -80,3 +80,18 @@ Rules fixed now:
 Requested by the owner: everything as in the generation-1 sequence (Gazebo GUI with `agriculture_world.launch` and the old `HUSKY_URDF_EXTRAS`, controller switch, `aloam_velodyne_VLP_16.launch` with rviz and the `/switch_fused_pose` remap, VINS-Mono with `config/farm/farm_mono_config.yaml`, wiggle, reset to (0, 0, 0.2), `waypoint_driver_v4.py`), with one change: terminal 5 runs `fusion_node_v2.py` with the F8 settings (`FUSION_MODE=fused C_T=3e-2 KAPPA_TH=1e9`; all other node settings at their defaults: no gate, no SAH, no consistency check) instead of `switching_node_v9.py`. It publishes to the same `/switch_fused_pose`, so A-LOAM is fed by it exactly as it was by the old node.
 Two additions that do not touch the estimate: (1) a passive logger (`gazebo/live/gt_logger.py`) writes the Husky pose from `/gazebo/model_states` (the old node logged gt itself, F8's node does not); (2) the LiDAR-to-IMU extrinsic the F8 node needs is read from tf of the running robot (`gazebo/live/make_live_extrinsics.py`; the IMU is the hector plugin on `base_link`), because the generation-1 rig is not the rig of the bag test.
 Rules fixed now: three runs, each from a full clean restart, all reported (a failed start counts as a run). Scoring starts at the reset to (0, 0, 0.2) (the teleport is the jump in the ground-truth file), so the wiggle and the teleport are not scored; full-span ATE RMSE and max, Umeyama SE(3), no scale, for the fused output; the A-LOAM output of the same log is reported beside it. Predictions: (S1) F8 below 2.5 m (half the old node's 5.0-5.8 m) in 3 of 3 runs; (S2) not below A-LOAM alone (old 0.32-0.48 m), as in the office world and the bag test (F8 0.99 m against 0.10 m); (S3) the live F8 is within a factor 2 of the bag-test F8 (0.99 m). Nothing is changed after seeing a score.
+
+### Step 2, run 1 of 3 (28 Oct 2026, live, Gazebo GUI, F8 node in terminal 5; scored from the reset at t = 184.7 s)
+GT path 80.9 m, route completed (end (-38.5, -40.0)), 3525 scored poses; modes after the reset FUSED 3394 / WARMUP 221 / VO_FAIL 3 (first FUSED 22.6 s after the reset). Full-span ATE RMSE / max (m), Umeyama SE(3), no scale:
+
+| Output | ATE / max |
+|---|---|
+| **F8 fused** | **0.490 / 0.750** |
+| A-LOAM output of the same run (fed by the F8 predictions, so not an independent A-LOAM-alone run) | 0.385 / 0.905 |
+| VINS-Mono alone (same log) | 1.222 / 5.696 |
+| Generation-1 switching node, same route, same procedure (3 runs) | 5.02 / 5.79 / 5.18 |
+| Generation-1 A-LOAM output (3 runs) | 0.32 / 0.44 / 0.48 |
+| Bag test, F8 | 0.99 / 2.71 |
+
+By leg of the GT path (fused error after the global alignment): 0-40 m 0.36 (max 0.62), 40-60 m 0.56, 60-81 m 0.59 (max 0.75); fused path length 83.0 m against 80.8 m.
+Predictions: S1 met (0.49 < 2.5 m; 1 of 3 runs so far). S2 met in the weak sense (fused 0.49 is not below the old A-LOAM range 0.32-0.48). S3 narrowly missed: 0.490 is 2.02 times lower than the bag-test F8 (0.99); the factor-2 bound was 0.495. P1' (replication of the old procedure): the A-LOAM output 0.385 is inside the old 0.32-0.48 range. One run; runs 2 and 3 are still to be done. The extrinsic printout of `make_live_extrinsics.py` was not sent for the record.
