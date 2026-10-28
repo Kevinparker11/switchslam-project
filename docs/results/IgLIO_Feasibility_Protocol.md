@@ -124,3 +124,16 @@ Mean ATE (m), rows c_T, columns c_R = 2e-6, 5e-6, 1e-5, 2e-5:
 
 ### Phase B launch (27 Oct 2026, before any Phase B run)
 The owner asked for the Phase B batch while the c_R grid question of Phase A3 was still open. The default already written above is therefore taken: the literal rule result c_T = 1e-6, c_R = 2e-5, no widening of the grid. Nothing else is changed from the specification (Multi Floor I20 x3 at 1.0x; Long Corridor I0 x2 + I20 x2 and Cave02 I0 x1 + I20 x1 at 0.5x; `ig_lio/phaseB_batch.sh`). The time-field check of the bag (seconds against milliseconds) is still open and is reported as a limit if it is not closed. Predictions I1-I5 stand as fixed; I1 is already known not to be met on the development sequence by the literal constants (Phase A3).
+
+## Outcome of Phase B (27-28 Oct 2026, live, frozen: 0.25 m change, c_T = 1e-6, c_R = 2e-5; nothing changed after Phase A)
+Full-span ATE RMSE (m), Umeyama SE(3):
+
+| Sequence | iG-LIO alone (I0) | Fused (I20) |
+|---|---|---|
+| Multi Floor (1.0x), 3 runs | Phase A: 0.75 / 0.23 / 0.32 (median 0.32) | 0.70 / 1.31 / 0.63 (median 0.70) |
+| Long Corridor (0.5x), 2 runs | 17,766 / 13,378 | 3,592 / 1,845 |
+| Cave02 (0.5x), 1 run | 655,217 | 159,132 |
+
+Predictions (fixed before the runs): I1 not met (Multi Floor fused median 0.70 against 0.32; the two corridor and cave sequences are failures in both columns). I2 not scored (needs VINS-Mono alone from the same runs). I3 met on Multi Floor only (0.32 against the paper's 0.25 m); missed by orders of magnitude on Long Corridor and Cave02. I4 not met (fused 3,592 against 17,766 m is not within 20 %). I5 met, but only because every non-Multi Floor run diverged in both kinds of run (3 of 3 alone, 3 of 3 fused; Multi Floor 0 of 6).
+Reading of the iG-LIO logs (read-only): feature starvation is not the cause on Long Corridor (median 1,369-1,536 downsampled points per scan). On Long Corridor the gyro-bias estimate is 38-42 rad/s from the first update and never recovers (24 rad/s at the end); the bag does not start static (mean gyro of the first 2 s: z -0.26 rad/s; gyro std 0.1-0.3 rad/s over 20 s, against 0.001 rad/s and 0.03-0.04 on Multi Floor), but the logged bias is two orders of magnitude above any raw gyro value (max 1.41 rad/s), so the non-static start does not by itself explain it; the mechanism is not found. On Cave02 the initial bias (1.1 rad/s) recovers to 0.03-0.06 rad/s by update 50, so its divergence is a different mechanism (scans with few or zero covariance points appear: minimum 0); not diagnosed. The time field of the converted scans (seconds or milliseconds) is still unchecked (the Multi Floor and Long Corridor bags hold raw Velodyne packets, no PointCloud2).
+Verdict under the rule of Stage 5: iG-LIO with the authors' configuration plus the one pre-declared change is not a stable third front end across sequences. The report stays on two front ends (A-LOAM, GenZ-LIO); iG-LIO is reported as a feasibility attempt that works on Multi Floor (development data) and fails on the held-out Long Corridor and Cave02. Any rescue (static-window initialisation, a per-sequence setting) would be a new, separately declared test and not a continuation of this one.
