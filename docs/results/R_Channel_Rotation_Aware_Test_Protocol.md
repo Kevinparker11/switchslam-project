@@ -31,3 +31,24 @@ Route: the L route with in-place turns inserted (4 turns of 360 degrees at 1.5 r
 | E1 or E2 fails | B is not equivalent to F16 on healthy data; reported, redesign is a new, separately declared step. |
 | R1 fails with P0 holding | R does not help even where it should; claim T + T+ only on this stack. |
 Limits: a design chosen after the replay result was known; constants come only from Multi Floor; one world and one kind of rotation failure in simulation; the check treats the LiDAR as the rotation reference (it cannot tell which sensor is wrong, as for translation).
+
+## Phase 0, first output (28 Oct 2026, 51 F8/F16 logs from the laptop, 102 rows of the scan; log names carried no sequence, so the logs are grouped here by row count and the sequence of each group is NOT yet confirmed)
+Rotation disagreement e between VINS-Mono and the A-LOAM scan-to-map output (rad; per group: mean of the per-log medians, largest per-log 95th percentile, largest value):
+
+| Group (logs) | 2 s: p50 / p95 / max | 10 s: p50 / p95 / max | max yaw part / tilt part (2 s) |
+|---|---|---|---|
+| A, 2.9-4.1k rows (18 logs; F8 kf_run1-9, F8 run1-3, F16 kf_run1-6; probably Multi Floor) | 0.039 / 0.160 / **0.340** | 0.071 / 0.329 / **0.570** | 0.300 / 0.277 |
+| B, ~9.4k rows (6) | 0.029 / 0.073 / 0.198 | 0.036 / 0.088 / 0.157 | 0.198 / 0.123 |
+| C, ~8.2-8.9k rows (10) | 0.012 / 0.083 / 0.196 | 0.022 / 0.092 / 0.231 | 0.184 / 0.128 |
+| D, ~2.8k rows (9) | 0.025 / 0.118 / 0.216 | 0.040 / 0.147 / 0.222 | 0.187 / 0.187 |
+| E, ~5.2-5.6k rows (3) | 0.011 / 0.081 / 0.206 | 0.021 / 0.089 / 0.186 | 0.184 / 0.158 |
+| one further log, 2877 rows | 0.040 / 0.151 / 0.225 | 0.081 / 0.253 / 0.367 | 0.211 / 0.218 |
+| GEODE F16 (2 logs, 1058-1118 FUSED rows) | 0.040 / 0.111 / 0.173 | 0.107 / 0.191 / 0.272 | 0.130 / 0.135 |
+| farm bag F8 / farm live F8 (1 log each) | 0.001-0.002 / 0.007 / 0.032 | 0.004-0.007 / 0.021 / 0.037 | 0.032 / 0.011 |
+What it shows, and what it does not:
+- Healthy A-LOAM-stack runs disagree with VINS-Mono by a median of 0.01-0.04 rad over 2 s (about 1-2 degrees) and at most 0.34 rad (19 degrees) over 2 s, 0.57 rad over 10 s. If group A is the Multi Floor set, a reference taken as its largest value (2 s: about 0.34, 10 s: about 0.57) is never exceeded by any other group (largest elsewhere 0.23 / 0.37), so the 2 % rule (E2) is met on those logs by construction; it also means the check is loose: it would stay open for rotation errors below about 19 degrees in 2 s.
+- The tilt part is as large as the yaw part (group A 0.277 against 0.300), so the disagreement is not confined to heading; a yaw-only R channel (option C) is not supported by this data.
+- The farm values (0.002 rad) say little: the route is nearly straight (95th percentile LiDAR rotation over 2 s is 0.02 rad, against 2.06 rad for GEODE), and the A-LOAM output there is seeded by the fused pose (open item above).
+- The scan uses the Multi Floor extrinsic for every log; GEODE and the farm have other rigs, so their rows are indicative only.
+- No recorded A-LOAM-stack run has a VINS-Mono rotation failure, so this output cannot show that the check would detect one. That is the job of Phase 3.
+Clarification written after seeing this output, not from it: "the Multi Floor calibration recordings" for the reference constants means all A-LOAM-stack Multi Floor F8/F16 live recordings made before the F17b runs (not the GenZ-stack calibration set). Which logs those are is to be confirmed from the folder names (updated scanner prints the last three path parts and the 95th percentile of the LiDAR rotation angle).

@@ -37,14 +37,14 @@ def Rs(d, pre):
     return [fc.quat_to_R(x) if np.isfinite(x).all() else None for x in q]
 
 
-print("%-52s %5s %5s | %-4s %6s %6s %6s %6s | %6s %6s" % ("log", "rows", "FUSED", "W", "n", "e_p50", "e_p95", "e_max", "eY_max", "eT_max"))
+print("%-60s %5s %5s | %-4s %6s %6s %6s %6s | %6s %6s | %6s" % ("log (last 3 path parts)", "rows", "FUSED", "W", "n", "e_p50", "e_p95", "e_max", "eY_max", "eT_max", "ang_p95"))
 for path in a.logs:
     d = pd.read_csv(path)
     t = d["time"].values
     ok = (d["mode"] == "FUSED").values
     RA, RV = Rs(d, "aft_"), Rs(d, "v_")
     for W in [float(x) for x in a.w.split(",")]:
-        es, ey, et = [], [], []
+        es, ey, et, an = [], [], [], []
         i0 = 0
         step = max(1, int(np.searchsorted(t, t[0] + 1.0)))        # about 1 s between windows
         for i in range(0, len(t), step):
@@ -56,10 +56,10 @@ for path in a.logs:
             err = fc.so3_log(dA.T @ dV)
             up = R_IL.T @ (RV[i].T @ np.array([0.0, 0.0, 1.0]))     # world up in the LiDAR frame at the window start
             e = float(np.linalg.norm(err)); y = abs(float(err @ up)); tl = float(np.sqrt(max(e * e - y * y, 0.0)))
-            es.append(e); ey.append(y); et.append(tl)
+            es.append(e); ey.append(y); et.append(tl); an.append(float(np.linalg.norm(fc.so3_log(dA))))
         es = np.array(es)
         if len(es) == 0:
-            print("%-52s %5d %5d | %-4g %6d" % (path.split("/")[-1][:52], len(d), ok.sum(), W, 0))
+            print("%-60s %5d %5d | %-4g %6d" % ("/".join(path.split("/")[-3:])[-60:], len(d), ok.sum(), W, 0))
         else:
-            print("%-52s %5d %5d | %-4g %6d %6.3f %6.3f %6.3f | %6.3f %6.3f" % (path.split("/")[-1][:52], len(d), ok.sum(), W, len(es),
-                  np.percentile(es, 50), np.percentile(es, 95), es.max(), max(ey), max(et)))
+            print("%-60s %5d %5d | %-4g %6d %6.3f %6.3f %6.3f | %6.3f %6.3f | %6.3f" % ("/".join(path.split("/")[-3:])[-60:], len(d), ok.sum(), W, len(es),
+                  np.percentile(es, 50), np.percentile(es, 95), es.max(), max(ey), max(et), np.percentile(an, 95)))
