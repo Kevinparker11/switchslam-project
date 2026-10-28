@@ -63,6 +63,14 @@ Environment (all optional):
                 the scan-to-map rotation.  T and the Schur translation information are combined direction by direction by
                 the chosen rule before the weight.  Works with or without SAH.  Three columns (OT_l1, OT_age, ot_ratio) are
                 appended only when on.  Off: F0-F19 unchanged bit for bit.
+                Round 2 (docs/results/OT_Channel_Round2.md) adds OT_MODE gmin | gmax | psum | agm | ci (basis-free matrix
+                combinations of S_tt and N T) and wprod | wmean (the OT channel as a separate weight, combined with the Schur weight),
+                and OT_SRC geom3 (scattered points count as isotropic support) | gschur (Schur block of the scan's geometric 6-DoF
+                Hessian) | georf (geometric tensor without the scan-direction 'lines' of a spinning LiDAR's rings);
+                OT_MODE smin: scale-free shape cap.  VIO_CHECK_START=1: the VINS is trusted at the start of a segment until a check can judge (default 0 =
+                untrusted until it has agreed, G20).  VIO_CHECK_PROJ=1: the checks judge the VINS only along the directions the LiDAR
+                translation weight (Schur T with the OT channel) supports (fusion_core.VioConsistency proj).  VIO_DEBUG=1 appends
+                vio_r_slow, vio_r_fast, guard_ex (for the reference calibration).
 Extrinsic: SubT-MRS Multi Floor 'laser_to_imu' (override with EXTRINSIC_YAML=path to the same format).
 """
 import os
@@ -119,6 +127,10 @@ TCAP = E("TCAP", "0") == "1"
 OT_MODE = E("OT_MODE", "off")
 OT = OT_MODE != "off"
 OT_SRC = E("OT_SRC", "planar")             # planar: T = mean n n^T of planar normals; geom: G also counts linear features
+assert OT_SRC in ("planar", "geom", "geom3", "gschur", "georf"), OT_SRC
+VIO_CHECK_START = E("VIO_CHECK_START", "0") == "1"
+VIO_CHECK_PROJ = E("VIO_CHECK_PROJ", "0") == "1"
+VIO_DEBUG = E("VIO_DEBUG", "0") == "1"
 if OT and TCAP:
     raise SystemExit("TCAP (per-scan T from /laser_cloud_surf_last) and OT_MODE (keyframe T) are alternatives; set one")
 KF_CLOUDS = SAH or OT                      # keyframe scans are needed by SAH and/or the OT channel
@@ -139,10 +151,12 @@ R_IL, t_IL = U @ Vt, T_LI[:3, 3].copy()
 
 lock = threading.Lock()
 gate = fc.KappaGate(kth=KAPPA_TH, mode=KAPPA_MODE)
-vio_check = fc.VioConsistency(ref=VIO_CHECK_REF, stat="scale", rule="gate", avg=None, n_min=VIO_CHECK_NMIN) if VIO_CHECK else None
+vio_check = fc.VioConsistency(ref=VIO_CHECK_REF, stat="scale", rule="gate", avg=None, n_min=VIO_CHECK_NMIN,
+                              proj=VIO_CHECK_PROJ, start_trusted=VIO_CHECK_START) if VIO_CHECK else None
 if vio_check is not None and VIO_CHECK_FAST > 0:
     vio_check = fc.VioChecks([vio_check, fc.VioConsistency(ref=VIO_CHECK_FAST_REF, stat="scale", rule="gate",
-                                                          avg=VIO_CHECK_FAST, n_min=VIO_CHECK_FAST_NMIN)])
+                                                          avg=VIO_CHECK_FAST, n_min=VIO_CHECK_FAST_NMIN,
+                                                          proj=VIO_CHECK_PROJ, start_trusted=VIO_CHECK_START)])
 core = fc.FusionCore(R_IL, t_IL, c_t=C_T, c_R=C_R, gate=gate, t_warm=T_WARM, hess_frame=HESS_FRAME,
                      jump_max=JUMP_MAX, w_mode=WEIGHT_MODE, alpha=W_ALPHA, vio_adapt=vio_check, vio_scale_T=VIO_SCALE_T,
                      lidar_guard_T=LIDAR_GUARD_T if vio_check is not None else 0.0, lidar_guard_ex=LIDAR_GUARD_EX,
@@ -176,7 +190,7 @@ w.writerow(["time", "mode", "fused_x", "fused_y", "fused_z", "fused_qx", "fused_
             "aft_x", "aft_y", "aft_z", "aft_qx", "aft_qy", "aft_qz", "aft_qw",
             "v_px", "v_py", "v_pz", "v_qx", "v_qy", "v_qz", "v_qw",
             "gate", "kappa_R", "kappa_t", "kth", "wt0", "wt1", "wt2", "wR0", "wR1", "wR2", "dta", "dtv",
-            "hess_src", "cost", "m_res"] + HCOLS + ["sah_corr_deg", "sah_total_deg", "sah_acc", "vio_gamma", "s_vio"] + (["rot_gamma", "rot_e2", "rot_e10"] if ROT_CHECK else []) + (["T_l1", "T_ms", "tcap_ratio"] if TCAP else []) + (["OT_l1", "OT_age", "ot_ratio"] if OT else []))
+            "hess_src", "cost", "m_res"] + HCOLS + ["sah_corr_deg", "sah_total_deg", "sah_acc", "vio_gamma", "s_vio"] + (["rot_gamma", "rot_e2", "rot_e10"] if ROT_CHECK else []) + (["T_l1", "T_ms", "tcap_ratio"] if TCAP else []) + (["OT_l1", "OT_age", "ot_ratio"] if OT else []) + (["vio_r_slow", "vio_r_fast", "guard_ex"] if VIO_DEBUG else []))
 cnt = [0]
 
 
@@ -212,7 +226,10 @@ def sah_process(job):
             Pb = voxel_down(Pb, SAH_VOXEL)
             if len(Pb) > SAH_MAXPTS:
                 Pb = Pb[np.random.default_rng(int(t * 1e3) % (2 ** 31)).choice(len(Pb), SAH_MAXPTS, replace=False)]
-            if OT:
+            if OT and OT_SRC in ("geom3", "gschur", "georf"):
+                nb, plan, T_pl, G_ge, G_3, G_S, G_RF = shd.scan_tensors_ext(Pb)
+                T_kf = {"geom3": G_3, "gschur": G_S, "georf": G_RF}[OT_SRC]
+            elif OT:
                 nb, plan, T_pl, G_ge = shd.scan_tensors(Pb)
                 T_kf = G_ge if OT_SRC == "geom" else T_pl
             else:
@@ -437,7 +454,8 @@ def aft_cb(msg):
                 info.get("gamma", 1.0), info.get("s_vio", 1.0)] +
                ([info.get("rot_gamma", 1.0), info.get("rot_e2", np.nan), info.get("rot_e10", np.nan)] if ROT_CHECK else []) +
                ([Tm[1] if Tm is not None else np.nan, Tm[2] if Tm is not None else np.nan, info.get("tcap_ratio", np.nan)] if TCAP else []) +
-               ([ot_l1, ot_age, info.get("tcap_ratio", np.nan)] if OT else []))
+               ([ot_l1, ot_age, info.get("tcap_ratio", np.nan)] if OT else []) +
+               ([info.get("vio_r_slow", np.nan), info.get("vio_r_fast", np.nan), info.get("guard_ex", np.nan)] if VIO_DEBUG else []))
     cnt[0] += 1
     if cnt[0] % 50 == 0:
         log.flush()
@@ -466,6 +484,7 @@ def main():
         print("SAH=1 KF_DIST=%g KF_ROT=%g SAH_RMIN=%g SAH_RMAX=%g SAH_VOXEL=%g SAH_MAXPTS=%d SAH_MAX_STEP=%.2f deg"
               % (KF_DIST, KF_ROT, SAH_RMIN, SAH_RMAX, SAH_VOXEL, SAH_MAXPTS, np.degrees(SAH_MAX_STEP)))
     print("TCAP=%d T_KNN=%d T_SUB=%d OT_MODE=%s OT_SRC=%s" % (TCAP, T_KNN, T_SUB, OT_MODE, OT_SRC))
+    print("VIO_CHECK_START=%d VIO_CHECK_PROJ=%d VIO_DEBUG=%d" % (VIO_CHECK_START, VIO_CHECK_PROJ, VIO_DEBUG))
     print("ROT_CHECK=%d ROT_REF_FAST=%g ROT_REF_SLOW=%g ROT_GUARD=%g ROT_C_FAIL=%g ROT_GAMMA_MIN=%g" % (ROT_CHECK, ROT_REF_FAST, ROT_REF_SLOW, ROT_GUARD, ROT_C_FAIL, ROT_GAMMA_MIN))
     print("VIO_CHECK=%d VIO_CHECK_REF=%g VIO_CHECK_NMIN=%d VIO_SCALE_T=%g VIO_CHECK_FAST=%g VIO_CHECK_FAST_REF=%g LIDAR_GUARD_T=%g LIDAR_GUARD_EX=%g GAMMA_MIN=%g GAP_T=%g"
           % (VIO_CHECK, VIO_CHECK_REF, VIO_CHECK_NMIN, VIO_SCALE_T, VIO_CHECK_FAST, VIO_CHECK_FAST_REF, LIDAR_GUARD_T, LIDAR_GUARD_EX, GAMMA_MIN, GAP_T))

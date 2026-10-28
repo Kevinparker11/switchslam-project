@@ -68,6 +68,59 @@ def scan_tensors(P, k=12, pmin=0.5, lmin=0.5):
     return nb, plan[m], T, G
 
 
+def scan_tensors_ext(P, k=12, pmin=0.5, lmin=0.5):
+    """scan_tensors() plus two alternative orientation tensors from the same k-NN PCA (round 2 of the OT study):
+    G3 = (sum_planar n n^T + sum_linear (I - d d^T)/2 + sum_scatter I/3) / n_all  (scattered points, neither planar nor
+         linear, e.g. vegetation or clutter, count as isotropic translational support; trace 1);
+    GS = translation Schur block of the scan's own geometric 6-DoF Hessian, H_g = sum J J^T with J = [p x n; n] per planar
+         point and [p x e; e] / sqrt(2) for the two directions e normal to each line direction d (p = the point, LiDAR
+         frame), divided by the number of planar + linear points (so tr(GS) <= tr(G) = 1: the rotation coupling of the
+         raw geometry removed, as the solver's Schur complement does).
+    GRF = G without scan-direction lines: a linear point whose direction d lies within 30 deg of the azimuthal sweep
+         direction of a spinning LiDAR at that point (z_body x p) is the ring sampling of a surface, not an edge (ring
+         spacing grows with range, so k-NN neighbourhoods on a plane are elongated along the ring) and is dropped.
+    Returns (normals, planarity, T, G, G3, GS, GRF); tensors are None when there are no such points."""
+    idx = knn_idx(P, k)
+    Q = P[idx] - P[idx].mean(1, keepdims=True)
+    C = np.einsum("nki,nkj->nij", Q, Q) / k
+    w, v = np.linalg.eigh(C)
+    plan = (w[:, 1] - w[:, 0]) / np.maximum(w[:, 2], 1e-12)
+    lin = (w[:, 2] - w[:, 1]) / np.maximum(w[:, 2], 1e-12)
+    m = plan > pmin
+    nb = v[m, :, 0]
+    ml = (lin > lmin) & ~m
+    d = v[ml, :, 2]
+    ms = ~m & ~ml
+    T = nb.T @ nb / len(nb) if len(nb) else None
+    tot = len(nb) + len(d)
+    G = G3 = GS = GRF = None
+    tng = np.c_[-P[:, 1], P[:, 0], np.zeros(len(P))]
+    tng /= np.maximum(np.linalg.norm(tng, axis=1, keepdims=True), 1e-9)
+    ring = np.abs((v[:, :, 2] * tng).sum(1)) > np.cos(np.radians(30.0))
+    d_rf = v[ml & ~ring, :, 2]
+    if len(nb) + len(d_rf):
+        GRF = (nb.T @ nb + 0.5 * (len(d_rf) * np.eye(3) - d_rf.T @ d_rf)) / (len(nb) + len(d_rf))
+    if tot:
+        G = (nb.T @ nb + 0.5 * (len(d) * np.eye(3) - d.T @ d)) / tot
+        G3 = (nb.T @ nb + 0.5 * (len(d) * np.eye(3) - d.T @ d) + ms.sum() / 3.0 * np.eye(3)) / (tot + ms.sum())
+        Pp, Pl = P[m], P[ml]
+        Jp = np.concatenate([np.cross(Pp, nb), nb], 1)                  # (np, 6)
+        rows = [Jp]
+        if len(d):
+            a = np.where(np.abs(d[:, 0:1]) < 0.9, np.array([[1.0, 0, 0]]), np.array([[0, 1.0, 0]]))
+            e1 = np.cross(d, a); e1 /= np.linalg.norm(e1, axis=1, keepdims=True)
+            e2 = np.cross(d, e1)
+            for e in (e1, e2):
+                rows.append(np.concatenate([np.cross(Pl, e), e], 1) / np.sqrt(2.0))
+        J = np.concatenate(rows, 0)
+        Hg = J.T @ J
+        Hrr, Hrt, Htt = Hg[:3, :3], Hg[:3, 3:], Hg[3:, 3:]
+        Hrr = Hrr + 1e-9 * max(np.trace(Hrr), 1e-300) * np.eye(3)
+        GS = (Htt - Hrt.T @ np.linalg.solve(Hrr, Hrt)) / tot
+        GS = 0.5 * (GS + GS.T)
+    return nb, plan[m], T, G, G3, GS, GRF
+
+
 def level_rotation(u):
     """rotation taking the unit vector u (estimated world up in the estimator's world frame) to +z"""
     z = np.array([0, 0, 1.0])

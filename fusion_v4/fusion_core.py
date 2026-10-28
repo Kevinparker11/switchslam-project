@@ -145,9 +145,17 @@ class VioConsistency:
     While r is undefined (no motion) the previous gamma is held; at the start of every VIO segment gamma = 0 until
     the VIO has shown that it agrees with the LiDAR.  The estimate restarts whenever the VIO is lost or re-initialised."""
 
-    def __init__(self, ref, stat="scale", rule="gate", T=10.0, avg=10.0, d_min=1.0, n_min=5, debias=False, T_loc=10.0):
+    def __init__(self, ref, stat="scale", rule="gate", T=10.0, avg=10.0, d_min=1.0, n_min=5, debias=False, T_loc=10.0,
+                 proj=False, start_trusted=False):
         assert stat in ("vec", "scale") and rule in ("ratio", "gate")
         self.ref, self.stat, self.rule, self.T, self.avg, self.d_min, self.n_min = ref, stat, rule, T, avg, d_min, n_min
+        # proj (round 2 of the OT study, V2): the window displacements are formed from per-step increments that were first
+        # multiplied by the LiDAR translation weight of that step (both LiDAR channels: Schur T capped by the orientation
+        # tensor), so the VIO is judged only along directions the LiDAR can vouch for; a LiDAR-degenerate axis carries no
+        # evidence against the VIO.  update() then needs inc = (projected LiDAR increment, projected VIO increment), world frame.
+        # start_trusted: gamma = 1 at the start of a segment until the check has enough windows to judge (V1b, V2);
+        # False = untrusted until the VIO has agreed (the G20 behaviour).
+        self.proj, self.start_trusted = proj, start_trusted
         # debias (stat 'scale', avg None): the test uses the spread of x = ln(|dv|/|da|) about its segment median, i.e. the
         # VIO is judged after its constant scale error has been removed by scale(); without it r = sqrt(mean x^2) mixes a
         # constant scale bias (correctable) with erratic motion (not correctable).
@@ -156,7 +164,8 @@ class VioConsistency:
 
     def reset(self):
         self.ts, self.A, self.V, self.rw = [], [], [], []      # times, LiDAR poses, VIO poses, (t_end, value)
-        self.i0, self.g, self.r = 0, 0.0, float("nan")
+        self.i0, self.g, self.r = 0, (1.0 if getattr(self, "start_trusted", False) else 0.0), float("nan")
+        self.CA, self.CV = [], []                               # proj: cumulative projected increments (world)
         self.sum, self.nused = 0.0, 0
         self.xs = []                                            # signed ln(|dv|/|da|) of every window (stat 'scale')
         self.s = 1.0
@@ -166,6 +175,7 @@ class VioConsistency:
         """Forget the stored poses, so that no window spans the next step (a LiDAR gap): the gate state and the statistics
         gathered so far are kept, and new windows form once T s of poses have been stored again."""
         self.ts, self.A, self.V, self.i0 = [], [], [], 0
+        self.CA, self.CV = [], []
 
     def scale_local(self):
         """Local VIO scale: median |LiDAR displacement| / |VIO displacement| of the 10 s windows that ended in the last T_loc s
@@ -178,15 +188,22 @@ class VioConsistency:
         either source misbehaves (a LiDAR blow-up or a VIO re-initialisation transient cannot drag it)."""
         return self.s
 
-    def update(self, t, aft, vins, R_IL, t_IL):
+    def update(self, t, aft, vins, R_IL, t_IL, inc=None):
         self.ts.append(t); self.A.append(aft); self.V.append(vins)
+        if self.proj:
+            ia, iv = (np.zeros(3), np.zeros(3)) if inc is None else (np.asarray(inc[0], float), np.asarray(inc[1], float))
+            self.CA.append((self.CA[-1] if self.CA else np.zeros(3)) + ia)
+            self.CV.append((self.CV[-1] if self.CV else np.zeros(3)) + iv)
         while self.i0 + 1 < len(self.ts) and self.ts[self.i0 + 1] <= t - self.T:
             self.i0 += 1
         if self.ts[self.i0] <= t - self.T + 1e-6 and self.i0 < len(self.ts) - 1:
             j = self.i0
-            _, da = rel_body(self.A[j][0], self.A[j][1], aft[0], aft[1])
-            dRI, dtI = rel_body(self.V[j][0], self.V[j][1], vins[0], vins[1])
-            _, dv = imu_to_lidar_increment(dRI, dtI, R_IL, t_IL)
+            if self.proj:
+                da, dv = self.CA[-1] - self.CA[j], self.CV[-1] - self.CV[j]
+            else:
+                _, da = rel_body(self.A[j][0], self.A[j][1], aft[0], aft[1])
+                dRI, dtI = rel_body(self.V[j][0], self.V[j][1], vins[0], vins[1])
+                _, dv = imu_to_lidar_increment(dRI, dtI, R_IL, t_IL)
             la = float(np.linalg.norm(da))
             if self.stat == "vec":
                 self.rw.append((t, float(np.linalg.norm(dv - da)) ** 2 / max(la, self.d_min) ** 2))
@@ -204,6 +221,8 @@ class VioConsistency:
         if self.i0 > 2000:                                       # keep the buffers short
             k = self.i0
             self.ts, self.A, self.V, self.i0 = self.ts[k:], self.A[k:], self.V[k:], 0
+            if self.proj:
+                self.CA, self.CV = self.CA[k:], self.CV[k:]
         if len(self.rw) >= self.n_min:
             if self.debias and self.stat == "scale" and self.avg is None:
                 med = float(np.median(self.xs))
@@ -236,14 +255,15 @@ class VioChecks:
 
     def __init__(self, checks):
         self.checks = list(checks)
+        self.proj = any(getattr(c, "proj", False) for c in self.checks)
 
     def reset(self):
         for c in self.checks:
             c.reset()
 
-    def update(self, *a):
+    def update(self, *a, **k):
         for c in self.checks:
-            c.update(*a)
+            c.update(*a, **k)
 
     def restart_windows(self):
         for c in self.checks:
@@ -399,6 +419,101 @@ def t_combine(mode, H, S_tt, T, hess_frame="world", R_wb=None):
     return (V * lam2) @ V.T, float(np.min(lam2 / np.maximum(lam, 1e-300)))
 
 
+# Round 2 of the OT study (docs/results/OT_Channel_Round2.md): basis-free matrix combinations of A = S_tt (solver) and
+# B = N T (raw geometry, same total mass), and two rules in which the OT channel is a separate weight.
+T_MODES2 = ("gmin", "gmax", "psum", "agm", "ci", "wprod", "wmean", "smin")
+W_RULES = ("wprod", "wmean")
+
+
+def _sym(X):
+    return 0.5 * (X + X.T)
+
+
+def _reg(X, eps=1e-9):
+    X = _sym(np.asarray(X, float))
+    return X + eps * max(float(np.trace(X)), 1e-300) * I3
+
+
+def _psd_apply(X, f):
+    """f applied to the eigenvalues of the symmetric X (eigenvalues clipped at 0 first)"""
+    lam, V = np.linalg.eigh(_sym(X))
+    return (V * f(np.clip(lam, 0.0, None))) @ V.T
+
+
+def ot_matrix_rule(mode, A, B):
+    """basis-free combination of two 3x3 PSD information matrices (A solver, B geometry)
+        gmin : B^1/2 min(M, I) B^1/2, M = B^-1/2 A B^-1/2   (generalised-eigen min: what both support)
+        gmax : B^1/2 max(M, I) B^1/2                        ('safe fusion', optimistic)
+        psum : 2 (A^-1 + B^-1)^-1 = 2 A (A + B)^-1 B        (matrix harmonic mean / parallel sum)
+        agm  : A # B = A^1/2 (A^-1/2 B A^-1/2)^1/2 A^1/2    (Ando geometric mean)
+        ci   : w A + (1 - w) B, w in [0, 1] maximising det  (covariance intersection)"""
+    A, B = _sym(np.asarray(A, float)), _sym(np.asarray(B, float))
+    if mode in ("gmin", "gmax"):
+        Br = _reg(B)
+        Bh = _psd_apply(Br, np.sqrt)
+        Bih = _psd_apply(Br, lambda w: 1.0 / np.sqrt(np.maximum(w, 1e-300)))
+        M = _sym(Bih @ A @ Bih)
+        f = (lambda m: np.minimum(m, 1.0)) if mode == "gmin" else (lambda m: np.maximum(m, 1.0))
+        S = Bh @ _psd_apply(M, f) @ Bh
+    elif mode == "psum":
+        S = 2.0 * A @ np.linalg.solve(_reg(A + B), B)
+    elif mode == "agm":
+        Ar = _reg(A)
+        Ah = _psd_apply(Ar, np.sqrt)
+        Aih = _psd_apply(Ar, lambda w: 1.0 / np.sqrt(np.maximum(w, 1e-300)))
+        S = Ah @ _psd_apply(_sym(Aih @ B @ Aih), np.sqrt) @ Ah
+    elif mode == "ci":
+        best, S = -np.inf, A
+        for w in np.linspace(0.0, 1.0, 101):
+            C = w * A + (1.0 - w) * B
+            sgn, ld = np.linalg.slogdet(_reg(C))
+            if sgn > 0 and ld > best:
+                best, S = ld, C
+    else:
+        raise ValueError("unknown matrix rule %s" % mode)
+    return _psd_apply(_sym(S), lambda w: w)
+
+
+def t_weight(mode, H, S_tt, T, c, gamma=1.0, hess_frame="world", R_wb=None):
+    """Translation weight W_t with the OT channel (round 1 rules T_MODES, round 2 rules T_MODES2).
+    S-rules: W = info_weight(S', c, gamma) with S' the combined information.  W-rules (the OT channel as its own weight):
+        wprod : W_A^1/2 W_B W_A^1/2     (W_A = info_weight(A), W_B = info_weight(N T): AND of the two weights)
+        wmean : (W_A + W_B) / 2        (equal vote of the two weights)
+    Returns (W, min_i lambda_i'/lambda_i along the solver's eigen-directions, or the W ratio for W-rules)."""
+    if mode in T_MODES:
+        S2, r = t_combine(mode, H, S_tt, T, hess_frame, R_wb)
+        return info_weight(S2, c, gamma), r
+    Hm = np.asarray(H, float).reshape(6, 6)
+    Hr = D_RAD @ _sym(Hm) @ D_RAD
+    Htt = Hr[3:, 3:]
+    if hess_frame == "world" and R_wb is not None:
+        Htt = R_wb.T @ Htt @ R_wb
+    A = _sym(S_tt)
+    B = float(np.trace(Htt)) * _sym(np.asarray(T, float))
+    lam, V = np.linalg.eigh(A)
+    lam = np.clip(lam, 0.0, None)
+    if mode == "smin":
+        # shape cap (scale-free): along each eigen-direction of A the solver's anisotropy lambda_i / lambda_max may not
+        # exceed the geometry's tau_i / tau_max: lambda_i' = min(lambda_i, lambda_max tau_i / tau_max).  The total mass of the
+        # two channels is never compared (their point sets differ), only how unevenly each spreads it over directions.
+        tau = np.clip(np.einsum("ij,jk,ki->i", V.T, B, V), 0.0, None)
+        lam2 = np.minimum(lam, tau * lam.max() / max(float(tau.max()), 1e-300))
+        return info_weight((V * lam2) @ V.T, c, gamma), float(np.min(lam2 / np.maximum(lam, 1e-300)))
+    if mode in W_RULES:
+        WA, WB = info_weight(A, c, gamma), info_weight(B, c, gamma)
+        if mode == "wprod":
+            WAh = _psd_apply(WA, np.sqrt)
+            W = _sym(WAh @ WB @ WAh)
+        else:
+            W = 0.5 * (WA + WB)
+        wa = np.einsum("ij,jk,ki->i", V.T, WA, V)
+        wn = np.einsum("ij,jk,ki->i", V.T, W, V)
+        return W, float(np.min(wn / np.maximum(wa, 1e-300)))
+    S2 = ot_matrix_rule(mode, A, B)
+    lam2 = np.clip(np.einsum("ij,jk,ki->i", V.T, S2, V), 0.0, None)
+    return info_weight(S2, c, gamma), float(np.min(lam2 / np.maximum(lam, 1e-300)))
+
+
 def t_cap_info(H, S_tt, T, hess_frame="world", R_wb=None):
     """the 'min' rule of t_combine (F18, TCAP=1): lambda_i' = min(lambda_i, tr(H_tt) v_i^T T v_i)"""
     return t_combine("min", H, S_tt, T, hess_frame, R_wb)
@@ -510,7 +625,7 @@ class FusionCore:
         # direction, by what the raw-scan orientation tensor T supports.  False = F8/F16 exactly (bit for bit); with no T for a
         # scan the weight is the uncapped one.
         self.t_cap, self.t_mode = t_cap, t_mode
-        assert t_mode in T_MODES, t_mode
+        assert t_mode in T_MODES + T_MODES2, t_mode
         # switch_rot (w_mode 'switch_ss' only): the rotation follows the same all-or-nothing switch as the translation (the whole
         # 6-DoF increment from the LiDAR, or from the VIO when the Switch-SLAM rule fires); False = rotation always from the VIO (F12)
         self.switch_rot = switch_rot
@@ -627,6 +742,7 @@ class FusionCore:
                 while self.gbuf and self.gbuf[0][0] <= t - self.lidar_guard_T:
                     self.gbuf.pop(0)
                 ex = sum(x[1] for x in self.gbuf) - sum(x[2] for x in self.gbuf)
+                info["guard_ex"] = ex if self.vio_adapt.trusted() else float("nan")
                 lidar_bad = self.vio_adapt.trusted() and ex > self.lidar_guard_ex
                 if lidar_bad and not self.guard_on and self.vio_scale_T > 0:
                     # first flagged step: the excess built up over the guard window, so the scale samples of that
@@ -671,10 +787,23 @@ class FusionCore:
             if is_gap:
                 self.vio_adapt.restart_windows()      # trust earned before the gap is kept; no window spans the LiDAR gap
             elif have_v and not lidar_bad:
-                self.vio_adapt.update(t, (Ra, pa), (np.asarray(vins[0], float), np.asarray(vins[1], float)), self.R_IL, self.t_IL)
+                kw = {}
+                if getattr(self.vio_adapt, "proj", False):
+                    # V2: per-step increments weighted by this step's LiDAR translation weight (both LiDAR channels), world frame
+                    if H is not None and np.isfinite(np.asarray(H, float)).all():
+                        _, S_tt_p, _, _ = schur_blocks(H, self.hess_frame, self.prev_a[0])
+                        if self.t_cap and T3 is not None:
+                            Wp = t_weight(self.t_mode, H, S_tt_p, T3, self.c_t, 1.0, self.hess_frame, self.prev_a[0])[0]
+                        else:
+                            Wp = info_weight(S_tt_p, self.c_t)
+                        kw["inc"] = (self.prev_a[0] @ (Wp @ dt_a), self.prev_a[0] @ (Wp @ dt_v))
+                self.vio_adapt.update(t, (Ra, pa), (np.asarray(vins[0], float), np.asarray(vins[1], float)), self.R_IL, self.t_IL, **kw)
             elif lost:
                 self.vio_adapt.reset()
             gam = max(self.vio_adapt.gamma(), self.gamma_min)
+            _chk = getattr(self.vio_adapt, "checks", [self.vio_adapt])
+            info["vio_r_slow"] = _chk[0].r
+            info["vio_r_fast"] = _chk[1].r if len(_chk) > 1 else float("nan")
             if self.vio_scale_seg and have_v:
                 self.s_vio = self.vio_adapt.scale_local() if self.vio_scale_seg == "local" else self.vio_adapt.scale()
                 if self.vio_scale_along and np.linalg.norm(dt_a) > 1e-6:
@@ -738,10 +867,10 @@ class FusionCore:
                 elif self.w_mode != "schur":
                     W_t = W_R = np.zeros((3, 3))
                 elif ok and np.linalg.norm(dt_a) <= self.jump_max and not lidar_bad:
-                    S_use = S_tt
                     if self.t_cap and T3 is not None:
-                        S_use, info["tcap_ratio"] = t_combine(self.t_mode, H, S_tt, T3, self.hess_frame, self.prev_a[0])
-                    W_t = info_weight(S_use, self.c_t, gam)
+                        W_t, info["tcap_ratio"] = t_weight(self.t_mode, H, S_tt, T3, self.c_t, gam, self.hess_frame, self.prev_a[0])
+                    else:
+                        W_t = info_weight(S_tt, self.c_t, gam)
                     W_R = info_weight(S_RR, self.c_R, gam)
                     if self.rot_adapt is not None:
                         if rot_bad:
