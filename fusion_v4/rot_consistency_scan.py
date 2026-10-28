@@ -37,7 +37,7 @@ def Rs(d, pre):
     return [fc.quat_to_R(x) if np.isfinite(x).all() else None for x in q]
 
 
-print("%-60s %5s %5s | %-4s %6s %6s %6s %6s | %6s %6s | %6s" % ("log (last 3 path parts)", "rows", "FUSED", "W", "n", "e_p50", "e_p95", "e_max", "eY_max", "eT_max", "ang_p95"))
+print("%-44s %5s %5s %-3s %5s | %5s %5s %5s | %5s %5s | %5s %5s" % ("log (last 2 path parts)", "rows", "FUSED", "W", "n", "e_p50", "e_p95", "e_max", "eY_mx", "eT_mx", "a_p95", "a_max"))
 for path in a.logs:
     d = pd.read_csv(path)
     t = d["time"].values
@@ -59,7 +59,7 @@ for path in a.logs:
             es.append(e); ey.append(y); et.append(tl); an.append(float(np.linalg.norm(fc.so3_log(dA))))
         es = np.array(es)
         if len(es) == 0:
-            print("%-60s %5d %5d | %-4g %6d" % ("/".join(path.split("/")[-3:])[-60:], len(d), ok.sum(), W, 0))
+            print("%-44s %5d %5d %-3g %5d" % ("/".join(path.split("/")[-2:])[-44:], len(d), ok.sum(), W, 0))
         else:
-            print("%-60s %5d %5d | %-4g %6d %6.3f %6.3f %6.3f | %6.3f %6.3f | %6.3f" % ("/".join(path.split("/")[-3:])[-60:], len(d), ok.sum(), W, len(es),
-                  np.percentile(es, 50), np.percentile(es, 95), es.max(), max(ey), max(et), np.percentile(an, 95)))
+            print("%-44s %5d %5d %-3g %5d | %5.3f %5.3f %5.3f | %5.3f %5.3f | %5.2f %5.2f" % ("/".join(path.split("/")[-2:])[-44:], len(d), ok.sum(), W, len(es),
+                  np.percentile(es, 50), np.percentile(es, 95), es.max(), max(ey), max(et), np.percentile(an, 95), max(an)))
