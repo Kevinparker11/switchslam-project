@@ -44,6 +44,30 @@ def planar_normals(P, k=12, pmin=0.5):
     return v[m, :, 0], plan[m]
 
 
+def scan_tensors(P, k=12, pmin=0.5, lmin=0.5):
+    """the planar normals of planar_normals() (identical output) plus two orientation tensors of the same k-NN PCA:
+    T = mean n n^T over planar points (the orientation tensor of the normals) and
+    G = (sum_planar n n^T + sum_linear (I - d d^T)/2) / (n_planar + n_linear), the geometric tensor that also counts
+    linear features (direction d: an edge constrains translation in the plane normal to d).  Both have trace 1.
+    Returns (normals, planarity, T, G); T and G are None when there are no such points."""
+    idx = knn_idx(P, k)
+    Q = P[idx] - P[idx].mean(1, keepdims=True)
+    C = np.einsum("nki,nkj->nij", Q, Q) / k
+    w, v = np.linalg.eigh(C)
+    plan = (w[:, 1] - w[:, 0]) / np.maximum(w[:, 2], 1e-12)
+    lin = (w[:, 2] - w[:, 1]) / np.maximum(w[:, 2], 1e-12)
+    m = plan > pmin
+    nb = v[m, :, 0]
+    ml = (lin > lmin) & ~m
+    d = v[ml, :, 2]
+    T = nb.T @ nb / len(nb) if len(nb) else None
+    tot = len(nb) + len(d)
+    G = None
+    if tot:
+        G = (nb.T @ nb + 0.5 * (len(d) * np.eye(3) - d.T @ d)) / tot
+    return nb, plan[m], T, G
+
+
 def level_rotation(u):
     """rotation taking the unit vector u (estimated world up in the estimator's world frame) to +z"""
     z = np.array([0, 0, 1.0])
