@@ -257,7 +257,7 @@ def otsu_tau(kappas, lo=10.0, hi=1000.0, default=0.05):
     return 1.0 / kc, kc
 
 
-MODELS = ("none", "iso", "hessian", "schur", "schur_otsu", "schur_gate")
+MODELS = ("none", "iso", "hessian", "schur", "schur_otsu", "schur_gate", "ot")
 
 
 def run_backend(kf_t, clouds, T_front_kf, odom_sigmas, model, rounds=2, closer=None, info_kw=None,

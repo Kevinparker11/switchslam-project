@@ -105,4 +105,17 @@ Tt, nn = fc.orientation_tensor(pts, 12, 400, np.random.default_rng(0))
 lam, vec = np.linalg.eigh(Tt)
 print("corridor T eigenvalues %s, weak axis %s, trace %.6f, n %d" % (np.round(lam, 4), np.round(np.abs(vec[:, 0]), 3), np.trace(Tt), nn))
 assert abs(np.trace(Tt) - 1) < 1e-9 and abs(vec[0, 0]) > 0.99 and lam[0] < 0.02
+# --- 5. all OT rules: positive semidefinite, ordered min <= harm <= gmean <= max per direction, tonly = tau
+for H_, T_ in ((H_bad, T_true), (H, T)):
+    _, S_ = fc.schur_blocks(H_, "body")[:2]
+    lam, V = np.linalg.eigh(0.5 * (S_ + S_.T))
+    vals = {}
+    for m in fc.T_MODES:
+        Sm, r = fc.t_combine(m, H_, S_, T_, "body")
+        assert np.linalg.eigvalsh(0.5 * (Sm + Sm.T)).min() > -1e-6, m
+        vals[m] = np.einsum("ij,jk,ki->i", V.T, Sm, V)
+    assert np.all(vals["min"] <= vals["harm"] + 1e-6) and np.all(vals["harm"] <= vals["gmean"] + 1e-6) and np.all(vals["gmean"] <= vals["max"] + 1e-6)
+    N = np.trace((fc.D_RAD @ (0.5 * (H_ + H_.T)) @ fc.D_RAD)[3:, 3:])
+    assert np.allclose(vals["tonly"], N * np.einsum("ij,jk,ki->i", V.T, T_, V), rtol=1e-6)
+print("OT rules: PSD, ordered, tonly = tau  ok")
 print("ALL CHECKS PASSED")

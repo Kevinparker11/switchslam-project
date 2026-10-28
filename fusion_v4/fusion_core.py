@@ -343,27 +343,65 @@ def orientation_tensor(pts, k=12, subsample=400, rng=None):
     return n.T @ n / len(n), len(n)
 
 
-def t_cap_info(H, S_tt, T, hess_frame="world", R_wb=None):
-    """Additional-T fail-safe (design fixed 28 Oct 2026, docs/results/ChannelT_MultiFloor_Single_Test.md).
-    The Hessian says how much translational information the SOLVER believes it has along each Schur eigen-direction v_i
-    (lambda_i of S_tt).  T says how much the RAW SCAN normals support along the same direction: N * v_i^T T v_i, with
-    N = tr(H_tt) (the same total mass as the Hessian, so no free scale: if the Hessian were N*T itself the cap would never
-    bind, because S_tt <= H_tt).  The information used for the weight is the smaller of the two, direction by direction:
-        lambda_i' = min(lambda_i, N v_i^T T v_i)
+T_MODES = ("min", "gmean", "harm", "tonly", "agree2", "hybrid", "max")
+
+
+def t_combine(mode, H, S_tt, T, hess_frame="world", R_wb=None):
+    """Orientation-tensor (OT) channel combined with the Schur translation channel (design of 28 Oct 2026,
+    docs/results/OT_Channel_Study.md).  Along each eigen-direction v_i of S_tt the solver claims lambda_i; the raw-scan
+    normals support tau_i = N v_i^T T v_i with N = tr(H_tt) (same total mass: no free scale).  Per direction:
+        min    : min(lambda, tau)                 fail-safe: the LiDAR is trusted only as far as BOTH channels allow
+        gmean  : sqrt(lambda tau)                 equal-weight log-average of the two opinions
+        harm   : 2 lambda tau / (lambda + tau)     harmonic mean (between min and gmean)
+        tonly  : tau                              orientation tensor alone (solver used only for the directions and N)
+        agree2 : lambda if 1/2 <= tau/lambda <= 2 else tau   (solver unless the two disagree by more than 2x)
+        hybrid : Schur complement with H_tt replaced by N T:  N T - H_tR H_RR^-1 H_Rt  (raw-normal translation support,
+                 solver's rotation-translation coupling), eigenvalues clipped at 0
+        max    : max(lambda, tau)                 optimistic (for completeness; not a fail-safe)
     Returns (S_tt', min_i lambda_i'/lambda_i)."""
     H = np.asarray(H, float).reshape(6, 6)
     Hr = D_RAD @ (0.5 * (H + H.T)) @ D_RAD
     Htt = Hr[3:, 3:]
+    Trot = np.asarray(T, float)
     if hess_frame == "world" and R_wb is not None:
         Htt = R_wb.T @ Htt @ R_wb
     N = float(np.trace(Htt))
     S = 0.5 * (S_tt + S_tt.T)
     lam, V = np.linalg.eigh(S)
     lam = np.clip(lam, 0.0, None)
-    cap = N * np.einsum("ij,jk,ki->i", V.T, np.asarray(T, float), V)
-    lam2 = np.minimum(lam, np.clip(cap, 0.0, None))
-    ratio = float(np.min(lam2 / np.maximum(lam, 1e-300)))
-    return (V * lam2) @ V.T, ratio
+    if mode == "hybrid":
+        Hrr, Hrt, Htr = Hr[:3, :3], Hr[:3, 3:], Hr[3:, :3]
+        C = Htr @ np.linalg.solve(Hrr, Hrt)
+        if hess_frame == "world" and R_wb is not None:
+            C = R_wb.T @ C @ R_wb
+        Sh = N * Trot - C
+        Sh = 0.5 * (Sh + Sh.T)
+        lh, Vh = np.linalg.eigh(Sh)
+        Sh = (Vh * np.clip(lh, 0.0, None)) @ Vh.T
+        lam2 = np.clip(np.einsum("ij,jk,ki->i", V.T, Sh, V), 0.0, None)
+        return Sh, float(np.min(lam2 / np.maximum(lam, 1e-300)))
+    tau = np.clip(N * np.einsum("ij,jk,ki->i", V.T, Trot, V), 0.0, None)
+    if mode == "min":
+        lam2 = np.minimum(lam, tau)
+    elif mode == "gmean":
+        lam2 = np.sqrt(lam * tau)
+    elif mode == "harm":
+        lam2 = 2.0 * lam * tau / np.maximum(lam + tau, 1e-300)
+    elif mode == "tonly":
+        lam2 = tau
+    elif mode == "agree2":
+        r = tau / np.maximum(lam, 1e-300)
+        lam2 = np.where((r >= 0.5) & (r <= 2.0), lam, tau)
+    elif mode == "max":
+        lam2 = np.maximum(lam, tau)
+    else:
+        raise ValueError("unknown OT mode %s" % mode)
+    return (V * lam2) @ V.T, float(np.min(lam2 / np.maximum(lam, 1e-300)))
+
+
+def t_cap_info(H, S_tt, T, hess_frame="world", R_wb=None):
+    """the 'min' rule of t_combine (F18, TCAP=1): lambda_i' = min(lambda_i, tr(H_tt) v_i^T T v_i)"""
+    return t_combine("min", H, S_tt, T, hess_frame, R_wb)
 
 
 def switch_slam_degenerate(H):
@@ -466,12 +504,13 @@ class FusionCore:
                  vio_scale_T=0.0, vio_scale_dmin=1.0, vio_scale_proj=False, vio_scale_seg=False,
                  lidar_guard_T=0.0, lidar_guard_ex=0.0, vio_scale_along=False, gamma_min=0.0,
                  gap_T=0.0, gap_vmax=5.0, gap_wmax=2.0, switch_rot=False,
-                 rot_adapt=None, rot_c_fail=1.0, rot_gamma_min=1e-3, t_cap=False):
+                 rot_adapt=None, rot_c_fail=1.0, rot_gamma_min=1e-3, t_cap=False, t_mode="min"):
         assert w_mode in W_MODES, w_mode
         # t_cap: the additional-T fail-safe (t_cap_info): the translation information of the Schur weight is capped, direction by
         # direction, by what the raw-scan orientation tensor T supports.  False = F8/F16 exactly (bit for bit); with no T for a
         # scan the weight is the uncapped one.
-        self.t_cap = t_cap
+        self.t_cap, self.t_mode = t_cap, t_mode
+        assert t_mode in T_MODES, t_mode
         # switch_rot (w_mode 'switch_ss' only): the rotation follows the same all-or-nothing switch as the translation (the whole
         # 6-DoF increment from the LiDAR, or from the VIO when the Switch-SLAM rule fires); False = rotation always from the VIO (F12)
         self.switch_rot = switch_rot
@@ -701,7 +740,7 @@ class FusionCore:
                 elif ok and np.linalg.norm(dt_a) <= self.jump_max and not lidar_bad:
                     S_use = S_tt
                     if self.t_cap and T3 is not None:
-                        S_use, info["tcap_ratio"] = t_cap_info(H, S_tt, T3, self.hess_frame, self.prev_a[0])
+                        S_use, info["tcap_ratio"] = t_combine(self.t_mode, H, S_tt, T3, self.hess_frame, self.prev_a[0])
                     W_t = info_weight(S_use, self.c_t, gam)
                     W_R = info_weight(S_RR, self.c_R, gam)
                     if self.rot_adapt is not None:

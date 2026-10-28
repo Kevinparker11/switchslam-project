@@ -56,6 +56,13 @@ Environment (all optional):
                 direction by direction: lambda_i' = min(lambda_i, tr(H_tt) v_i^T T v_i).  No free constant.  T is paired with the mapped
                 scan by time stamp; a scan without T is weighted exactly as in F8/F16.  Three columns (T_l1, T_ms, tcap_ratio) are
                 appended to the log only when on.  Default off: F0-F17 are unchanged bit for bit.  T_KNN, T_SUB: the recipe (12, 400).
+  OT_MODE       off (default) | min | gmean | harm | tonly | agree2 | hybrid | max : the orientation-tensor (OT) channel
+                (fusion_core.t_combine; docs/results/OT_Channel_Study.md).  At every keyframe (same rule and same planar normals
+                as SAH: /velodyne_cloud_registered, body frame, r in [SAH_RMIN, SAH_RMAX], voxel SAH_VOXEL, PCA k=12, planarity
+                > 0.5) T = mean n n^T of the planar normals; between keyframes T is rotated into the current LiDAR frame with
+                the scan-to-map rotation.  T and the Schur translation information are combined direction by direction by
+                the chosen rule before the weight.  Works with or without SAH.  Three columns (OT_l1, OT_age, ot_ratio) are
+                appended only when on.  Off: F0-F19 unchanged bit for bit.
 Extrinsic: SubT-MRS Multi Floor 'laser_to_imu' (override with EXTRINSIC_YAML=path to the same format).
 """
 import os
@@ -109,6 +116,12 @@ ROT_REF_FAST, ROT_REF_SLOW = float(E("ROT_REF_FAST", "0.402")), float(E("ROT_REF
 ROT_GUARD = float(E("ROT_GUARD", "0"))
 ROT_C_FAIL, ROT_GAMMA_MIN = float(E("ROT_C_FAIL", "1.0")), float(E("ROT_GAMMA_MIN", "1e-3"))
 TCAP = E("TCAP", "0") == "1"
+OT_MODE = E("OT_MODE", "off")
+OT = OT_MODE != "off"
+OT_SRC = E("OT_SRC", "planar")             # planar: T = mean n n^T of planar normals; geom: G also counts linear features
+if OT and TCAP:
+    raise SystemExit("TCAP (per-scan T from /laser_cloud_surf_last) and OT_MODE (keyframe T) are alternatives; set one")
+KF_CLOUDS = SAH or OT                      # keyframe scans are needed by SAH and/or the OT channel
 T_KNN, T_SUB = int(E("T_KNN", "12")), int(E("T_SUB", "400"))
 VINS_GAP = 1.0            # s without VINS -> treated as lost (warm-up restarts)
 
@@ -135,14 +148,16 @@ core = fc.FusionCore(R_IL, t_IL, c_t=C_T, c_R=C_R, gate=gate, t_warm=T_WARM, hes
                      lidar_guard_T=LIDAR_GUARD_T if vio_check is not None else 0.0, lidar_guard_ex=LIDAR_GUARD_EX,
                      gamma_min=GAMMA_MIN if vio_check is not None else 0.0, gap_T=GAP_T,
                      rot_adapt=fc.RotConsistency(ROT_REF_FAST, ROT_REF_SLOW, guard=ROT_GUARD) if ROT_CHECK else None,
-                     rot_c_fail=ROT_C_FAIL, rot_gamma_min=ROT_GAMMA_MIN, t_cap=TCAP)
+                     rot_c_fail=ROT_C_FAIL, rot_gamma_min=ROT_GAMMA_MIN, t_cap=TCAP or OT,
+                     t_mode=OT_MODE if OT else "min")
 if MODE == "lidar":
     core.t_warm = 1e12                     # every step is WARMUP = LiDAR only
 
 vins_buf = deque(maxlen=400)               # (t, R, p) IMU poses in the VINS world
 E3 = np.array([0.0, 0.0, 1.0])
-if SAH:
+if KF_CLOUDS:
     import structure_heading as shd
+if SAH:
     sah = shd.make_sah()
 sah_state = dict(last_kf=None, pending={}, clouds=deque(maxlen=30), todo=0.0, applied=0.0, decided=0.0, n_kf=0, Rprev=None,
                  busy=False, dropped=0)
@@ -150,6 +165,7 @@ sah_q = queue.Queue(maxsize=2)
 latest_H = [None, None, None]              # H, cost, m
 t_buf = deque(maxlen=40)                   # (scan stamp, T 3x3, T smallest eigenvalue, compute ms) from /laser_cloud_surf_last
 t_rng = np.random.default_rng(0)
+ot_state = dict(T=None, n_kf=0)            # OT channel: (Ra at the keyframe, T in that keyframe's LiDAR frame, keyframe time)
 pub = [None]
 
 log_path = "switching_log_v2_%s.csv" % RUN_TAG
@@ -160,7 +176,7 @@ w.writerow(["time", "mode", "fused_x", "fused_y", "fused_z", "fused_qx", "fused_
             "aft_x", "aft_y", "aft_z", "aft_qx", "aft_qy", "aft_qz", "aft_qw",
             "v_px", "v_py", "v_pz", "v_qx", "v_qy", "v_qz", "v_qw",
             "gate", "kappa_R", "kappa_t", "kth", "wt0", "wt1", "wt2", "wR0", "wR1", "wR2", "dta", "dtv",
-            "hess_src", "cost", "m_res"] + HCOLS + ["sah_corr_deg", "sah_total_deg", "sah_acc", "vio_gamma", "s_vio"] + (["rot_gamma", "rot_e2", "rot_e10"] if ROT_CHECK else []) + (["T_l1", "T_ms", "tcap_ratio"] if TCAP else []))
+            "hess_src", "cost", "m_res"] + HCOLS + ["sah_corr_deg", "sah_total_deg", "sah_acc", "vio_gamma", "s_vio"] + (["rot_gamma", "rot_e2", "rot_e10"] if ROT_CHECK else []) + (["T_l1", "T_ms", "tcap_ratio"] if TCAP else []) + (["OT_l1", "OT_age", "ot_ratio"] if OT else []))
 cnt = [0]
 
 
@@ -186,23 +202,32 @@ def sah_process(job):
     """job = (t, Ra, pa, Rf, u, applied_at_snapshot, cloud msg).
     The heading measurement must refer to the heading the estimator WILL have once every correction decided so far
     is applied (corrections are applied gradually), so the snapshot rotation is moved by the outstanding amount."""
-    t, Ra, pa, Rf, u, applied_snap, msg = job
+    t, Ra, pa, Rf, u, applied_snap, do_sah, msg = job
     try:
         Pb = (cloud_xyz(msg) - pa) @ Ra                         # registered (map) cloud -> LiDAR body frame
         r = np.linalg.norm(Pb, axis=1)
         Pb = Pb[(r > SAH_RMIN) & (r < SAH_RMAX)]
-        nb = plan = None
+        nb = plan = T_kf = None
         if len(Pb) >= 50:
             Pb = voxel_down(Pb, SAH_VOXEL)
             if len(Pb) > SAH_MAXPTS:
                 Pb = Pb[np.random.default_rng(int(t * 1e3) % (2 ** 31)).choice(len(Pb), SAH_MAXPTS, replace=False)]
-            nb, plan = shd.planar_normals(Pb)
+            if OT:
+                nb, plan, T_pl, G_ge = shd.scan_tensors(Pb)
+                T_kf = G_ge if OT_SRC == "geom" else T_pl
+            else:
+                nb, plan = shd.planar_normals(Pb)
     except Exception as ex:                                     # never let SAH break the estimator
         rospy.logwarn("SAH preprocessing failed at %.2f: %s", t, ex)
         return
     with lock:
         sah_state["n_kf"] += 1
         if nb is None:
+            return
+        if OT and len(nb) >= 50 and T_kf is not None:
+            ot_state["T"] = (Ra.copy(), T_kf, t)
+            ot_state["n_kf"] += 1
+        if not do_sah:
             return
         try:
             outstanding = sah_state["decided"] - applied_snap
@@ -345,6 +370,7 @@ def sah_on_step(t, Ra, pa, v, info, R):
     if v is not None:
         u = core.Rf @ (R_IL.T @ (v[0].T @ E3))
         u = u / np.linalg.norm(u)
+    if SAH and v is not None:
         if sah_state["Rprev"] is not None:
             sah.add_turn(float(fc.so3_log(core.Rf @ sah_state["Rprev"].T) @ u))
         if info["mode"] == "FUSED" and sah_state["todo"] != 0.0:
@@ -353,7 +379,7 @@ def sah_on_step(t, Ra, pa, v, info, R):
             sah_state["todo"] -= corr_now
             sah_state["applied"] += corr_now
             R = core.Rf
-    if info["mode"] != "FUSED" and sah_state["todo"] != 0.0:
+    if SAH and info["mode"] != "FUSED" and sah_state["todo"] != 0.0:
         sah_state["decided"] -= sah_state["todo"]               # VIO (re)starting: drop stale corrections
         sah_state["todo"] = 0.0
     sah_state["Rprev"] = core.Rf.copy()
@@ -362,8 +388,9 @@ def sah_on_step(t, Ra, pa, v, info, R):
         np.arccos(np.clip((np.trace(lk[0].T @ Ra) - 1) / 2, -1, 1)) >= KF_ROT
     if is_kf:
         sah_state["last_kf"] = (Ra, pa)
-        if info["mode"] == "FUSED" and u is not None:
-            snap = (Ra.copy(), pa.copy(), core.Rf.copy(), u.copy(), sah_state["applied"])
+        do_sah = SAH and info["mode"] == "FUSED" and u is not None
+        if do_sah or OT:
+            snap = (Ra.copy(), pa.copy(), core.Rf.copy(), (u.copy() if u is not None else E3.copy()), sah_state["applied"], do_sah)
             for st_, m_ in sah_state["clouds"]:
                 if st_ == t:
                     job = (t,) + snap + (m_,)
@@ -384,9 +411,16 @@ def aft_cb(msg):
         v = vins_at(t)
         H = latest_H[0]
         Tm = t_at(t) if TCAP else None
-        R, p, info = core.step(t, (Ra, pa), v, H, T3=(Tm[0] if Tm is not None else None))
+        T3 = Tm[0] if Tm is not None else None
+        ot_l1 = ot_age = np.nan
+        if OT and ot_state["T"] is not None:
+            Rk, Tk, tk = ot_state["T"]
+            Rr = Ra.T @ Rk                      # keyframe LiDAR frame -> current LiDAR frame
+            T3 = Rr @ Tk @ Rr.T
+            ot_l1, ot_age = float(np.linalg.eigvalsh(T3)[0]), t - tk
+        R, p, info = core.step(t, (Ra, pa), v, H, T3=T3)
         cost, mres = latest_H[1], latest_H[2]
-        if SAH:
+        if KF_CLOUDS:
             try:
                 R, corr_now, job = sah_on_step(t, Ra, pa, v, info, R)
             except Exception as ex:                             # never let SAH break the estimator
@@ -402,7 +436,8 @@ def aft_cb(msg):
                [np.degrees(corr_now), np.degrees(sah_state["applied"]), (sah.stats["acc"] if SAH else 0),
                 info.get("gamma", 1.0), info.get("s_vio", 1.0)] +
                ([info.get("rot_gamma", 1.0), info.get("rot_e2", np.nan), info.get("rot_e10", np.nan)] if ROT_CHECK else []) +
-               ([Tm[1] if Tm is not None else np.nan, Tm[2] if Tm is not None else np.nan, info.get("tcap_ratio", np.nan)] if TCAP else []))
+               ([Tm[1] if Tm is not None else np.nan, Tm[2] if Tm is not None else np.nan, info.get("tcap_ratio", np.nan)] if TCAP else []) +
+               ([ot_l1, ot_age, info.get("tcap_ratio", np.nan)] if OT else []))
     cnt[0] += 1
     if cnt[0] % 50 == 0:
         log.flush()
@@ -423,14 +458,14 @@ def main():
     if TCAP:
         from sensor_msgs.msg import PointCloud2
         rospy.Subscriber("/laser_cloud_surf_last", PointCloud2, surf_cb, queue_size=20, buff_size=2 ** 24)
-    if SAH:
+    if KF_CLOUDS:
         from sensor_msgs.msg import PointCloud2
         rospy.Subscriber("/velodyne_cloud_registered", PointCloud2, sah_cloud_cb, queue_size=20, buff_size=2 ** 24)
         if not SAH_SYNC:
             threading.Thread(target=sah_worker, daemon=True).start()
         print("SAH=1 KF_DIST=%g KF_ROT=%g SAH_RMIN=%g SAH_RMAX=%g SAH_VOXEL=%g SAH_MAXPTS=%d SAH_MAX_STEP=%.2f deg"
               % (KF_DIST, KF_ROT, SAH_RMIN, SAH_RMAX, SAH_VOXEL, SAH_MAXPTS, np.degrees(SAH_MAX_STEP)))
-    print("TCAP=%d T_KNN=%d T_SUB=%d" % (TCAP, T_KNN, T_SUB))
+    print("TCAP=%d T_KNN=%d T_SUB=%d OT_MODE=%s OT_SRC=%s" % (TCAP, T_KNN, T_SUB, OT_MODE, OT_SRC))
     print("ROT_CHECK=%d ROT_REF_FAST=%g ROT_REF_SLOW=%g ROT_GUARD=%g ROT_C_FAIL=%g ROT_GAMMA_MIN=%g" % (ROT_CHECK, ROT_REF_FAST, ROT_REF_SLOW, ROT_GUARD, ROT_C_FAIL, ROT_GAMMA_MIN))
     print("VIO_CHECK=%d VIO_CHECK_REF=%g VIO_CHECK_NMIN=%d VIO_SCALE_T=%g VIO_CHECK_FAST=%g VIO_CHECK_FAST_REF=%g LIDAR_GUARD_T=%g LIDAR_GUARD_EX=%g GAMMA_MIN=%g GAP_T=%g"
           % (VIO_CHECK, VIO_CHECK_REF, VIO_CHECK_NMIN, VIO_SCALE_T, VIO_CHECK_FAST, VIO_CHECK_FAST_REF, LIDAR_GUARD_T, LIDAR_GUARD_EX, GAMMA_MIN, GAP_T))

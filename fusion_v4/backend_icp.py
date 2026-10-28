@@ -170,6 +170,18 @@ def loop_information(H, stats, model, inflate=10.0, floor_rot_deg=0.5, floor_tra
     Returns (Lambda, info dict)."""
     if model == "iso":
         return scale * I6 / max(stats["msd"], 1e-4), dict(dropped_t=0, dropped_R=0)
+    if model == "ot":
+        # orientation-tensor loop factor (28 Oct 2026, docs/results/OT_Channel_Study.md): same total information as
+        # 'iso' (trace 6/msd), but the translation part is shaped by the orientation tensor of the matched surface
+        # normals, T = H_tt / tr(H_tt) (H_tt = sum w n n^T over the ICP correspondences): Lambda_t = 3 T / msd.
+        # A loop then constrains translation only along directions in which its surfaces have normals (no free scale).
+        Htt = 0.5 * (H[3:, 3:] + H[3:, 3:].T)
+        T = Htt / max(float(np.trace(Htt)), 1e-12)
+        Lam = np.zeros((6, 6))
+        Lam[:3, :3] = I6[:3, :3]
+        Lam[3:, 3:] = 3.0 * T
+        Lam = scale * Lam / max(stats["msd"], 1e-4) + 1e-6 * I6
+        return Lam, dict(dropped_t=int(np.linalg.eigvalsh(T)[0] < 0.01), dropped_R=0)
     Lam = H / max(stats["sigma2"], 1e-6) / inflate
     lam, V = np.linalg.eigh(0.5 * (Lam + Lam.T))
     lam = np.clip(lam, 1e-9 * max(lam[-1], 1e-9), None)
