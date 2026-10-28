@@ -46,7 +46,7 @@ Environment (all optional):
                 the gap, and the pose is held if the VIO cannot be used either.  1.0 for G23; 0 = off (G20 exactly, default).
   ROT_CHECK     1: rotation-consistency check, design B (docs/results/R_Channel_Rotation_Aware_Test_Protocol.md; fusion_core.RotConsistency).
                 While the VINS rotation agrees with the LiDAR rotation over 2 s and 10 s windows (e <= ROT_REF_FAST / ROT_REF_SLOW rad,
-                the largest values on the A-LOAM-stack Multi Floor F8/F16 recordings: 0.340 / 0.570) the R weight is C_R (0 = rotation
+                the largest values at every scan on the 19 A-LOAM-stack Multi Floor F8/F16 recordings: 0.402 / 0.585) the R weight is C_R (0 = rotation
                 from the VINS, i.e. F16); when it does not, the LiDAR rotation carries the step (ROT_C_FAIL, ROT_GAMMA_MIN: design
                 values 1.0 and 1e-3, not tuned).  ROT_GUARD > 0: a LiDAR rotation above ROT_GUARD rad in 2 s is treated as failed
                 (the VINS carries the rotation); OFF (0) in F17: the 3 x rule gives 6.5 rad, above the pi limit of a rotation angle, so it could never fire.  Default off:
@@ -100,7 +100,7 @@ LIDAR_GUARD_EX = float(E("LIDAR_GUARD_EX", "2.16"))
 GAMMA_MIN = float(E("GAMMA_MIN", "0"))
 GAP_T = float(E("GAP_T", "0"))
 ROT_CHECK = E("ROT_CHECK", "0") == "1"
-ROT_REF_FAST, ROT_REF_SLOW = float(E("ROT_REF_FAST", "0.340")), float(E("ROT_REF_SLOW", "0.570"))
+ROT_REF_FAST, ROT_REF_SLOW = float(E("ROT_REF_FAST", "0.402")), float(E("ROT_REF_SLOW", "0.585"))
 ROT_GUARD = float(E("ROT_GUARD", "0"))
 ROT_C_FAIL, ROT_GAMMA_MIN = float(E("ROT_C_FAIL", "1.0")), float(E("ROT_GAMMA_MIN", "1e-3"))
 VINS_GAP = 1.0            # s without VINS -> treated as lost (warm-up restarts)

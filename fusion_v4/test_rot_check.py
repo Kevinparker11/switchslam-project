@@ -8,7 +8,7 @@ DT, N = 0.1, 400
 t = np.arange(N) * DT
 R_IL, t_IL = np.eye(3), np.zeros(3)
 H = np.diag([20000.0, 20000, 20000, 3e5, 3e5, 3e5])
-REF2, REF10 = 0.34, 0.57
+REF2, REF10 = 0.402, 0.585
 
 
 def truth(rate=0.5):
