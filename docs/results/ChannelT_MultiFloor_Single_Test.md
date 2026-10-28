@@ -42,3 +42,6 @@ PLAY_RATE=0.5 FRONT=aloam ./run_fusion_study.sh F18
 python3 tcap_report.py ~/runs_v2/switching_log_v2_F18_run1.csv --seq multifloor
 ```
 Send back the last printout (and `~/runs_v2/switching_log_v2_F18_run1.csv` if you can). The smoke run is checked for the "T present" line only; its ATE is meaningless.
+
+## Superseded (28 Oct 2026, before the full run)
+Only the 70 s smoke run of F18 was made (T paired on 99.3 % of fused rows; cap ratio median 0.71; T 8.3 ms p50 / 20.7 ms p99). The single full run was not made: the replay study `OT_Channel_Study.md` showed that a tensor of planar normals only is the wrong source for a cap on A-LOAM (it removes valid edge-constrained information: -0.5 to -0.6 m on the corridors). The orientation-tensor channel now uses the geometric tensor of the keyframe scans (planes and edges) in config F20; F18 / F19 remain in the code for the record.

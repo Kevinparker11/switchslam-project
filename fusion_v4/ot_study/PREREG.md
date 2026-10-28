@@ -32,3 +32,19 @@ The OT channel is a fail-safe for the case "the solver is confident but wrong". 
 - inside a window the LiDAR scan-to-map position slides along the weakest Schur translation direction (taken at the window start, fixed in the world) at 0.2 m/s (4 m per window; the slide stays in the pose afterwards, as a corrupted map would), and the solver claims confidence: H_tt is replaced by tr(H_tt)/3 * I (wrong correspondences that look like constraint);
 - the keyframe scans (and so the OT channel) and the VIO are untouched.
 Runs: F16 and F20 on all 12 logs with the same faults. Prediction: F20 has lower full-span ATE than F16 on most logs; the difference is the value of the OT channel under this fault model. Reported as a mechanism demonstration under a stated fault model, not as a frequency of such faults in real data.
+
+## Correction found while checking the replay (28 Oct, before the corridor back-end results were read)
+The first pass replayed LC and C02 with the Multi Floor LiDAR-IMU extrinsic (the node default), not the corridor extrinsics of seq.env. Own-setting check: MF replays equal the live logs exactly; LC differed by -0.02 m and C02 by +0.05 m. The difference is below 1 deg and a few cm, and it is the same for every configuration, but all LC and C02 replays (stages 1-3 and the back end) are rerun with the correct extrinsics (`batch.sh` sets EXTRINSIC_YAML per sequence). The stage-1/2 selections are re-checked with the same rules on the corrected numbers and both passes are reported.
+
+## Stage 4 (written before it is run): the heading read-out in the back end
+Observation that motivates it (from the MF back-end results already seen): with loops, F16/F20 reach 0.456/0.469 m on MF against 0.347 for F8 + loops on the same logs, although their front ends are better. On MF the SAH corrections swing by 1-2 deg within 30 s (e.g. MF1: -1.10 deg at 120 s, +1.17 deg at 150 s), and the pose graph treats those concentrated heading changes as ordinary odometry with the same noise on every step, so a loop that disagrees spreads the disagreement uniformly instead of undoing the injected correction.
+Rule (no parameter): the odometry factor of each keyframe step gets its rotation covariance increased, about the gravity axis only, by the square of the total SAH correction the front end applied inside that step: Sigma_rot = sigma_r^2 I + (sum |corr|)^2 u u^T (u = world up in the keyframe frame). The front end thereby declares where it injected heading, and the graph may undo it where loops disagree. Model name `iso_sah` (loop factors as `iso`).
+Adoption: if on MF (6 logs) the mean ATE with loops of F20 under iso_sah is lower than under iso, and on LC and on C02 it is not worse than iso by more than 0.05 m, F20 uses iso_sah. Reported either way.
+
+## Stage 4 outcome
+F20 with loops on MF (6 logs): iso 0.469, iso_sah 0.469 (per log 0.59 0.32 0.59 0.43/0.44 0.40/0.39 0.48). Not lower, so not adopted (corridor check not needed). The SAH corrections inside one keyframe step are small compared with the odometry rotation sigma already used (1.46 deg per step), so the extra covariance changes almost nothing; the explanation offered in the stage-4 note is not supported. The MF loop gap (F20 + loops 0.469 against F8 + loops 0.347 on the same logs) stays unexplained.
+
+## Pass 2 (corridors with their own extrinsics): selections re-checked with the same rules
+Own-setting check now exact on all 12 logs (F8: LC 4.76 / 4.87 / 3.97, C02 2.07 / 2.10 / 2.19 = the live logs).
+F16: MF 0.560, LC 1.983, C02 1.709. Stage 1: still only `max` admissible (LC 1.983, C02 1.696). Stage 2: OTG_min MF 0.558, LC 2.010 (+0.027), C02 1.710 (+0.001): admissible, chosen as before. OTG_max: MF 0.584, LC 1.959, C02 1.589 (not chosen: the rule prefers the fail-safe).
+Stage 3: F20 better than F16 under the injected fault on 12 / 12 logs (MF -0.084, LC -0.098, C02 -0.248 m).

@@ -193,7 +193,7 @@ class LoopCloser:
 
 # ----------------------------------------------------------------------------- pose graph
 def optimise(T_odom, odom_sigmas, loops, T_init=None, robust="huber", robust_k=1.345, prior_sigma=1e-4,
-             chi2_drop=22.46, prune_rounds=2):
+             chi2_drop=22.46, prune_rounds=2, odom_cov=None):
     """T_odom: front-end keyframe poses (define the odometry chain and the prior on keyframe 0);
     T_init: starting values (default T_odom).  Loops get a Huber kernel (bounded but non-zero pull, so
     true loops far from the drifted estimate still converge; a Cauchy kernel would discard them), then
@@ -212,7 +212,8 @@ def optimise(T_odom, odom_sigmas, loops, T_init=None, robust="huber", robust_k=1
         graph.add(gtsam.PriorFactorPose3(0, gtsam.Pose3(T_odom[0]), gtsam.noiseModel.Isotropic.Sigma(6, prior_sigma)))
         on = gtsam.noiseModel.Diagonal.Sigmas(np.asarray(odom_sigmas, float))
         for k in range(len(T_odom) - 1):
-            graph.add(gtsam.BetweenFactorPose3(k, k + 1, gtsam.Pose3(bi.inv_se3(T_odom[k]) @ T_odom[k + 1]), on))
+            nk = on if odom_cov is None else gtsam.noiseModel.Gaussian.Covariance(np.asarray(odom_cov[k], float))
+            graph.add(gtsam.BetweenFactorPose3(k, k + 1, gtsam.Pose3(bi.inv_se3(T_odom[k]) @ T_odom[k + 1]), nk))
         for a in active:
             L = loops[a]
             base = gtsam.noiseModel.Gaussian.Information(L["Lambda"])
@@ -261,7 +262,7 @@ MODELS = ("none", "iso", "hessian", "schur", "schur_otsu", "schur_gate", "ot")
 
 
 def run_backend(kf_t, clouds, T_front_kf, odom_sigmas, model, rounds=2, closer=None, info_kw=None,
-                verbose=False):
+                verbose=False, odom_cov=None):
     """model: 'none' | 'iso' (LIO-SAM-like) | 'hessian' | 'schur' (fixed tau 0.05) |
     'schur_otsu' (tau from Otsu on this run's loop kappas, label-free) | 'schur_gate' (schur_otsu, and
     loops whose kappa_R is above the Otsu cut are rejected).  Returns optimised keyframe poses, loops."""
@@ -292,7 +293,7 @@ def run_backend(kf_t, clouds, T_front_kf, odom_sigmas, model, rounds=2, closer=N
                 continue
             Lam, inf = bi.loop_information(v["H"], v["stats"], lam_model, **kw)
             loops.append(dict(i=v["i"], j=v["j"], T=v["T"], Lambda=Lam, info=inf, stats=v["stats"]))
-        T_est = optimise(T_front_kf, odom_sigmas, loops, T_init=T_est)
+        T_est = optimise(T_front_kf, odom_sigmas, loops, T_init=T_est, odom_cov=odom_cov)
         loops = [L for L in loops if L.get("used", True)]
         if verbose:
             extra = ""

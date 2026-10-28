@@ -77,11 +77,38 @@ else:
 print("odometry noise per keyframe step (%s): rotation %.3f deg, translation %.3f m" % (
     src, np.degrees(sig[0]), sig[3]))
 
+def sah_step_cov(L, t_scan, kf_t, keep, sig):
+    """iso_sah (OT_Channel_Study stage 4): per keyframe step, the rotation covariance about the gravity axis is increased by
+    the square of the total SAH heading correction the front end applied inside that step (no parameter)."""
+    import fusion_core as fc
+    corr = np.radians(np.abs(pd.to_numeric(L["sah_corr_deg"], errors="coerce").fillna(0.0).values)) if "sah_corr_deg" in L else np.zeros(len(t_scan))
+    vq = L[["v_qx", "v_qy", "v_qz", "v_qw"]].apply(pd.to_numeric, errors="coerce").values
+    base = np.diag(np.asarray(sig, float) ** 2)
+    covs = []
+    for k in range(len(kf_t) - 1):
+        m = (t_scan > kf_t[k]) & (t_scan <= kf_t[k + 1])
+        d = float(corr[m].sum())
+        C = base.copy()
+        if d > 0:
+            j = int(np.clip(np.searchsorted(t_scan, kf_t[k + 1]), 0, len(t_scan) - 1))
+            u = np.array([0.0, 0.0, 1.0])
+            if np.isfinite(vq[j]).all():
+                u = vt.R_IL.T @ (fc.quat_to_R(vq[j]).T @ u)
+                u = u / np.linalg.norm(u)
+            C[:3, :3] += d * d * np.outer(u, u)
+        covs.append(C)
+    return covs
+
+
 segs = [("full span", np.ones(len(t_scan), bool)), ("bag 0", t_scan < a.calib_end), ("bags 1-2", t_scan >= a.calib_end)]
 closer = bg.LoopCloser(clouds, min_gap_s=a.min_gap, r_xy=a.r_xy)
 rows = []
 for model in a.models.split(","):
-    T_opt, loops = bg.run_backend(kf_t, clouds, T_kf, sig, model, rounds=a.rounds, closer=closer, verbose=True)
+    if model == "iso_sah":
+        T_opt, loops = bg.run_backend(kf_t, clouds, T_kf, sig, "iso", rounds=a.rounds, closer=closer, verbose=True,
+                                      odom_cov=sah_step_cov(L, t_scan, kf_t, keep, sig))
+    else:
+        T_opt, loops = bg.run_backend(kf_t, clouds, T_kf, sig, model, rounds=a.rounds, closer=closer, verbose=True)
     P = bg.correct_all_scans(t_scan, T_scan, kf_t, T_kf, T_opt)
     r = [model, len(loops), sum(l["info"]["dropped_t"] > 0 for l in loops), sum(l["info"]["dropped_R"] > 0 for l in loops)]
     for _, m in segs:

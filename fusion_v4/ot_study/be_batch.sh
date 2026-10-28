@@ -12,5 +12,6 @@ gt() { case $1 in MF*) echo /mnt/user-data/uploads/ground_truth_path.csv;; LC*) 
 one() { r=$1; (cd $FD && python3 run_backend.py --log $OLDPWD/out/$r/switching_log_v2_$tag.csv --kf ${KF[$r]} --gt $(gt $r) \
         --models none,iso,ot --odom-sigma 1.46,0.054 --rounds 1) > out/$r/be_$tag.txt 2>&1; }
 i=0
-for r in MF1 MF2 MF3 MF4 MF5 MF6 LC1 LC2 LC3 C021 C022 C023; do one $r & i=$((i+1)); [ $((i % 2)) = 0 ] && wait; done; wait
+RUNS=${RUNS:-"MF1 MF2 MF3 MF4 MF5 MF6 LC1 LC2 LC3 C021 C022 C023"}
+for r in $RUNS; do one $r & i=$((i+1)); [ $((i % 2)) = 0 ] && wait; done; wait
 echo BE_DONE $tag

@@ -45,3 +45,10 @@ No Google Scholar / IEEE Xplore / Semantic Scholar paging; the 60 or so papers c
 
 ## Sources
 [V-LOAM (ICRA 2015)](https://frc.ri.cmu.edu/~zhangji/publications/ICRA_2015.pdf), [Selective Kalman Filter](https://arxiv.org/html/2412.17235v1), [SA-LIVO](https://arxiv.org/html/2606.25699v1), [Super Odometry 2.0](https://arxiv.org/pdf/2608.25427), [DAMM-LOAM](https://arxiv.org/abs/2510.13287), [MM-LINS](https://arxiv.org/abs/2503.19506), [ALIVE-LIO](https://arxiv.org/abs/2604.02706), [DCReg](https://arxiv.org/abs/2509.06285), [Planar Constraint Assisted LiDAR SLAM (Manhattan)](https://www.mdpi.com/2072-4292/15/1/15), [MSC-VO](https://arxiv.org/pdf/2111.03408), [PGD-VIO](https://arxiv.org/pdf/2407.17709), [DeCOD](https://arxiv.org/html/2609.36753), [Switch-SLAM](https://doi.org/10.1109/LRA.2024.3421792), [SuperLoc](https://arxiv.org/abs/2412.02901), [LF-GICP](https://arxiv.org/html/2608.19522).
+
+## Addendum (28 Oct, later): the R + T + OT structure
+Three more papers bear on the owner's fixed structure (details and links in `OT_Channel_Study.md`):
+- LF-GICP (arXiv 2608.19522) already uses the orientation tensor of planarity-weighted map normals as a solver-independent degeneracy measure (threshold-gated, LiDAR-only, no heading use). "Orientation tensor as degeneracy measure" is therefore not new.
+- D²-LIO (arXiv 2508.14355) already uses separate rotation and translation weights because of the scale difference. Together with DCReg, the R / T separation is not new.
+- LiLi (arXiv 2609.17145) is independent of the Hessian, but through re-optimisation, not normals.
+What was not found in the papers read: the tensor (with edges counted) as a direction-by-direction, threshold-free cap on the Schur translation information inside a VIO-primary weight (N = tr(H_tt), no scale), and one orientation-distribution channel giving both that cap and the heading anchor (SAH = alignment of all even-order orientation tensors of the same normals). Claim wording in `OT_Channel_Study.md` section 7.
