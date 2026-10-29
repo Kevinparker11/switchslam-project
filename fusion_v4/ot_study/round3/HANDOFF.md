@@ -7,8 +7,8 @@ Pre-registration: PREREG3.md (written 02:29:54Z, before any OT candidate was rep
 | G20 (harness; reproduces the earlier G20 replay on 33 recordings, max diff 0.038 m) | 0.350 | 1.707 | 0.296 | 2.476 | 0.474 | 0.455 |
 | G20 + OT_MODE=min | 0.350 | 1.707 | 0.296 | 2.473 | 0.473 | 0.455 |
 | G20 + OT_MODE=smin | 0.351 | 1.707 | 0.296 | 2.476 | 0.474 | 0.453 |
-| G20 + OT_MODE=gmax | see gmax_clean line in the chat / run gscore.py | | | | | |
-So far both fail-safe rules are neutral on G20 (the same finding as on A-LOAM).
+| **G20 + OT_MODE=gmax** | 0.347 | **1.461** | 0.288 | 2.227 | **0.379** | **0.213** |
+The two fail-safe rules (min, smin) are neutral on G20, as on A-LOAM. gmax lowers Long Corridor (1.707 to 1.461), GEODE (0.474 to 0.379), Gazebo (0.455 to 0.213) and Corridor02 (2.476 to 2.227) and leaves Multi Floor and Cave02 level (clean medians; MF mean 0.390 vs 0.374). Not yet scored: fault cells, agm, the PREREG3 score and the per-recording counts. gmax is not a fail-safe (see OT_Channel_Round2.md), so the FL cells decide.
 
 ## Still to run (in driveG.sh order)
 Gc_agm_clean; then fault cells Gbase_FL, Gbase_FV and for min, smin, gmax, agm: Gc_<rule>_FL, Gc_<rule>_FV (MF, LC, CV only). Then `python3 gselect.py` applies the PREREG3 rule (score = mean ln ratio over 12 cells; admissible if every clean sequence median is within +0.05 m of G20).
