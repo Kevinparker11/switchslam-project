@@ -29,3 +29,17 @@ Target: beat Switch-SLAM (RA-L Table II, front end, no loop closure) on Long Cor
 * **Size of the effect:** rotating the post-switch fused path back by the step (6-8 deg, a bound on what removing the step could give) lowers the ATE only from 3.38 / 1.96 / 3.05 to 2.91 / 1.68 / 2.56 m (8 deg). So the step is part of the gap, not all of it; the mean would be about 2.4 m, no margin.
 * Rotation weight: a replay of C_R = 1e-5 ... 3e-3 (R channel active) on the three Long Corridor F8 logs does not help (mean 1.99 / 2.05 / 2.55 / 3.06 / 2.67 / 2.01 against 1.97 at C_R = 0, F21 base). The R channel stays a safeguard, not a gain, on this data.
 * Replay is blind to this: replays of F20 / F21 give 1.97-2.01 on Long Corridor, live gave 2.80. The replays use F8 logs, in which A-LOAM was not seeded by SAH-corrected poses.
+
+## Addendum, 29 Oct 2026: Multi Floor live run of F20 (laptop, one run)
+The Multi Floor step of the batch was skipped because the batch script looked for `laptop_bags/RosBag`; the bags are in `laptop_bags/multifloor`. One run was made afterwards by hand (`BAG_DIR_OVERRIDE=.../multifloor`, 0.5x, `REPEAT=1 RECORD_KF=1 FRONT=aloam`, config `[F20]`, started 09:13:25, ended 09:30:04, numbers copied from the owner's printouts; the zip was not yet received).
+
+| Output | ATE RMSE / max (m) | Rows |
+|---|---|---|
+| F20 front end, live | **0.478 / 0.82** (common window 0.49 / 0.83) | 4092, GT path 272.7 m |
+| F20 + loop back end (iso, 1 round, 1.46 deg / 0.054 m) | **0.402 / 0.98** | |
+| Switch-SLAM (no loop closure) | 1.61 / 3.63 | |
+
+References: F20 replay 0.56 (front) / 0.469 (iso); F21 replay 0.58 / 0.457; F16 live 0.640 +- 0.115 (6 runs, 0.5x); F8 live 0.475-0.74.
+Reading: the live F20 Multi Floor front end is inside the F8 / F16 range and below Switch-SLAM on both RMSE and max. The loop back end lowers RMSE by 0.076 m and raises the maximum from 0.82 to 0.98 m. One run: the F16 run-to-run sd is 0.115 m, so differences of this size to the replay values are not meaningful. This closes the Multi Floor gap in the live batch (P3 for Multi Floor: met in this run, n = 1).
+
+A PC run of the same command (`runs_v2`) was a failed start and is not a result: VINS-Mono never ran because `multifloor_config.yaml` was missing from the PC's `vinsmono_test` container (mode share WARMUP 1.000, LiDAR-only A-LOAM, 39.98 m). The config was copied from the repository (`configs/multifloor/`); the repeat is written to `~/runs_v2_PC2`.
