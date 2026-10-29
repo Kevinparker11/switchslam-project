@@ -118,3 +118,18 @@ GT file starts at t = 223.21 s with no reset jump (0.02 m largest step), so the 
 | (bag recording) A-LOAM alone | | 0.10 / 0.19 | |
 
 Against the rules fixed above: A-LOAM is not failed (0.478 < 2.5 m; end-point error 0.83 < 5 m); C-P1 (< 1 m) holds for this run. Standalone A-LOAM (0.478) and F8 (0.490) are tied on RMSE (one run each); F8 has the lower maximum (0.75 against 0.98). The raw scan-to-scan odometry drifts to 7.2 m, so the accuracy comes from A-LOAM's scan-to-map step, which does not fail on this route. So this world and route do not reproduce the Switch-SLAM Farm failure of LOAM, and the live farm test does not show an advantage of F8 over A-LOAM alone; it shows that F8 does not damage it, unlike the generation-1 switching node (5.0-5.8 m). One run; run-to-run spread of A-LOAM on this world is unknown until replicates exist.
+
+## Step 4 (29 Oct 2026): one live run of F21 (R + T + OT: `gmax`, VIO-trust check) on the farm L route, laptop
+Written before the run (conversation of 29 Oct): config `[F21]` = `FUSION_MODE=fused C_T=3e-2 KAPPA_TH=1e9 SAH=1 ROT_CHECK=1 OT_SRC=geom OT_MODE=gmax VIO_CHECK=1 VIO_CHECK_FAST=5 LIDAR_GUARD_T=2 LIDAR_GUARD_EX=4.325 VIO_CHECK_REF=0.157 VIO_CHECK_FAST_REF=0.277 VIO_CHECK_START=1`, in the original five-terminal procedure with `fusion_node_v2.py` in place of the switching node (as in Step 2), the Husky reset to (0, 0, 0.2), `waypoint_driver_v4.py`, `gt_logger.py`, extrinsic from tf. Pass rule: fused output RMSE <= 0.38 m and max <= 1.10 m (Switch-SLAM Table II, Farm), full span from the reset, Umeyama SE(3), no scale; the A-LOAM output of the same log and VINS-Mono alone reported beside it; nothing changed after the score; one run supports no claim.
+
+Result (numbers copied from the owner's `score_fused.py` printout; the log files were not attached): GT path after reset 78.3 m, 3559 log rows after the reset, modes FUSED 3222 / WARMUP 329 / VO_FAIL 8. Rotation check closed on 0 of 3222 FUSED rows.
+
+| Output | n | ATE / max (m) | end-point error (m) |
+|---|---|---|---|
+| **F21 fused** | 3489 | **0.496 / 0.995** | 0.544 |
+| A-LOAM output (fed by the fused pose) | 3489 | 0.446 / 1.117 | 0.336 |
+| VINS-Mono alone | 3440 | 3.453 / 16.990 | 1.775 |
+| Switch-SLAM (paper) | | 0.38 / 1.10 | |
+
+Against the rule: **RMSE 0.496 > 0.38, not met; max 0.995 <= 1.10, met.** The bag replay value (F21 0.280) did not transfer to the live session.
+Context from the same procedure, one run each: F8 fused 0.490 / 0.750; A-LOAM unfed 0.478 / 0.977; F8-fed A-LOAM output 0.385 / 0.905; generation-1 A-LOAM output 0.32 / 0.44 / 0.48. The live F21 fused output is therefore at the level of A-LOAM's own output on this route (0.32-0.50 over all runs so far), and the paper's 0.38 lies inside that run-to-run range; with one run per method the live farm cannot separate F21 from F8 or from A-LOAM alone. VINS-Mono alone was worse than in the F8 run (3.45 against 1.22). Whether the VIO-trust check closed during the run was not printed by `score_fused.py`; it needs the log columns.
