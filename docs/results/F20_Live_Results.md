@@ -16,7 +16,7 @@ Replay of the same design: LC 2.01 front / 1.455 iso; C02 1.71 / 1.481.
 * P1 (structure live): OT tensor present on 100 % of fused rows in all 6 runs (median age 0.30 s LC, about 1.0 s C02); rotation check closed on 0 rows. **Pass** (LC and C02).
 * P2 (inside the F16 live range): LC front 2.796 in 1.99-3.17 pass; C02 front 1.753 in 1.64-1.84 pass; C02 iso 1.435 in 0.807-1.853 pass; **LC iso 2.328 outside 1.312-2.125 fail**. MF not run.
 * P3 (within Switch-SLAM): **LC front mean 2.796 is not below 2.42, fail; LC iso run 3 (3.609) is not below 2.42, fail.** MF not run.
-* Not a pass: LC runs 1 and 3 (3.38, 3.05) are worse than LiDAR alone in the run-1 replay comparison (2.21) and run 3's loop back end made it worse (3.05 to 3.61).
+* Also: LC run 1 (3.38) is worse than the LiDAR-only replay on the same log (2.21), and in LC run 3 the loop back end made the result worse (3.05 front end to 3.61 with iso loops).
 
 ## Reading
 F20 is not distinguishable from F16 on the front end (both Long Corridor means lie inside the F16 range), but it does not meet the Long Corridor Switch-SLAM target live, and the replay value (2.01) was optimistic: live run-to-run spread on Long Corridor is 1.96 to 3.38 m. Corridor02 matches replay closely (1.75 vs 1.71). The live result is a single batch; nothing was changed after seeing it.
