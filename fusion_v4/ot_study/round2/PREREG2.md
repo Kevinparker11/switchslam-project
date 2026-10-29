@@ -87,3 +87,8 @@ Reported arms (not eligible): smin/V1b -0.1720, smin/V2 -0.1720, F20/V1b -0.1655
 
 ## Diagnostic arm (written before it is run; not a candidate, C_T stays frozen at 0.03)
 gmax raises mainly the weakest-direction LiDAR weight (MF mean w0 0.694 -> 0.812, LC 0.643 -> 0.696, C02 0.718 -> 0.779; w2 almost unchanged). To see whether a constant gives the same, F20 + V1b is replayed with C_T = 0.056, the value at which the F20 weak-direction weight on MF would reach gmax's (c lambda from 2.27 to 4.26). Same 13 cells and the farm bag; reported beside F21, never selected.
+
+## Final outcome (2026-10-29)
+Loop back end (iso, clean): F20 MF 0.469 / LC 1.455 / C02 1.481; F20+V1b 0.470 / 1.457 / 1.481; F21 0.457 / 1.331 / 1.349.
+Diagnostic arm (F20+V1b, C_T = 0.056, 13 cells): score -0.1905 (F21 -0.1781, F20+V1b -0.1655); farm 0.186 m (F21 0.280, F20+V1b 0.330); worse than F21 on MF-FL and C02-FL. Reported only, not selectable.
+The stage-B choice stands: F21 = gmax + V1b. Conclusion and limits: docs/results/OT_Channel_Round2.md.
