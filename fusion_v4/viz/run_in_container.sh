@@ -6,7 +6,12 @@ GT=${1:-}
 export ROS_IP=$(hostname -i); source /opt/ros/noetic/setup.bash
 while true; do
   echo "[viz] waiting for a live run (a new /switch_fused_pose message) ..."
-  until timeout 6 rostopic echo -n1 /switch_fused_pose >/dev/null 2>&1; do sleep 2; done
+  if [ "${FORCE:-}" != 1 ]; then
+    until timeout 6 rostopic echo -n1 /switch_fused_pose >/dev/null 2>&1; do
+      echo "[viz] no pose message yet | $(timeout 4 rostopic info /switch_fused_pose 2>&1 | grep -A3 Publishers | tr '\n' ' ' | cut -c1-110) | /clock publishers: $(timeout 4 rostopic info /clock 2>&1 | grep -c '^ \* /')"
+      sleep 2
+    done
+  fi
   RID=$(rosparam get /run_id 2>/dev/null); echo "[viz] run $RID detected, opening RViz"
   python3 /viz/fused_path.py & P1=$!
   P2=""; [ -n "$GT" ] && { python3 /viz/gt_path.py "$GT" & P2=$!; }
