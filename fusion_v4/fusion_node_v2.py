@@ -115,6 +115,8 @@ VIO_CHECK = E("VIO_CHECK", "0") == "1"
 VIO_CHECK_REF = float(E("VIO_CHECK_REF", "0.156"))
 VIO_CHECK_NMIN = int(E("VIO_CHECK_NMIN", "200"))
 VIO_SCALE_T = float(E("VIO_SCALE_T", "0"))
+VIO_SCALE_PROJ = E("VIO_SCALE_PROJ", "0") == "1"      # 1: measure the scale only along LiDAR-constrained motion (Schur translation weight)
+VIO_SCALE_ALONG = E("VIO_SCALE_ALONG", "0") == "1"    # 1: the correction acts only along the LiDAR direction of travel
 VIO_CHECK_FAST = float(E("VIO_CHECK_FAST", "0"))
 VIO_CHECK_FAST_REF = float(E("VIO_CHECK_FAST_REF", "0.278"))
 VIO_CHECK_FAST_NMIN = int(E("VIO_CHECK_FAST_NMIN", "25"))
@@ -163,7 +165,7 @@ if vio_check is not None and VIO_CHECK_FAST > 0:
                                                           avg=VIO_CHECK_FAST, n_min=VIO_CHECK_FAST_NMIN,
                                                           proj=VIO_CHECK_PROJ, start_trusted=VIO_CHECK_START)])
 core = fc.FusionCore(R_IL, t_IL, c_t=C_T, c_R=C_R, gate=gate, t_warm=T_WARM, hess_frame=HESS_FRAME,
-                     jump_max=JUMP_MAX, w_mode=WEIGHT_MODE, alpha=W_ALPHA, vio_adapt=vio_check, vio_scale_T=VIO_SCALE_T,
+                     jump_max=JUMP_MAX, w_mode=WEIGHT_MODE, alpha=W_ALPHA, vio_adapt=vio_check, vio_scale_T=VIO_SCALE_T, vio_scale_proj=VIO_SCALE_PROJ, vio_scale_along=VIO_SCALE_ALONG,
                      lidar_guard_T=LIDAR_GUARD_T if vio_check is not None else 0.0, lidar_guard_ex=LIDAR_GUARD_EX,
                      gamma_min=GAMMA_MIN if vio_check is not None else 0.0, gap_T=GAP_T,
                      rot_adapt=fc.RotConsistency(ROT_REF_FAST, ROT_REF_SLOW, guard=ROT_GUARD) if ROT_CHECK else None,
