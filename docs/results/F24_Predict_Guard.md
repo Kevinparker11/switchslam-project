@@ -64,3 +64,22 @@ Why: path lengths against the ground truth. Farm: A-LOAM 0.999, VINS-Mono 0.909 
 * The guard did not act in either run: no VO_FAIL row, no VINS step above jump_max = 1 m (largest 0.81 m on Long Corridor, 0.43 m on Multi Floor), no VINS rotation step above 0.5 rad (0.34 / 0.25). So both runs behaved as F23, and the differences from the F23 live numbers are run-to-run variation (live Long Corridor runs of one configuration have spanned 1.96-3.38 m: F20 3.38 / 1.96 / 3.05; F16 1.99-3.17). F24 is therefore not shown to help or to hurt on the bag sequences; it is inactive there.
 * Long Corridor, L1 (rule of section 5 of F22_Handover_Anchor.md): RMSE 2.12 < 2.42 met; max 5.31 > 5.09 missed by 0.22 m; one of the three runs the rule needs.
 * The Long Corridor maximum is at 9.6 s after the start, in WARMUP (LiDAR only, 211 rows), error mean 3.95 m in the first 30 s, 0.8-2.3 m afterwards. The direction of travel in the first 10 s is 3.4 deg off the ground truth, 1.1 deg at 20 s, 0.9 deg at 40 s, 0.5 deg at 60 s. The start point is 135 m from the centroid of the path, so with the full-span alignment a heading error of about 2 deg at the start is 5 m. One anchored handover, 2.95 deg at 20.6 s. The excess is in the LiDAR-only warm-up heading, not at the handover.
+
+## 8. Long Corridor, three F24 live runs (4 Nov 2026, laptop, front end only)
+| Run | ATE / max (m) |
+|---|---|
+| 1 | 2.12 / 5.31 |
+| 2 | 2.15 / 5.57 |
+| 3 | 1.75 / 3.53 |
+| mean | 2.007 / 4.80 |
+Switch-SLAM Long Corridor: 2.42 / 5.09. Rule L1 (F22_Handover_Anchor.md section 5): mean RMSE 2.007 < 2.42 **met**; per-run max <= 5.09 **not met** (runs 1 and 2 are 0.22 and 0.48 m above; run 3 is below). The anchored runs (F23 1.75; F24 2.12, 2.15, 1.75) are all better in RMSE than the unanchored live runs (F20 3.38 / 1.96 / 3.05; F16 1.99-3.17), but four anchored runs are too few to call the difference statistical. Multi Floor (run 1): 0.45 / 0.92, as in section 7.
+
+## 9. Shorter LiDAR-only warm-up, replay (4 Nov 2026) - not adopted, replay only
+Reason for the test: the Long Corridor maximum lies in the 20 s LiDAR-only warm-up (section 7). Replayed with `T_WARM` = 20 / 10 / 5 s on the 12 development logs, F23 configuration (anchor on), mean ATE / max (m):
+| Sequence | T_WARM 20 (= F23) | 10 | 5 |
+|---|---|---|---|
+| Corridor02 | 1.569 / 2.642 | 1.557 / 2.608 | 1.449 / 2.333 |
+| Long Corridor | 1.703 / 3.508 | 1.604 / 2.969 | 1.591 / 2.846 |
+| Multi Floor | 0.531 / 1.029 | 0.596 / 1.024 | 0.623 / 1.037 |
+Per run on Multi Floor: MF5 0.403 -> 0.605 (5 s) / 0.638, MF2 0.318 -> 0.379 / 0.476.
+Reading: a shorter warm-up lowers Long Corridor RMSE by about 0.1 and its max by about 0.5-0.65 m, helps Corridor02 a little, and costs Multi Floor 0.065-0.09 m RMSE (still far inside Switch-SLAM's 1.61). Probable reason: VINS-Mono's scale is weakly observed in its first seconds, so letting it in earlier brings its scale error with it on Multi Floor. Limits: the replay is open loop (A-LOAM is not re-seeded), it was optimistic for F20 Long Corridor earlier (replay 2.01, live 2.80), and the corridor gain is smaller than the live run-to-run spread (about 1 m). Nothing is changed; a shorter warm-up would need live runs under a pre-registered rule, and it is a per-environment trade, not a free gain.
