@@ -77,3 +77,13 @@ Umeyama SE(3), no scale. Replay rates as before (MF 0.5x, LC 0.5x, C02 0.33x). N
 * L3 (held out, frozen, run only after L1 / L2): Cave02 F23 mean not above the F16 live range (4.40 + 0.61 m); GEODE and the
   farm L route reported against F16 / F21, whatever comes out.
 * All runs are reported, including failed starts.
+
+## 6. Live results (3 Nov 2026, laptop, front end only, no loop closure)
+Reported in the order they were run; nothing changed between runs.
+| Run | Config | Sequence | ATE RMSE / max (m) | Against |
+|---|---|---|---|---|
+| F21_kf_run1 | F21 | Multi Floor | 0.58 / 1.20 | Switch-SLAM 1.61 / 3.63; live F20 0.48 / 0.82; replay 0.583 / 1.10 |
+| F23_kf_run1 | F23 | Long Corridor | 1.75 / 3.02 | Switch-SLAM 2.42 / 5.09; live F20 mean 2.80; replay 1.703 / 3.51 |
+* L1 so far (Long Corridor): run 1 is below 2.42 m and its max is below 5.09 m. L1 needs 3 runs and Multi Floor, so it is open.
+* Live agrees with replay (1.75 live against 1.70 replay), so the earlier optimism (F20 replay 2.01, live 2.80) did not repeat for this run.
+* Single runs on development sequences. Remaining: F23 on Multi Floor and Corridor02 (3 runs each), 2 more Long Corridor runs, then L3.
