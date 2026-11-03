@@ -134,6 +134,7 @@ assert OT_SRC in ("planar", "geom", "geom3", "gschur", "georf"), OT_SRC
 VIO_CHECK_START = E("VIO_CHECK_START", "0") == "1"
 VIO_CHECK_PROJ = E("VIO_CHECK_PROJ", "0") == "1"
 VIO_DEBUG = E("VIO_DEBUG", "0") == "1"
+PREDICT_GUARD = E("PREDICT_GUARD", "0") == "1"   # 1: no VINS motion in the mapping guess while VINS is failing / jumping (0 = F0-F23 bit for bit)
 HANDOVER = E("HANDOVER", "none")           # none (F0-F21 bit for bit) | anchor (fusion_core.FusionCore handover)
 if OT and TCAP:
     raise SystemExit("TCAP (per-scan T from /laser_cloud_surf_last) and OT_MODE (keyframe T) are alternatives; set one")
@@ -167,7 +168,7 @@ core = fc.FusionCore(R_IL, t_IL, c_t=C_T, c_R=C_R, gate=gate, t_warm=T_WARM, hes
                      gamma_min=GAMMA_MIN if vio_check is not None else 0.0, gap_T=GAP_T,
                      rot_adapt=fc.RotConsistency(ROT_REF_FAST, ROT_REF_SLOW, guard=ROT_GUARD) if ROT_CHECK else None,
                      rot_c_fail=ROT_C_FAIL, rot_gamma_min=ROT_GAMMA_MIN, t_cap=TCAP or OT,
-                     t_mode=OT_MODE if OT else "min", handover=HANDOVER)
+                     t_mode=OT_MODE if OT else "min", handover=HANDOVER, predict_guard=PREDICT_GUARD)
 if MODE == "lidar":
     core.t_warm = 1e12                     # every step is WARMUP = LiDAR only
 
@@ -489,7 +490,7 @@ def main():
         print("SAH=1 KF_DIST=%g KF_ROT=%g SAH_RMIN=%g SAH_RMAX=%g SAH_VOXEL=%g SAH_MAXPTS=%d SAH_MAX_STEP=%.2f deg"
               % (KF_DIST, KF_ROT, SAH_RMIN, SAH_RMAX, SAH_VOXEL, SAH_MAXPTS, np.degrees(SAH_MAX_STEP)))
     print("TCAP=%d T_KNN=%d T_SUB=%d OT_MODE=%s OT_SRC=%s" % (TCAP, T_KNN, T_SUB, OT_MODE, OT_SRC))
-    print("VIO_CHECK_START=%d VIO_CHECK_PROJ=%d VIO_DEBUG=%d HANDOVER=%s" % (VIO_CHECK_START, VIO_CHECK_PROJ, VIO_DEBUG, HANDOVER))
+    print("VIO_CHECK_START=%d VIO_CHECK_PROJ=%d VIO_DEBUG=%d HANDOVER=%s PREDICT_GUARD=%d" % (VIO_CHECK_START, VIO_CHECK_PROJ, VIO_DEBUG, HANDOVER, int(PREDICT_GUARD)))
     print("ROT_CHECK=%d ROT_REF_FAST=%g ROT_REF_SLOW=%g ROT_GUARD=%g ROT_C_FAIL=%g ROT_GAMMA_MIN=%g" % (ROT_CHECK, ROT_REF_FAST, ROT_REF_SLOW, ROT_GUARD, ROT_C_FAIL, ROT_GAMMA_MIN))
     print("VIO_CHECK=%d VIO_CHECK_REF=%g VIO_CHECK_NMIN=%d VIO_SCALE_T=%g VIO_CHECK_FAST=%g VIO_CHECK_FAST_REF=%g LIDAR_GUARD_T=%g LIDAR_GUARD_EX=%g GAMMA_MIN=%g GAP_T=%g"
           % (VIO_CHECK, VIO_CHECK_REF, VIO_CHECK_NMIN, VIO_SCALE_T, VIO_CHECK_FAST, VIO_CHECK_FAST_REF, LIDAR_GUARD_T, LIDAR_GUARD_EX, GAMMA_MIN, GAP_T))

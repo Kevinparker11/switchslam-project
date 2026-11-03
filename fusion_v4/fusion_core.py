@@ -637,7 +637,7 @@ class FusionCore:
                  lidar_guard_T=0.0, lidar_guard_ex=0.0, vio_scale_along=False, gamma_min=0.0,
                  gap_T=0.0, gap_vmax=5.0, gap_wmax=2.0, switch_rot=False,
                  rot_adapt=None, rot_c_fail=1.0, rot_gamma_min=1e-3, t_cap=False, t_mode="min",
-                 handover="none", handover_nmin=20):
+                 handover="none", handover_nmin=20, predict_guard=False):
         assert w_mode in W_MODES, w_mode
         # handover: what happens to the fused rotation when FUSED starts (after the warm-up, or after a VINS loss and its
         # re-warm-up).  'none' (default, F0-F21 bit for bit): the fused rotation keeps the LiDAR rotation integrated during the
@@ -651,6 +651,10 @@ class FusionCore:
         # scans needed (fewer: 'none' behaviour for that handover).
         assert handover in ("none", "anchor"), handover
         self.handover, self.handover_nmin = handover, handover_nmin
+        # predict_guard: predict() (the initial guess handed to A-LOAM's scan-to-map matching) uses the VINS motion only while VINS is
+        # trusted by the node's own failure rule: not after a VO_FAIL step, and the step within jump_max / rot_jump_max (the numbers
+        # that define a VINS jump).  False = F0-F23 exactly (a VINS step up to 3 x jump_max, in any mode, was used as the guess).
+        self.predict_guard = bool(predict_guard)
         self.warm_pairs, self.prev_mode = [], "INIT"
         # t_cap: the additional-T fail-safe (t_cap_info): the translation information of the Schur weight is capped, direction by
         # direction, by what the raw-scan orientation tensor T supports.  False = F8/F16 exactly (bit for bit); with no T for a
@@ -730,6 +734,9 @@ class FusionCore:
         dR_I, dt_I = rel_body(self.prev_v[0], self.prev_v[1], vins_now[0], vins_now[1])
         dR, dt = imu_to_lidar_increment(dR_I, dt_I, self.R_IL, self.t_IL)
         if np.linalg.norm(dt) > 3 * self.jump_max:
+            return self.Rf, self.pf
+        if self.predict_guard and (self.prev_mode == "VO_FAIL" or np.linalg.norm(dt) > self.jump_max
+                                   or np.linalg.norm(so3_log(dR)) > self.rot_jump_max):
             return self.Rf, self.pf
         return compose(self.Rf, self.pf, dR, dt)
 

@@ -156,6 +156,7 @@ declare -A CFG=(
   [F21]="FUSION_MODE=fused C_T=3e-2 KAPPA_TH=1e9 SAH=1 ROT_CHECK=1 OT_SRC=geom OT_MODE=gmax VIO_CHECK=1 VIO_CHECK_FAST=5 LIDAR_GUARD_T=2 LIDAR_GUARD_EX=4.325 VIO_CHECK_REF=0.157 VIO_CHECK_FAST_REF=0.277 VIO_CHECK_START=1"  # F20 + geometry-supported translation weight (gmax) + VIO-trust check (V1b). docs/results/OT_Channel_Round2.md
   [F22]="FUSION_MODE=fused C_T=3e-2 KAPPA_TH=1e9 SAH=1 ROT_CHECK=1 OT_SRC=geom OT_MODE=min HANDOVER=anchor"  # F20 + anchored WARMUP->FUSED handover (no new constant). docs/results/F22_Handover_Anchor.md
   [F23]="FUSION_MODE=fused C_T=3e-2 KAPPA_TH=1e9 SAH=1 ROT_CHECK=1 OT_SRC=geom OT_MODE=gmax VIO_CHECK=1 VIO_CHECK_FAST=5 LIDAR_GUARD_T=2 LIDAR_GUARD_EX=4.325 VIO_CHECK_REF=0.157 VIO_CHECK_FAST_REF=0.277 VIO_CHECK_START=1 HANDOVER=anchor"  # F21 + anchored handover. docs/results/F22_Handover_Anchor.md
+  [F24]="FUSION_MODE=fused C_T=3e-2 KAPPA_TH=1e9 SAH=1 ROT_CHECK=1 OT_SRC=geom OT_MODE=gmax VIO_CHECK=1 VIO_CHECK_FAST=5 LIDAR_GUARD_T=2 LIDAR_GUARD_EX=4.325 VIO_CHECK_REF=0.157 VIO_CHECK_FAST_REF=0.277 VIO_CHECK_START=1 HANDOVER=anchor PREDICT_GUARD=1"  # F23 + no VINS motion in the mapping guess while VINS fails. docs/results/F24_Predict_Guard.md
   [G16]="FUSION_MODE=fused C_T=$GENZ_C_T_F8 KAPPA_TH=1e9 SAH=1"            # ablation: F16 rule on GenZ (+ SAH)
   [G9]="FUSION_MODE=fused C_T=$GENZ_C_T C_R=$GENZ_C_R KAPPA_TH=1e9"         # R and T both from Schur: S_RR and S_tt active weights
   [G17]="FUSION_MODE=fused C_T=$GENZ_C_T C_R=$GENZ_C_R KAPPA_TH=1e9 SAH=1"  # G9 + SAH (the additional T)
