@@ -1,0 +1,90 @@
+Panels:
+  - Class: rviz/Displays
+    Name: Displays
+    Property Tree Widget:
+      Expanded: ~
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Class: rviz/Grid
+      Name: Grid
+      Enabled: true
+      Cell Size: 10
+      Plane Cell Count: 40
+      Color: 70; 74; 82
+    - Class: rviz/PointCloud2
+      Name: A-LOAM map
+      Enabled: true
+      Topic: /laser_cloud_map
+      Style: Points
+      Size (Pixels): 1
+      Color Transformer: AxisColor
+      Axis: Z
+      Use Fixed Frame: true
+      Queue Size: 2
+    - Class: rviz/PointCloud2
+      Name: current scan
+      Enabled: true
+      Topic: /velodyne_cloud_registered
+      Style: Points
+      Size (Pixels): 2
+      Color Transformer: FlatColor
+      Color: 255; 255; 255
+      Queue Size: 2
+    - Class: rviz/Path
+      Name: ground truth
+      Enabled: true
+      Topic: /gt_path
+      Color: 255; 255; 255
+      Line Style: Lines
+      Line Width: 0.06
+    - Class: rviz/Path
+      Name: A-LOAM mapped path
+      Enabled: true
+      Topic: /aft_mapped_path
+      Color: 255; 170; 40
+      Line Style: Lines
+      Line Width: 0.05
+    - Class: rviz/Odometry
+      Name: fused pose (trail)
+      Enabled: true
+      Topic: /switch_fused_pose
+      Keep: 5000
+      Position Tolerance: 0.1
+      Angle Tolerance: 0.1
+      Shape:
+        Alpha: 1
+        Axes Length: 1
+        Axes Radius: 0.1
+        Color: 79; 209; 139
+        Head Length: 0.3
+        Head Radius: 0.1
+        Shaft Length: 0.5
+        Shaft Radius: 0.05
+        Value: Arrow
+  Enabled: true
+  Global Options:
+    Background Color: 15; 17; 21
+    Fixed Frame: camera_init
+    Frame Rate: 20
+  Name: root
+  Tools:
+    - Class: rviz/Interact
+    - Class: rviz/MoveCamera
+  Value: true
+  Views:
+    Current:
+      Class: rviz/Orbit
+      Name: Current View
+      Target Frame: camera_init
+      Pitch: 1.5
+      Yaw: 3.14
+      Distance: 120
+      Focal Point: {X: 80, Y: 20, Z: 0}
+    Saved: ~
+Window Geometry:
+  Displays: {collapsed: false}
+  Height: 900
+  Width: 1500
+  X: 60
+  Y: 40
