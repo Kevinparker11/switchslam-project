@@ -71,6 +71,9 @@ Environment (all optional):
                 untrusted until it has agreed, G20).  VIO_CHECK_PROJ=1: the checks judge the VINS only along the directions the LiDAR
                 translation weight (Schur T with the OT channel) supports (fusion_core.VioConsistency proj).  VIO_DEBUG=1 appends
                 vio_r_slow, vio_r_fast, guard_ex (for the reference calibration).
+  HANDOVER      none (default) | anchor: at every entry into FUSED (after the warm-up, or after a VINS loss and its re-warm-up)
+                the fused rotation is re-anchored to the VINS through the robust mean VINS-to-map attitude offset of the whole
+                warm-up, instead of continuing from one instant (fusion_core.FusionCore handover).  Appends handover_deg.
 Extrinsic: SubT-MRS Multi Floor 'laser_to_imu' (override with EXTRINSIC_YAML=path to the same format).
 """
 import os
@@ -131,6 +134,7 @@ assert OT_SRC in ("planar", "geom", "geom3", "gschur", "georf"), OT_SRC
 VIO_CHECK_START = E("VIO_CHECK_START", "0") == "1"
 VIO_CHECK_PROJ = E("VIO_CHECK_PROJ", "0") == "1"
 VIO_DEBUG = E("VIO_DEBUG", "0") == "1"
+HANDOVER = E("HANDOVER", "none")           # none (F0-F21 bit for bit) | anchor (fusion_core.FusionCore handover)
 if OT and TCAP:
     raise SystemExit("TCAP (per-scan T from /laser_cloud_surf_last) and OT_MODE (keyframe T) are alternatives; set one")
 KF_CLOUDS = SAH or OT                      # keyframe scans are needed by SAH and/or the OT channel
@@ -163,7 +167,7 @@ core = fc.FusionCore(R_IL, t_IL, c_t=C_T, c_R=C_R, gate=gate, t_warm=T_WARM, hes
                      gamma_min=GAMMA_MIN if vio_check is not None else 0.0, gap_T=GAP_T,
                      rot_adapt=fc.RotConsistency(ROT_REF_FAST, ROT_REF_SLOW, guard=ROT_GUARD) if ROT_CHECK else None,
                      rot_c_fail=ROT_C_FAIL, rot_gamma_min=ROT_GAMMA_MIN, t_cap=TCAP or OT,
-                     t_mode=OT_MODE if OT else "min")
+                     t_mode=OT_MODE if OT else "min", handover=HANDOVER)
 if MODE == "lidar":
     core.t_warm = 1e12                     # every step is WARMUP = LiDAR only
 
@@ -190,7 +194,7 @@ w.writerow(["time", "mode", "fused_x", "fused_y", "fused_z", "fused_qx", "fused_
             "aft_x", "aft_y", "aft_z", "aft_qx", "aft_qy", "aft_qz", "aft_qw",
             "v_px", "v_py", "v_pz", "v_qx", "v_qy", "v_qz", "v_qw",
             "gate", "kappa_R", "kappa_t", "kth", "wt0", "wt1", "wt2", "wR0", "wR1", "wR2", "dta", "dtv",
-            "hess_src", "cost", "m_res"] + HCOLS + ["sah_corr_deg", "sah_total_deg", "sah_acc", "vio_gamma", "s_vio"] + (["rot_gamma", "rot_e2", "rot_e10"] if ROT_CHECK else []) + (["T_l1", "T_ms", "tcap_ratio"] if TCAP else []) + (["OT_l1", "OT_age", "ot_ratio"] if OT else []) + (["vio_r_slow", "vio_r_fast", "guard_ex"] if VIO_DEBUG else []))
+            "hess_src", "cost", "m_res"] + HCOLS + ["sah_corr_deg", "sah_total_deg", "sah_acc", "vio_gamma", "s_vio"] + (["rot_gamma", "rot_e2", "rot_e10"] if ROT_CHECK else []) + (["T_l1", "T_ms", "tcap_ratio"] if TCAP else []) + (["OT_l1", "OT_age", "ot_ratio"] if OT else []) + (["vio_r_slow", "vio_r_fast", "guard_ex"] if VIO_DEBUG else []) + (["handover_deg"] if HANDOVER != "none" else []))
 cnt = [0]
 
 
@@ -455,7 +459,8 @@ def aft_cb(msg):
                ([info.get("rot_gamma", 1.0), info.get("rot_e2", np.nan), info.get("rot_e10", np.nan)] if ROT_CHECK else []) +
                ([Tm[1] if Tm is not None else np.nan, Tm[2] if Tm is not None else np.nan, info.get("tcap_ratio", np.nan)] if TCAP else []) +
                ([ot_l1, ot_age, info.get("tcap_ratio", np.nan)] if OT else []) +
-               ([info.get("vio_r_slow", np.nan), info.get("vio_r_fast", np.nan), info.get("guard_ex", np.nan)] if VIO_DEBUG else []))
+               ([info.get("vio_r_slow", np.nan), info.get("vio_r_fast", np.nan), info.get("guard_ex", np.nan)] if VIO_DEBUG else []) +
+               ([info.get("handover_deg", np.nan)] if HANDOVER != "none" else []))
     cnt[0] += 1
     if cnt[0] % 50 == 0:
         log.flush()
@@ -484,7 +489,7 @@ def main():
         print("SAH=1 KF_DIST=%g KF_ROT=%g SAH_RMIN=%g SAH_RMAX=%g SAH_VOXEL=%g SAH_MAXPTS=%d SAH_MAX_STEP=%.2f deg"
               % (KF_DIST, KF_ROT, SAH_RMIN, SAH_RMAX, SAH_VOXEL, SAH_MAXPTS, np.degrees(SAH_MAX_STEP)))
     print("TCAP=%d T_KNN=%d T_SUB=%d OT_MODE=%s OT_SRC=%s" % (TCAP, T_KNN, T_SUB, OT_MODE, OT_SRC))
-    print("VIO_CHECK_START=%d VIO_CHECK_PROJ=%d VIO_DEBUG=%d" % (VIO_CHECK_START, VIO_CHECK_PROJ, VIO_DEBUG))
+    print("VIO_CHECK_START=%d VIO_CHECK_PROJ=%d VIO_DEBUG=%d HANDOVER=%s" % (VIO_CHECK_START, VIO_CHECK_PROJ, VIO_DEBUG, HANDOVER))
     print("ROT_CHECK=%d ROT_REF_FAST=%g ROT_REF_SLOW=%g ROT_GUARD=%g ROT_C_FAIL=%g ROT_GAMMA_MIN=%g" % (ROT_CHECK, ROT_REF_FAST, ROT_REF_SLOW, ROT_GUARD, ROT_C_FAIL, ROT_GAMMA_MIN))
     print("VIO_CHECK=%d VIO_CHECK_REF=%g VIO_CHECK_NMIN=%d VIO_SCALE_T=%g VIO_CHECK_FAST=%g VIO_CHECK_FAST_REF=%g LIDAR_GUARD_T=%g LIDAR_GUARD_EX=%g GAMMA_MIN=%g GAP_T=%g"
           % (VIO_CHECK, VIO_CHECK_REF, VIO_CHECK_NMIN, VIO_SCALE_T, VIO_CHECK_FAST, VIO_CHECK_FAST_REF, LIDAR_GUARD_T, LIDAR_GUARD_EX, GAMMA_MIN, GAP_T))

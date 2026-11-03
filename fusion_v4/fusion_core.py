@@ -606,6 +606,23 @@ class KappaGate:
         return bool(kappa_R <= self.kth), self.kth
 
 
+def chordal_rotation_mean(Rs):
+    """rotation closest (Frobenius) to the arithmetic mean of the rotation matrices"""
+    U, _, Vt = np.linalg.svd(np.sum(np.asarray(Rs, float), axis=0))
+    if np.linalg.det(U @ Vt) < 0:
+        U[:, -1] *= -1
+    return U @ Vt
+
+
+def robust_rotation_mean(Rs):
+    """chordal mean, then the chordal mean of the rotations within 3 x the median distance (at least 0.5 deg) of it:
+    a few transient samples (a VINS catch-up, an A-LOAM map correction) do not move the result"""
+    M = chordal_rotation_mean(Rs)
+    d = np.array([np.linalg.norm(so3_log(M.T @ R)) for R in Rs])
+    keep = d <= max(3.0 * float(np.median(d)), np.radians(0.5))
+    return chordal_rotation_mean([R for R, k in zip(Rs, keep) if k])
+
+
 # ----------------------------------------------------------------------------- the fusion step
 class FusionCore:
     """Feed one LiDAR scan-to-map pose per call (with the VINS-Mono pose interpolated to the same time).
@@ -619,8 +636,22 @@ class FusionCore:
                  vio_scale_T=0.0, vio_scale_dmin=1.0, vio_scale_proj=False, vio_scale_seg=False,
                  lidar_guard_T=0.0, lidar_guard_ex=0.0, vio_scale_along=False, gamma_min=0.0,
                  gap_T=0.0, gap_vmax=5.0, gap_wmax=2.0, switch_rot=False,
-                 rot_adapt=None, rot_c_fail=1.0, rot_gamma_min=1e-3, t_cap=False, t_mode="min"):
+                 rot_adapt=None, rot_c_fail=1.0, rot_gamma_min=1e-3, t_cap=False, t_mode="min",
+                 handover="none", handover_nmin=20):
         assert w_mode in W_MODES, w_mode
+        # handover: what happens to the fused rotation when FUSED starts (after the warm-up, or after a VINS loss and its
+        # re-warm-up).  'none' (default, F0-F21 bit for bit): the fused rotation keeps the LiDAR rotation integrated during the
+        # warm-up and continues with VINS increments; a transient VINS rotation error at that instant (VINS lags ~5 deg in a fast
+        # turn and catches up one scan later, Long Corridor F20 runs) is counted twice and stays in the heading for the rest of the
+        # run.  'anchor': at the first FUSED step the fused rotation is set to R_off * R_vL(t), where R_vL = VINS IMU rotation x
+        # R_IL (LiDAR orientation in the VINS world) and R_off = robust chordal mean of R_aft(s) R_vL(s)^T over every warm-up
+        # scan of the current VINS segment (both sensors' attitude over the whole warm-up, not one instant).  From then on the
+        # VINS increments continue from a reference that is consistent with the VINS itself, so its own catch-up corrects the
+        # transient instead of adding it.  No new constant: the window is the warm-up (T_WARM); handover_nmin = fewest warm-up
+        # scans needed (fewer: 'none' behaviour for that handover).
+        assert handover in ("none", "anchor"), handover
+        self.handover, self.handover_nmin = handover, handover_nmin
+        self.warm_pairs, self.prev_mode = [], "INIT"
         # t_cap: the additional-T fail-safe (t_cap_info): the translation information of the Schur weight is capped, direction by
         # direction, by what the raw-scan orientation tensor T supports.  False = F8/F16 exactly (bit for bit); with no T for a
         # scan the weight is the uncapped one.
@@ -908,9 +939,22 @@ class FusionCore:
         phi = W_R @ so3_log(dR_a) + (I3 - W_R) @ phi_v
         dt = W_t @ dt_a + (I3 - W_t) @ dt_v
         self.Rf, self.pf = compose(self.Rf, self.pf, so3_exp(phi), dt)
+        if self.handover != "none":
+            if lost:
+                self.warm_pairs = []                     # the VINS segment ended: its warm-up pairs are no longer valid
+            if mode == "WARMUP" and have_v:
+                self.warm_pairs.append((Ra, np.asarray(vins[0], float) @ self.R_IL))
+            if mode == "FUSED" and self.prev_mode in ("INIT", "WARMUP", "VO_FAIL"):
+                if len(self.warm_pairs) >= self.handover_nmin:
+                    R_off = robust_rotation_mean([A @ B.T for A, B in self.warm_pairs])
+                    R_new = R_off @ (np.asarray(vins[0], float) @ self.R_IL)
+                    info["handover_deg"] = float(np.degrees(np.linalg.norm(so3_log(self.Rf.T @ R_new))))
+                    self.Rf = R_new
+                self.warm_pairs = []
         # re-orthonormalise
         U, _, Vt = np.linalg.svd(self.Rf)
         self.Rf = U @ Vt
+        self.prev_mode = mode
         self.prev_a = (Ra, pa)
         self.prev_v = vins
         self.t_prev = t
