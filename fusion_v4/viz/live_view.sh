@@ -12,7 +12,7 @@ xhost +local:docker >/dev/null 2>&1 || echo "xhost not found: install x11-xserve
 MNT=(); GTCMD=":;"
 if [ -n "$GT" ]; then
   [ -f "$GT" ] || { echo "ground-truth file not found: $GT  (run without the argument to skip it)"; exit 1; }
-  MNT=(-v "$(readlink -f "$GT"):/viz/gt.txt:ro"); GTCMD="python3 /viz/gt_path.py /viz/gt.txt &"
+  MNT=(-v "$(readlink -f "$GT"):/gt.txt:ro"); GTCMD="python3 /viz/gt_path.py /gt.txt &"
 fi
 echo "waiting for the fusion node on $GPU (start the batch first) ..."
 exec docker run --rm -it --network vins_bridge -e DISPLAY="$DISPLAY" -e QT_X11_NO_MITSHM=1 -e ROS_MASTER_URI="http://$GPU:11311" \
