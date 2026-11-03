@@ -45,23 +45,13 @@ Visualization Manager:
       Color: 255; 170; 40
       Line Style: Lines
       Line Width: 0.05
-    - Class: rviz/Odometry
-      Name: fused pose (trail)
+    - Class: rviz/Path
+      Name: fused path
       Enabled: true
-      Topic: /switch_fused_pose
-      Keep: 5000
-      Position Tolerance: 0.1
-      Angle Tolerance: 0.1
-      Shape:
-        Alpha: 1
-        Axes Length: 1
-        Axes Radius: 0.1
-        Color: 79; 209; 139
-        Head Length: 0.3
-        Head Radius: 0.1
-        Shaft Length: 0.5
-        Shaft Radius: 0.05
-        Value: Arrow
+      Topic: /fused_path
+      Color: 79; 209; 139
+      Line Style: Lines
+      Line Width: 0.08
   Enabled: true
   Global Options:
     Background Color: 15; 17; 21
