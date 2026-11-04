@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Short on time: apply every patch the replicas need, then ONE run each on Multi Floor: SW, V7, then (after the mapping patch) SWM.
+# Short on time: ONE run on Multi Floor, by default SW only (about 20 min).  Extras on request: WITH_V7=1 adds one V7 run (and the VINS-Mono
+# Hessian patch it needs), WITH_SWM=1 adds one SWM run after the scan-to-map patch (SWM always last).
 #   1. unit tests
 #   2. patches, each only if its marker is missing (safe to repeat):
 #        VINS-Mono container  : /vins_mono_hessian  (patch_vinsmono_hessian.py, needed by V7)         marker "vins_mono_hessian" in estimator.cpp
@@ -8,7 +9,7 @@
 #   4. A-LOAM scan-to-map Hessian patch (patch_mapping_hessian.py) + catkin_make, then SWM on Multi Floor (SWM LAST: the patch slows every later run)
 #   5. table of the three results against Switch-SLAM Table II (1.61 / 3.63).  One run each: no verdict under the three-run rule of
 #      docs/protocols/SwitchSLAM_Exact_Replica.md section 5, only a first look.
-# SKIP_SWM=1 leaves out step 4 (about 25 min saved).   Total about 50-55 min with SWM, about 30 min without (estimate).
+# Default: steps 1, 2 (laserOdometry patch only), 3 with SW only, 5.  About 20 min (estimate).
 # Detach:  setsid nohup systemd-inhibit --what=sleep:idle bash batches/switchslam_quick.sh > ~/sw_quick.log 2>&1 < /dev/null & disown
 set -u
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd); FV4=$(dirname "$HERE"); REPO=$(dirname "$FV4"); P=$REPO/patches/aloam_vins
@@ -27,13 +28,14 @@ patch_if_missing() {  # container file marker patch.py rebuild-dir
   docker exec "$c" bash -c "source /opt/ros/noetic/setup.bash && cd $ws && catkin_make 2>&1 | tail -3" 2>&1 | tee -a "$LOG"
   docker exec "$c" grep -q "$m" "$f" || { say "marker still missing after patch: $f"; return 1; }
 }
-patch_if_missing vinsmono_test /root/catkin_ws/src/VINS-Mono/vins_estimator/src/estimator.cpp vins_mono_hessian "$P/patch_vinsmono_hessian.py" /root/catkin_ws || exit 1
+[ "${WITH_V7:-0}" = 1 ] && patch_if_missing vinsmono_test /root/catkin_ws/src/VINS-Mono/vins_estimator/src/estimator.cpp vins_mono_hessian "$P/patch_vinsmono_hessian.py" /root/catkin_ws || exit 1
 patch_if_missing switchslam_gpu_v2 /root/catkin_ws/src/A-LOAM/src/laserOdometry.cpp laser_hessian "$P/patch_hessian.py" /root/catkin_ws || exit 1
 
-say "--- SW and V7, one run each on Multi Floor"
-ONLY=MF CFGS="SW V7" REPEAT=1 ZIP=$HOME/Downloads/for_claude_SW_quick.zip bash batches/switchslam_exact_batch.sh >> "$LOG" 2>&1
+CF="SW"; [ "${WITH_V7:-0}" = 1 ] && CF="SW V7"
+say "--- one run each on Multi Floor: $CF"
+ONLY=MF CFGS="$CF" REPEAT=1 ZIP=$HOME/Downloads/for_claude_SW_quick.zip bash batches/switchslam_exact_batch.sh >> "$LOG" 2>&1
 
-if [ "${SKIP_SWM:-0}" != 1 ]; then
+if [ "${WITH_SWM:-0}" = 1 ]; then
   say "--- scan-to-map Hessian patch, then SWM"
   docker cp "$FV4/patch_mapping_hessian.py" switchslam_gpu_v2:/root/ && \
   docker exec switchslam_gpu_v2 bash -c "python3 /root/patch_mapping_hessian.py && source /opt/ros/noetic/setup.bash && cd /root/catkin_ws && catkin_make 2>&1 | tail -3" 2>&1 | tee -a "$LOG"
