@@ -111,22 +111,30 @@ class SwitchSlamCore:
         self.hess_frame = hess_frame
         self.Rf = self.pf = None                  # T_{k-1}: final pose chain, in the A-LOAM map frame
         self.prev_o = self.prev_v = self.prev_aft = self.prev_pub = None
+        self.prev_t = None                        # stamp of the last finished scan (used by the gyro prior)
 
     def initialised(self):
         return self.Rf is not None
 
-    def init(self, aft, odom, vins, pub):
+    def init(self, aft, odom, vins, pub, t=None):
         """first mapped scan: the final chain starts on A-LOAM's pose; pub = the pose we published for this scan"""
         self.Rf, self.pf = np.asarray(aft[0], float).copy(), np.asarray(aft[1], float).copy()
         self.prev_aft = (self.Rf.copy(), self.pf.copy())
         self.prev_o, self.prev_v, self.prev_pub = odom, vins, pub
+        self.prev_t = t
 
     # ------------------------------------------------------------------ Algorithm 1, lines 1-8
-    def decide(self, odom, vins, H):
+    def decide(self, odom, vins, H, gyro_dR=None, t=None):
         """odom = (R, p) A-LOAM scan-to-scan odometry pose of this scan; vins = (R, p) VINS-Mono IMU pose at the scan
-        time or None (VINS lost / not initialised); H = Hessian used for the detection (6x6) or None."""
+        time or None (VINS lost / not initialised); H = Hessian used for the detection (6x6) or None.
+        gyro_dR (SWI variant only) = integrated-gyro rotation increment of the LiDAR frame since the last finished scan; it replaces
+        the rotation of the LiDAR increment (translation stays A-LOAM's).  None = the plain replica.  t = scan stamp."""
         dl = fc.rel_body(self.prev_o[0], self.prev_o[1], odom[0], odom[1]) if odom is not None and self.prev_o is not None \
             else (I3, np.zeros(3))
+        gyro_deg = np.nan
+        if gyro_dR is not None:
+            gyro_deg = float(np.degrees(np.linalg.norm(fc.so3_log(dl[0].T @ gyro_dR))))
+            dl = (np.asarray(gyro_dR, float), dl[1])
         dv, vo_fail = None, True
         if vins is not None and self.prev_v is not None:
             dR_I, dt_I = fc.rel_body(self.prev_v[0], self.prev_v[1], vins[0], vins[1])
@@ -145,7 +153,7 @@ class SwitchSlamCore:
             kind, d = "VO", dv
         guess = fc.compose(self.Rf, self.pf, d[0], d[1])
         vo_pose = None if vo_fail else fc.compose(self.Rf, self.pf, dv[0], dv[1])
-        return dict(kind=kind, guess=guess, vo=vo_pose, vo_fail=vo_fail, eig=eig, status=status, w=w, odom=odom, vins=vins,
+        return dict(kind=kind, guess=guess, vo=vo_pose, t=t, gyro=gyro_dR is not None, gyro_deg=gyro_deg, vo_fail=vo_fail, eig=eig, status=status, w=w, odom=odom, vins=vins,
                     dtl=float(np.linalg.norm(dl[1])), dtv=float(np.linalg.norm(dv[1])) if dv is not None else np.nan)
 
     def pose_to_publish(self, guess):
@@ -186,6 +194,7 @@ class SwitchSlamCore:
         self.buf.append(bool(degen))                                    # line 10: Q_s <- current status
         self.prev_aft, self.prev_pub = (Ra.copy(), pa.copy()), pub
         self.prev_o, self.prev_v = dec["odom"], dec["vins"]
+        self.prev_t = dec.get("t", self.prev_t)
         lam_bar = eig["lam_bar"] if eig is not None else np.full(3, np.nan)
         return self.Rf, self.pf, dict(case=case, kind=dec["kind"], status=dec["status"], vo_fail=dec["vo_fail"], degen=bool(degen),
-                                      lam_bar=lam_bar, w=dec["w"], step=float(np.linalg.norm(x[3:])), dtl=dec["dtl"], dtv=dec["dtv"])
+                                      lam_bar=lam_bar, w=dec["w"], step=float(np.linalg.norm(x[3:])), dtl=dec["dtl"], dtv=dec["dtv"], gyro=dec["gyro"], gyro_deg=dec["gyro_deg"])

@@ -13,6 +13,7 @@ Environment (all optional):
   N_BUF        length of the status queue Q_s (default 5; the paper does not give it)
   LT_MODE      published (default, [0.12, 0.27, 0.48] as printed) | formula (Eq. 12 evaluated: [0.116, 0.271, 0.471])
   EQ15_W       weight of the LiDAR step in Eq. 15 (default 0.5 = the literal reading, mean of the two steps)
+  GYRO         1 = SWI variant: rotation of the LiDAR increment from the integrated gyro (IMU_TOPICS, default /imu/data,/cmu_sp1/imu/data)
   RUN_TAG      log name suffix
   EXTRINSIC_YAML  same format as fusion_node_v2 (default SubT-MRS Multi Floor laser_to_imu)
 """
@@ -28,6 +29,7 @@ from std_msgs.msg import Float64MultiArray
 
 import fusion_core as fc
 import switch_slam_core as sw
+import gyro_prior as gp
 
 E = os.environ.get
 HESS_TOPIC = E("HESS_TOPIC", "/laser_hessian")
@@ -36,6 +38,8 @@ N_BUF = int(E("N_BUF", "5"))
 LT_MODE = E("LT_MODE", "published")
 EQ15_W = float(E("EQ15_W", "0.5"))
 RUN_TAG = E("RUN_TAG", "SW")
+GYRO = E("GYRO", "0") == "1"                  # SWI: rotation of the LiDAR increment from the integrated gyro (docs section 12)
+IMU_TOPICS = E("IMU_TOPICS", "/imu/data,/cmu_sp1/imu/data").split(",")
 VINS_GAP = 1.0                      # s without a VINS-Mono pose -> S_vo = fail
 
 T_LI = np.array([[0.999945562, 0.009074807, 0.005149763, 0.080],
@@ -52,6 +56,7 @@ R_IL, t_IL = U_ @ Vt_, T_LI[:3, 3].copy()
 lt = sw.LT_PUBLISHED if LT_MODE == "published" else sw.thresholds_from_formula()
 core = sw.SwitchSlamCore(R_IL, t_IL, n_buf=N_BUF, lt=lt, eq15_w=EQ15_W, hess_frame=HESS_FRAME)
 lock = threading.Lock()
+gyro_buf = gp.GyroBuffer()
 vins_buf = deque(maxlen=400)
 odoms, pubs, decs = OrderedDict(), OrderedDict(), OrderedDict()
 latest_H = [None, np.nan, np.nan]
@@ -67,7 +72,7 @@ w.writerow(["time", "mode", "fused_x", "fused_y", "fused_z", "fused_qx", "fused_
             "v_px", "v_py", "v_pz", "v_qx", "v_qy", "v_qz", "v_qw",
             "gate", "kappa_R", "kappa_t", "kth", "wt0", "wt1", "wt2", "wR0", "wR1", "wR2", "dta", "dtv",
             "hess_src", "cost", "m_res"] + HCOLS + ["sah_corr_deg", "sah_total_deg", "sah_acc"] +
-           ["sw_case", "sw_status", "sw_vo_fail", "sw_lam1", "sw_lam2", "sw_lam3", "sw_w", "sw_degen", "sw_race"])
+           ["sw_case", "sw_status", "sw_vo_fail", "sw_lam1", "sw_lam2", "sw_lam3", "sw_w", "sw_degen", "sw_race", "sw_gyro", "sw_gyro_deg"])
 
 
 def odom_to_pose(msg):
@@ -95,6 +100,12 @@ def vins_cb(msg):
     R, p = odom_to_pose(msg)
     with lock:
         vins_buf.append((msg.header.stamp.to_sec(), R, p))
+
+
+def imu_cb(msg):
+    a = msg.angular_velocity
+    with lock:
+        gyro_buf.add(msg.header.stamp.to_sec(), a.x, a.y, a.z)
 
 
 def hess_cb(msg):
@@ -131,7 +142,11 @@ def laser_odom_cb(msg):
             P = O                                            # before the first mapped scan: pass A-LOAM's odometry through
         else:
             H = None if latest_H[0] is None else latest_H[0].copy()
-            dec = core.decide(O, vins_at(t), H)
+            dR_L = None
+            if GYRO and core.prev_t is not None:
+                dR_I = gyro_buf.rotation(core.prev_t, t)
+                dR_L = None if dR_I is None else gp.to_lidar(dR_I, R_IL)
+            dec = core.decide(O, vins_at(t), H, gyro_dR=dR_L, t=t)
             dec["H"] = H
             dec["race"] = len(decs) > 0                      # an earlier scan is still being mapped: its T_w_odom is not in yet
             P = core.pose_to_publish(dec["guess"])
@@ -150,9 +165,9 @@ def aft_cb(msg):
         Hfull = latest_H[0]
         if not core.initialised():
             O = odoms.get(t, (Ra, pa))
-            core.init((Ra, pa), O, v, pubs.get(t, O))
+            core.init((Ra, pa), O, v, pubs.get(t, O), t=t)
             R, p, info = core.Rf, core.pf, dict(case=0, kind="INIT", status="", vo_fail=v is None, degen=False,
-                                               lam_bar=np.full(3, np.nan), w=np.nan, dtl=np.nan, dtv=np.nan)
+                                               lam_bar=np.full(3, np.nan), w=np.nan, dtl=np.nan, dtv=np.nan, gyro=False, gyro_deg=np.nan)
             race = False
         else:
             dec = decs.pop(t, None)
@@ -174,7 +189,7 @@ def aft_cb(msg):
     w.writerow([t, "SW_" + info["kind"], *p, *fc.R_to_quat(R), *pa, *fc.R_to_quat(Ra), *vp, *vq,
                 info["case"], np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, info["dtl"], info["dtv"],
                 HESS_TOPIC, cost, mres] + Hrow + [0.0, 0.0, 0] +
-               [info["case"], info["status"], int(info["vo_fail"]), lb[0], lb[1], lb[2], info["w"], int(info["degen"]), int(race)])
+               [info["case"], info["status"], int(info["vo_fail"]), lb[0], lb[1], lb[2], info["w"], int(info["degen"]), int(race), int(info["gyro"]), info["gyro_deg"]])
     stats["rows"] += 1
     stats["race"] += int(race)
     if stats["rows"] % 50 == 0:
@@ -190,8 +205,12 @@ def main():
     rospy.Subscriber(HESS_TOPIC, Float64MultiArray, hess_cb, queue_size=50)
     rospy.Subscriber("/laser_odom_to_init", Odometry, laser_odom_cb, queue_size=50)
     rospy.Subscriber("/aft_mapped_to_init", Odometry, aft_cb, queue_size=50)
-    print("FUSION_MODE=switch_slam HESS_TOPIC=%s HESS_FRAME=%s N_BUF=%d LT_MODE=%s LT=%s EQ15_W=%g RUN_TAG=%s"
-          % (HESS_TOPIC, HESS_FRAME, N_BUF, LT_MODE, np.round(lt, 3).tolist(), EQ15_W, RUN_TAG))
+    if GYRO:
+        from sensor_msgs.msg import Imu
+        for tp in IMU_TOPICS:
+            rospy.Subscriber(tp, Imu, imu_cb, queue_size=1000)
+    print("FUSION_MODE=switch_slam HESS_TOPIC=%s HESS_FRAME=%s N_BUF=%d LT_MODE=%s LT=%s EQ15_W=%g GYRO=%d RUN_TAG=%s"
+          % (HESS_TOPIC, HESS_FRAME, N_BUF, LT_MODE, np.round(lt, 3).tolist(), EQ15_W, int(GYRO), RUN_TAG))
     print("switch_slam_node listening...")
     rospy.spin()
 
