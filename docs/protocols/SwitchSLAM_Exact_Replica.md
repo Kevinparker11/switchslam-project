@@ -109,3 +109,16 @@ Reading (from the log, not tested by a further run): pure A-LOAM on Multi Floor 
 **What.** `fusion_v4/gyro_prior.py` integrates the gyro (zero-order hold) between the last finished scan and the current one, converts it to the LiDAR frame with the extrinsic rotation, and `SwitchSlamCore.decide(..., gyro_dR=...)` replaces the ROTATION of the LiDAR increment with it; the translation stays A-LOAM's scan-to-scan translation. Everything else (rule, queue, interpolation, Eqs. 14-16) is `SW`. No bias estimate, no accelerometer, no position preintegration, no tuning. If the IMU samples do not cover a scan, that scan falls back to the plain `SW` increment. Config `SWI` = `SW` + `GYRO=1`; IMU topics tried: `/imu/data` and `/cmu_sp1/imu/data` (Multi Floor). Log columns added: `sw_gyro` (1 = gyro used), `sw_gyro_deg` (difference between gyro and A-LOAM odometry rotation, degrees).
 
 **Honest status.** Tests: `test_gyro_prior.py` (integration against exact angles, coverage fallback, frame conversion, core use, node plumbing with constant yaw rate); `SW` behaviour unchanged (11 + node + v7 tests still pass). Not run live. Not the paper's system: the paper's propagation is a full LiDAR-IMU one; SWI is the nearest thing this stack allows. Report as "our implementation, gyro-aided variant (SWI)", next to `SW`, whatever it gives. Run: `RUN_CFGS=SWI bash batches/switchslam_quick.sh` (one Multi Floor run, about 20 min); the script prints the share of scans where the gyro was used.
+
+## 13. First live result of SWI (4 Nov 2026, laptop, Multi Floor, 0.5x, one run, commit 1376a25)
+
+| Config | ATE RMSE / max (m) | Note |
+|---|---|---|
+| Switch-SLAM, published (Table II, mean of 3) | 1.61 / 3.63 | |
+| SW (paper's rule, A-LOAM guess) | 5.03 / 10.22 | section 11 |
+| **SWI** (SW + gyro rotation prior) | **1.51 / 4.35** | gyro used in 100 % of 4131 scans; median gyro-vs-odometry rotation difference 0.70 deg per scan |
+| F24 (this thesis) | 0.45 / 0.92 | same session |
+
+One run: no verdict under the three-run rule of section 5, and none is claimed. The hypothesis of section 12 (the missing IMU in the guess is what separates `SW` from the published level) is supported by this one run, not proven.
+
+**Caveats that must stay with the number.** (1) SWI was designed after the `SW` result on this same sequence, so Multi Floor is development data for SWI; no parameter was tuned (the only change is the rotation source), but the choice to try it followed the result. The independent tests are the other sequences: Long Corridor (published 2.42 / 5.09) and the sequences with no published number. (2) RMSE is below the published value, the maximum error is 20 % above it; one run cannot separate this from run-to-run spread. (3) The median 0.7 deg per scan disagreement between gyro and A-LOAM odometry rotation is large for a 0.1 s scan period; cause not examined (candidates: gyro bias, time offset between IMU and LiDAR stamps, A-LOAM odometry error). (4) SWI is "our implementation, gyro-aided variant", not the paper's LiDAR-IMU propagation.
