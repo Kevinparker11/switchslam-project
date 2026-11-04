@@ -138,6 +138,14 @@ VIO_CHECK_PROJ = E("VIO_CHECK_PROJ", "0") == "1"
 VIO_DEBUG = E("VIO_DEBUG", "0") == "1"
 PREDICT_GUARD = E("PREDICT_GUARD", "0") == "1"   # 1: no VINS motion in the mapping guess while VINS is failing / jumping (0 = F0-F23 bit for bit)
 HANDOVER = E("HANDOVER", "none")           # none (F0-F21 bit for bit) | anchor (fusion_core.FusionCore handover)
+HANDOVER_TRUST = E("HANDOVER_TRUST", "0") == "1"   # 1 (F25): the anchored handover is skipped while VINS is distrusted (0 = F24 bit for bit)
+ZUPT = E("ZUPT", "0") == "1"                       # 1 (F25): standstill hold (IMU quiet + LiDAR wander), see still_detect.py (0 = F24 bit for bit)
+ZUPT_G = float(E("ZUPT_G", "0.02"))                # rad/s, mean |gyro| over ZUPT_W s must be below   (set from imu_still_scan.py)
+ZUPT_A = float(E("ZUPT_A", "0.1"))                 # m/s^2, std of |accel| over ZUPT_W s must be below (set from imu_still_scan.py)
+ZUPT_W = float(E("ZUPT_W", "1.0"))
+ZUPT_T = float(E("ZUPT_T", "5.0"))                 # s, LiDAR wander window
+ZUPT_RATIO = float(E("ZUPT_RATIO", "0.5"))         # net displacement / path length below this = wander
+IMU_TOPICS = E("IMU_TOPICS", "/imu/data,/cmu_sp1/imu/data").split(",")
 if OT and TCAP:
     raise SystemExit("TCAP (per-scan T from /laser_cloud_surf_last) and OT_MODE (keyframe T) are alternatives; set one")
 KF_CLOUDS = SAH or OT                      # keyframe scans are needed by SAH and/or the OT channel
@@ -170,7 +178,11 @@ core = fc.FusionCore(R_IL, t_IL, c_t=C_T, c_R=C_R, gate=gate, t_warm=T_WARM, hes
                      gamma_min=GAMMA_MIN if vio_check is not None else 0.0, gap_T=GAP_T,
                      rot_adapt=fc.RotConsistency(ROT_REF_FAST, ROT_REF_SLOW, guard=ROT_GUARD) if ROT_CHECK else None,
                      rot_c_fail=ROT_C_FAIL, rot_gamma_min=ROT_GAMMA_MIN, t_cap=TCAP or OT,
-                     t_mode=OT_MODE if OT else "min", handover=HANDOVER, predict_guard=PREDICT_GUARD)
+                     t_mode=OT_MODE if OT else "min", handover=HANDOVER, predict_guard=PREDICT_GUARD,
+                     handover_trust=HANDOVER_TRUST, zupt=ZUPT, zupt_T=ZUPT_T, zupt_ratio=ZUPT_RATIO)
+if ZUPT:
+    import still_detect as sd
+    still_det = sd.StillDetector(window=ZUPT_W, g_thr=ZUPT_G, a_thr=ZUPT_A)
 if MODE == "lidar":
     core.t_warm = 1e12                     # every step is WARMUP = LiDAR only
 
@@ -197,7 +209,7 @@ w.writerow(["time", "mode", "fused_x", "fused_y", "fused_z", "fused_qx", "fused_
             "aft_x", "aft_y", "aft_z", "aft_qx", "aft_qy", "aft_qz", "aft_qw",
             "v_px", "v_py", "v_pz", "v_qx", "v_qy", "v_qz", "v_qw",
             "gate", "kappa_R", "kappa_t", "kth", "wt0", "wt1", "wt2", "wR0", "wR1", "wR2", "dta", "dtv",
-            "hess_src", "cost", "m_res"] + HCOLS + ["sah_corr_deg", "sah_total_deg", "sah_acc", "vio_gamma", "s_vio"] + (["rot_gamma", "rot_e2", "rot_e10"] if ROT_CHECK else []) + (["T_l1", "T_ms", "tcap_ratio"] if TCAP else []) + (["OT_l1", "OT_age", "ot_ratio"] if OT else []) + (["vio_r_slow", "vio_r_fast", "guard_ex"] if VIO_DEBUG else []) + (["handover_deg"] if HANDOVER != "none" else []))
+            "hess_src", "cost", "m_res"] + HCOLS + ["sah_corr_deg", "sah_total_deg", "sah_acc", "vio_gamma", "s_vio"] + (["rot_gamma", "rot_e2", "rot_e10"] if ROT_CHECK else []) + (["T_l1", "T_ms", "tcap_ratio"] if TCAP else []) + (["OT_l1", "OT_age", "ot_ratio"] if OT else []) + (["vio_r_slow", "vio_r_fast", "guard_ex"] if VIO_DEBUG else []) + (["handover_deg"] if HANDOVER != "none" else []) + (["handover_skipped"] if HANDOVER_TRUST else []) + (["zupt", "still_gyro", "still_acc"] if ZUPT else []))
 cnt = [0]
 
 
@@ -327,6 +339,12 @@ def vins_cb(msg):
         vins_buf.append((msg.header.stamp.to_sec(), R, p))
 
 
+def imu_cb(msg):
+    a, g = msg.linear_acceleration, msg.angular_velocity
+    with lock:
+        still_det.add(msg.header.stamp.to_sec(), (g.x, g.y, g.z), (a.x, a.y, a.z))
+
+
 def surf_cb(msg):
     """additional T: orientation tensor of this scan's planar points, stored under the scan's time stamp"""
     import time as _time
@@ -442,7 +460,11 @@ def aft_cb(msg):
             Rr = Ra.T @ Rk                      # keyframe LiDAR frame -> current LiDAR frame
             T3 = Rr @ Tk @ Rr.T
             ot_l1, ot_age = float(np.linalg.eigvalsh(T3)[0]), t - tk
-        R, p, info = core.step(t, (Ra, pa), v, H, T3=T3)
+        still, sg, sa = False, np.nan, np.nan
+        if ZUPT:
+            sg, sa, _ = still_det.stats(t)
+            still = still_det.still(t)
+        R, p, info = core.step(t, (Ra, pa), v, H, T3=T3, still=still)
         cost, mres = latest_H[1], latest_H[2]
         if KF_CLOUDS:
             try:
@@ -463,7 +485,9 @@ def aft_cb(msg):
                ([Tm[1] if Tm is not None else np.nan, Tm[2] if Tm is not None else np.nan, info.get("tcap_ratio", np.nan)] if TCAP else []) +
                ([ot_l1, ot_age, info.get("tcap_ratio", np.nan)] if OT else []) +
                ([info.get("vio_r_slow", np.nan), info.get("vio_r_fast", np.nan), info.get("guard_ex", np.nan)] if VIO_DEBUG else []) +
-               ([info.get("handover_deg", np.nan)] if HANDOVER != "none" else []))
+               ([info.get("handover_deg", np.nan)] if HANDOVER != "none" else []) +
+               ([info.get("handover_skipped", 0)] if HANDOVER_TRUST else []) +
+               ([info.get("zupt", 0), sg, sa] if ZUPT else []))
     cnt[0] += 1
     if cnt[0] % 50 == 0:
         log.flush()
@@ -481,6 +505,12 @@ def main():
     rospy.Subscriber(HESS_TOPIC, Float64MultiArray, hess_cb, queue_size=50)
     rospy.Subscriber("/laser_odom_to_init", Odometry, laser_odom_cb, queue_size=50)
     rospy.Subscriber("/aft_mapped_to_init", Odometry, aft_cb, queue_size=50)
+    if ZUPT:
+        from sensor_msgs.msg import Imu
+        for tp in IMU_TOPICS:
+            rospy.Subscriber(tp, Imu, imu_cb, queue_size=1000)
+        print("ZUPT=1 IMU_TOPICS=%s ZUPT_G=%g ZUPT_A=%g ZUPT_W=%g ZUPT_T=%g ZUPT_RATIO=%g" % (IMU_TOPICS, ZUPT_G, ZUPT_A, ZUPT_W, ZUPT_T, ZUPT_RATIO))
+    print("HANDOVER_TRUST=%d" % int(HANDOVER_TRUST))
     if TCAP:
         from sensor_msgs.msg import PointCloud2
         rospy.Subscriber("/laser_cloud_surf_last", PointCloud2, surf_cb, queue_size=20, buff_size=2 ** 24)
