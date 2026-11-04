@@ -122,3 +122,18 @@ Reading (from the log, not tested by a further run): pure A-LOAM on Multi Floor 
 One run: no verdict under the three-run rule of section 5, and none is claimed. The hypothesis of section 12 (the missing IMU in the guess is what separates `SW` from the published level) is supported by this one run, not proven.
 
 **Caveats that must stay with the number.** (1) SWI was designed after the `SW` result on this same sequence, so Multi Floor is development data for SWI; no parameter was tuned (the only change is the rotation source), but the choice to try it followed the result. The independent tests are the other sequences: Long Corridor (published 2.42 / 5.09) and the sequences with no published number. (2) RMSE is below the published value, the maximum error is 20 % above it; one run cannot separate this from run-to-run spread. (3) The median 0.7 deg per scan disagreement between gyro and A-LOAM odometry rotation is large for a 0.1 s scan period; cause not examined (candidates: gyro bias, time offset between IMU and LiDAR stamps, A-LOAM odometry error). (4) SWI is "our implementation, gyro-aided variant", not the paper's LiDAR-IMU propagation.
+
+## 14. Long Corridor, SW and SWI (4 Nov 2026, laptop, 0.5x, one run each, commit 1376a25)
+
+| Config | Multi Floor RMSE / max (m) | Long Corridor RMSE / max (m) |
+|---|---|---|
+| Switch-SLAM published (mean of 3) | 1.61 / 3.63 | 2.42 / 5.09 |
+| SW | 5.03 / 10.22 | 12.58 / 23.53 |
+| SWI (gyro prior) | 1.51 / 4.35 | 13.81 / 24.78 |
+| F24 | 0.45 / 0.92 | 1.75 to 2.15 / 3.53 to 5.57 (three runs, same batch) |
+
+Neither replica reproduces the published level on Long Corridor. The gyro prior, which closed the gap on Multi Floor, did nothing here (13.81 against 12.58; gyro used in 100 % of scans, median gyro-vs-odometry rotation difference 0.65 deg). So the Multi Floor agreement of SWI is not a general reproduction; it is one run on the sequence that SWI was designed after. Under the rule of section 5 (needs three runs): `SW` is outside the +-50 % band on both sequences in its single runs (3.1 times and 5.2 times the published RMSE).
+
+Log of the `SW` run: the rule fired on 4.5 % of scans (78 INTERP, 47 VO of 2776); the trajectory is 14 % shorter than F24's (518 m against 603 m), i.e. the usual slide along a corridor. The scan-to-scan Hessian of this sequence has median eigenvalues (rad, m units) 65 / 85 / 166 / 387 / 2066 / 5162; the weakest direction is mainly translation (tx 0.62, tz 0.46) but only 1.3 times weaker than the second weakest, so the normalised smallest eigenvalue is 0.29, above the 0.12 threshold: the paper's rule, with this Hessian, does not call the corridor degenerate. Whether the paper's scan-to-map Hessian (`SWM`) would is untested; changing thresholds to make the rule fire would be tuning on the target and is not done.
+
+Reading: with the Hessian and guess available in this stack the paper's rule hardly fires on Multi Floor (1.5 %) or Long Corridor (4.5 %), so `SW` and `SWI` behave mostly like A-LOAM with or without a gyro prior. The honest statement for the report: our implementations of Switch-SLAM do not reproduce the published numbers on Long Corridor; the difference is attributed (unproven) to the missing LiDAR-IMU system (D1) and the Hessian used (A1). No claim about the published system.
