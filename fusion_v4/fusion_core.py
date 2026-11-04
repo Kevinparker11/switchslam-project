@@ -637,8 +637,23 @@ class FusionCore:
                  lidar_guard_T=0.0, lidar_guard_ex=0.0, vio_scale_along=False, gamma_min=0.0,
                  gap_T=0.0, gap_vmax=5.0, gap_wmax=2.0, switch_rot=False,
                  rot_adapt=None, rot_c_fail=1.0, rot_gamma_min=1e-3, t_cap=False, t_mode="min",
-                 handover="none", handover_nmin=20, predict_guard=False):
+                 handover="none", handover_nmin=20, predict_guard=False,
+                 handover_trust=False, zupt=False, zupt_T=5.0, zupt_ratio=0.5):
         assert w_mode in W_MODES, w_mode
+        # handover_trust (F25, GEODE stairs): the anchored handover sets the fused rotation to R_off * R_vL(t) from the VINS.  GEODE F24
+        # run 1 entered FUSED with a VINS that both consistency checks had already closed (gamma = 0, rot_gamma = 0) and the anchor
+        # rotated the fused frame by 60 deg for the rest of the segment (error 4 m -> 12 m).  True: the anchor is applied only when
+        # gamma >= 0.5 and rot_gamma >= 0.5 at that step (the VINS is trusted); otherwise the 'none' behaviour for that handover.
+        # False = F24 exactly.
+        self.handover_trust = bool(handover_trust)
+        # zupt (F25, Cave02): standstill hold.  The node says `still` (IMU quiet over its window, see still_detect.py); the hold is
+        # applied only if the LiDAR does not show consistent travel either: over the last zupt_T s of the A-LOAM positions the net
+        # displacement is below zupt_ratio times the path length (a random-walk wander at standstill, not a straight or constant-speed
+        # run, which an IMU alone cannot tell from standing).  Held: the translation increment of this step is zero (the rotation is kept), the
+        # mapping guess is the held pose, and the next A-LOAM increment is measured from the A-LOAM pose of this step (the wander is
+        # discarded).  False = F24 exactly.
+        self.zupt, self.zupt_T, self.zupt_ratio = bool(zupt), float(zupt_T), float(zupt_ratio)
+        self.zbuf, self.zupt_now = [], False
         # handover: what happens to the fused rotation when FUSED starts (after the warm-up, or after a VINS loss and its
         # re-warm-up).  'none' (default, F0-F21 bit for bit): the fused rotation keeps the LiDAR rotation integrated during the
         # warm-up and continues with VINS increments; a transient VINS rotation error at that instant (VINS lags ~5 deg in a fast
@@ -729,6 +744,8 @@ class FusionCore:
         """initial guess for the next scan: last fused pose moved by the VINS motion since then"""
         if self.Rf is None:
             return None
+        if self.zupt_now:
+            return self.Rf, self.pf               # standstill hold: the guess is where the robot is held
         if vins_now is None or self.prev_v is None:
             return self.Rf, self.pf
         dR_I, dt_I = rel_body(self.prev_v[0], self.prev_v[1], vins_now[0], vins_now[1])
@@ -740,7 +757,20 @@ class FusionCore:
             return self.Rf, self.pf
         return compose(self.Rf, self.pf, dR, dt)
 
-    def step(self, t, aft, vins=None, H=None, vo_fail=False, T3=None):
+    def _tortuous(self, t, pa):
+        """True when, over the last zupt_T s, the A-LOAM positions show a wander rather than travel: net displacement <
+        zupt_ratio x path length.  Needs a full window; False before that."""
+        self.zbuf.append((t, np.asarray(pa, float).copy()))
+        while len(self.zbuf) > 1 and self.zbuf[1][0] <= t - self.zupt_T:
+            self.zbuf.pop(0)
+        if t - self.zbuf[0][0] < 0.8 * self.zupt_T or len(self.zbuf) < 3:
+            return False
+        P = np.array([x[1] for x in self.zbuf])
+        path = float(np.linalg.norm(np.diff(P, axis=0), axis=1).sum())
+        net = float(np.linalg.norm(P[-1] - P[0]))
+        return path > 1e-9 and net < self.zupt_ratio * path
+
+    def step(self, t, aft, vins=None, H=None, vo_fail=False, T3=None, still=False):
         """aft = (R, p) LiDAR pose in the A-LOAM map frame; vins = (R, p) IMU pose in the VINS world
         frame at the same time (or None); H = 6x6 Hessian (or None). Returns (R, p, info)."""
         Ra, pa = np.asarray(aft[0], float), np.asarray(aft[1], float)
@@ -945,6 +975,12 @@ class FusionCore:
             phi_v = phi_v + (self.byaw * getattr(self, "gL", np.zeros(3)) if self.bias_axis == "yaw" else self.bR)
         phi = W_R @ so3_log(dR_a) + (I3 - W_R) @ phi_v
         dt = W_t @ dt_a + (I3 - W_t) @ dt_v
+        if self.zupt:
+            hold = bool(still) and self._tortuous(t, pa) and not is_gap
+            if hold:
+                dt = np.zeros(3)                      # translation only: the rotation of the step is kept
+            self.zupt_now = hold
+            info["zupt"] = int(hold)
         self.Rf, self.pf = compose(self.Rf, self.pf, so3_exp(phi), dt)
         if self.handover != "none":
             if lost:
@@ -952,7 +988,9 @@ class FusionCore:
             if mode == "WARMUP" and have_v:
                 self.warm_pairs.append((Ra, np.asarray(vins[0], float) @ self.R_IL))
             if mode == "FUSED" and self.prev_mode in ("INIT", "WARMUP", "VO_FAIL"):
-                if len(self.warm_pairs) >= self.handover_nmin:
+                trusted_now = (not self.handover_trust) or (gam >= 0.5 and rot_gam >= 0.5)
+                info["handover_skipped"] = int(not trusted_now)
+                if len(self.warm_pairs) >= self.handover_nmin and trusted_now:
                     R_off = robust_rotation_mean([A @ B.T for A, B in self.warm_pairs])
                     R_new = R_off @ (np.asarray(vins[0], float) @ self.R_IL)
                     info["handover_deg"] = float(np.degrees(np.linalg.norm(so3_log(self.Rf.T @ R_new))))
