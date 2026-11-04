@@ -28,7 +28,7 @@ patch_if_missing() {  # container file marker patch.py rebuild-dir
   docker exec "$c" bash -c "source /opt/ros/noetic/setup.bash && cd $ws && catkin_make 2>&1 | tail -3" 2>&1 | tee -a "$LOG"
   docker exec "$c" grep -q "$m" "$f" || { say "marker still missing after patch: $f"; return 1; }
 }
-[ "${WITH_V7:-0}" = 1 ] && patch_if_missing vinsmono_test /root/catkin_ws/src/VINS-Mono/vins_estimator/src/estimator.cpp vins_mono_hessian "$P/patch_vinsmono_hessian.py" /root/catkin_ws || exit 1
+if [ "${WITH_V7:-0}" = 1 ]; then patch_if_missing vinsmono_test /root/catkin_ws/src/VINS-Mono/vins_estimator/src/estimator.cpp vins_mono_hessian "$P/patch_vinsmono_hessian.py" /root/catkin_ws || exit 1; fi
 patch_if_missing switchslam_gpu_v2 /root/catkin_ws/src/A-LOAM/src/laserOdometry.cpp laser_hessian "$P/patch_hessian.py" /root/catkin_ws || exit 1
 
 CF="SW"; [ "${WITH_V7:-0}" = 1 ] && CF="SW V7"
