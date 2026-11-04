@@ -72,7 +72,7 @@ if want LC; then
 fi
 
 # collect
-Z=$HOME/Downloads/for_claude_SW_batch.zip; T=$(mktemp -d)
+Z=${ZIP:-$HOME/Downloads/for_claude_SW_batch.zip}; T=$(mktemp -d)
 for pair in C02:$HOME/runs_corridor2 CAVE:$HOME/runs_cave02_sw GEODE:$HOME/runs_geode_sw MF:$HOME/runs_v2 LC:$HOME/runs_corridor; do
   p=${pair%%:*}; d=${pair#*:}
   cp "$d/results_index.csv" "$T/${p}_results_index.csv" 2>/dev/null; cp "$d/failed_runs.csv" "$T/${p}_failed_runs.csv" 2>/dev/null
