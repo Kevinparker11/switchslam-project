@@ -76,7 +76,7 @@ Z=${ZIP:-$HOME/Downloads/for_claude_SW_batch.zip}; T=$(mktemp -d)
 for pair in C02:$HOME/runs_corridor2 CAVE:$HOME/runs_cave02_sw GEODE:$HOME/runs_geode_sw MF:$HOME/runs_v2 LC:$HOME/runs_corridor; do
   p=${pair%%:*}; d=${pair#*:}
   cp "$d/results_index.csv" "$T/${p}_results_index.csv" 2>/dev/null; cp "$d/failed_runs.csv" "$T/${p}_failed_runs.csv" 2>/dev/null
-  for f in "$d"/switching_log_v2_{F24,SW,SWI,V7}_kf_run*.csv "$d"/ate_{F24,SW,SWI,V7}_kf_run*.txt "$d"/node_{F24,SW,SWI,V7}_kf_run*.out "$d"/keyframes_{F24,SW,SWI,V7}_kf_run*.npz; do
+  for f in "$d"/switching_log_v2_{F24,SW,SWI,SWM,SW1,V7}_kf_run*.csv "$d"/ate_{F24,SW,SWI,SWM,SW1,V7}_kf_run*.txt "$d"/node_{F24,SW,SWI,SWM,SW1,V7}_kf_run*.out "$d"/keyframes_{F24,SW,SWI,SWM,SW1,V7}_kf_run*.npz; do
     [ -f "$f" ] && cp "$f" "$T/${p}_$(basename "$f")"
   done
 done
@@ -84,6 +84,6 @@ mkdir -p "$(dirname "$Z")"; rm -f "$Z"; (cd "$T" && zip -q "$Z" *) && say "zip: 
 say "=== results (ATE RMSE / max, m)"
 for pair in C02:$HOME/runs_corridor2 CAVE:$HOME/runs_cave02_sw GEODE:$HOME/runs_geode_sw MF:$HOME/runs_v2 LC:$HOME/runs_corridor; do
   p=${pair%%:*}; d=${pair#*:}
-  grep -E "^(F24|SW|SWI|V7)_kf_run" "$d/results_index.csv" 2>/dev/null | awk -F, -v s=$p '{print s, $1, $(NF-2), $(NF-1)}' | tee -a "$LOG"
+  grep -E "^(F24|SW|SWI|SWM|SW1|V7)_kf_run" "$d/results_index.csv" 2>/dev/null | awk -F, -v s=$p '{print s, $1, $(NF-2), $(NF-1)}' | tee -a "$LOG"
 done
 say "ALL_DONE $(date +%T)"
