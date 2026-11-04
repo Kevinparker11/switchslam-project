@@ -4,6 +4,7 @@
 # reproduction check (Switch-SLAM Table II: Multi Floor 1.61 / 3.63, Long Corridor 2.42 / 5.09; RMSE / max, m).
 # Front end only (the paper's Table II used no loop closure).  Same A-LOAM, VINS-Mono, extrinsics, replay rates and scorer for both.
 #   ONLY="C02 CAVE GEODE MF LC"   sequences, in this order (default).  CFGS="F24 SW"   configurations per sequence.
+#   CFGS="F24 SW V7" adds the generation-1 node (switching_node_v7.py; needs /vins_mono_hessian in the VINS-Mono container).
 #   REPEAT=1 (default: once each, as planned); REPEAT=3 gives the paper's "average of three repeated tests".
 # Needs: python3 test_switch_slam.py passing, containers switchslam_gpu_v2 and vinsmono_test, the external drive for the bags.
 # Detach:  setsid nohup systemd-inhibit --what=sleep:idle bash batches/switchslam_exact_batch.sh > ~/sw_batch.log 2>&1 < /dev/null & disown
@@ -25,8 +26,9 @@ mk_env() {  # example-name outdir bagdir gtfile extrinsics-file
   cp "$5" "$2/"
 }
 say "=== Switch-SLAM exact replica batch $(date)  sequences: $ONLY  configs: $CFGS  repeat: $REPEAT  commit: $(git -C "$REPO" rev-parse --short HEAD 2>/dev/null)"
-python3 test_switch_slam.py > /dev/null && python3 test_switch_slam_node.py > /dev/null || { say "unit tests failed - not starting"; exit 1; }
+python3 test_switch_slam.py > /dev/null && python3 test_switch_slam_node.py > /dev/null && python3 test_switching_node_v7.py > /dev/null || { say "unit tests failed - not starting"; exit 1; }
 for c in switchslam_gpu_v2 vinsmono_test; do docker inspect "$c" >/dev/null 2>&1 || { say "container $c does not exist"; exit 1; }; docker start "$c" >/dev/null 2>&1; done
+grep -q "\[V7\]" run_fusion_study.sh || { say "run_fusion_study.sh has no V7 config"; exit 1; }
 grep -q "\[SW\]" run_fusion_study.sh || { say "run_fusion_study.sh has no SW config"; exit 1; }
 
 # run <label> <rate> <seq.env or ""> [extra env words]
@@ -74,7 +76,7 @@ Z=$HOME/Downloads/for_claude_SW_batch.zip; T=$(mktemp -d)
 for pair in C02:$HOME/runs_corridor2 CAVE:$HOME/runs_cave02_sw GEODE:$HOME/runs_geode_sw MF:$HOME/runs_v2 LC:$HOME/runs_corridor; do
   p=${pair%%:*}; d=${pair#*:}
   cp "$d/results_index.csv" "$T/${p}_results_index.csv" 2>/dev/null; cp "$d/failed_runs.csv" "$T/${p}_failed_runs.csv" 2>/dev/null
-  for f in "$d"/switching_log_v2_{F24,SW}_kf_run*.csv "$d"/ate_{F24,SW}_kf_run*.txt "$d"/node_{F24,SW}_kf_run*.out "$d"/keyframes_{F24,SW}_kf_run*.npz; do
+  for f in "$d"/switching_log_v2_{F24,SW,V7}_kf_run*.csv "$d"/ate_{F24,SW,V7}_kf_run*.txt "$d"/node_{F24,SW,V7}_kf_run*.out "$d"/keyframes_{F24,SW,V7}_kf_run*.npz; do
     [ -f "$f" ] && cp "$f" "$T/${p}_$(basename "$f")"
   done
 done
@@ -82,6 +84,6 @@ mkdir -p "$(dirname "$Z")"; rm -f "$Z"; (cd "$T" && zip -q "$Z" *) && say "zip: 
 say "=== results (ATE RMSE / max, m)"
 for pair in C02:$HOME/runs_corridor2 CAVE:$HOME/runs_cave02_sw GEODE:$HOME/runs_geode_sw MF:$HOME/runs_v2 LC:$HOME/runs_corridor; do
   p=${pair%%:*}; d=${pair#*:}
-  grep -E "^(F24|SW)_kf_run" "$d/results_index.csv" 2>/dev/null | awk -F, -v s=$p '{print s, $1, $(NF-2), $(NF-1)}' | tee -a "$LOG"
+  grep -E "^(F24|SW|V7)_kf_run" "$d/results_index.csv" 2>/dev/null | awk -F, -v s=$p '{print s, $1, $(NF-2), $(NF-1)}' | tee -a "$LOG"
 done
 say "ALL_DONE $(date +%T)"

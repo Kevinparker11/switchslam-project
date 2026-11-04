@@ -160,6 +160,8 @@ declare -A CFG=(
   # Switch-SLAM as published (switch_slam_node.py: Algorithm 1 + Eqs. 11-16, no warm-up/weights/SAH/OT/guards). docs/protocols/SwitchSLAM_Exact_Replica.md
   [SW]="FUSION_MODE=switch_slam HESS_TOPIC=/laser_hessian N_BUF=5 LT_MODE=published EQ15_W=0.5"      # scan-to-scan Hessian (installed on every container), literal Eq. 15
   [SWM]="FUSION_MODE=switch_slam HESS_TOPIC=/mapping_hessian N_BUF=5 LT_MODE=published EQ15_W=0.5"  # scan-to-map Hessian as in the paper (needs fusion_v3/patch_mapping_hessian.py in A-LOAM)
+  # Generation-1 Switch-SLAM-style node (switching_node_v7.py: the original switching_node_multifloor rule, ported; needs /vins_mono_hessian). docs/protocols/SwitchSLAM_Exact_Replica.md section 8
+  [V7]="FUSION_MODE=switching_v7"
   [SW1]="FUSION_MODE=switch_slam HESS_TOPIC=/laser_hessian N_BUF=5 LT_MODE=published EQ15_W=1.0"      # variant: whole projected LiDAR step in Eq. 15 (documented, not the literal reading)
   [G16]="FUSION_MODE=fused C_T=$GENZ_C_T_F8 KAPPA_TH=1e9 SAH=1"            # ablation: F16 rule on GenZ (+ SAH)
   [G9]="FUSION_MODE=fused C_T=$GENZ_C_T C_R=$GENZ_C_R KAPPA_TH=1e9"         # R and T both from Schur: S_RR and S_tt active weights
@@ -184,7 +186,7 @@ for a in "$@"; do [ "$a" = "--dry" ] && DRY=1 || SEL+=("$a"); done
 REPEAT=${REPEAT:-1}; SMOKE=${SMOKE:-0}; RECORD_KF=${RECORD_KF:-0}
 [ -z "$BAGS" ] && { echo "no .bag files found in $BAG_DIR"; exit 1; }
 [ -f "$GT" ] || { echo "ground truth not found: $GT"; exit 1; }
-for f in fusion_core.py fusion_node_v2.py switch_slam_core.py switch_slam_node.py v2_tools.py fusion_summary.py structure_heading.py lio_bridge.py genz/make_genz_config.py; do
+for f in fusion_core.py fusion_node_v2.py switch_slam_core.py switch_slam_node.py switching_node_v7.py v2_tools.py fusion_summary.py structure_heading.py lio_bridge.py genz/make_genz_config.py; do
   [ -f "$FUSION_DIR/$f" ] || { echo "missing $FUSION_DIR/$f"; exit 1; }
 done
 if [ "$FRONT" = genz ]; then
@@ -203,7 +205,7 @@ if [ "$FRONT" = iglio ]; then
   docker exec $GPU_C bash -c "test -f $IGLIO_WS/devel/setup.bash && grep -q IGLIO_INFO_PATCH $IGLIO_WS/src/ig_lio/src/ig_lio_node.cpp" \
     || { echo "patched iG-LIO not found in $GPU_C:$IGLIO_WS - run ig_lio/install_iglio.sh first"; exit 1; }
 fi
-for s_ in "${SEL[@]}"; do case "$s_" in SW*) [ "$FRONT" = aloam ] || { echo "$s_ (Switch-SLAM) runs on the A-LOAM stack: use FRONT=aloam"; exit 1; } ;; esac; done
+for s_ in "${SEL[@]}"; do case "$s_" in SW*|V7*) [ "$FRONT" = aloam ] || { echo "$s_ (Switch-SLAM replica) runs on the A-LOAM stack: use FRONT=aloam"; exit 1; } ;; esac; done
 echo "bags: $BAGS"
 OUT=$OUT_DIR; mkdir -p $OUT; RES=$OUT/results_index.csv
 exec 9>$OUT/.run.lock
@@ -229,7 +231,7 @@ run_one() {
     exit 1
   fi
 
-  local NODE_PY=fusion_node_v2.py; case "$id" in SW*) NODE_PY=switch_slam_node.py;; esac
+  local NODE_PY=fusion_node_v2.py; case "$id" in SW*) NODE_PY=switch_slam_node.py;; V7*) NODE_PY=switching_node_v7.py;; esac
   $RESTART > $OUT/restart_$tag.out 2>&1
   GPU=$(docker inspect -f '{{.NetworkSettings.Networks.vins_bridge.IPAddress}}' $GPU_C)
   VINS=$(docker inspect -f '{{.NetworkSettings.Networks.vins_bridge.IPAddress}}' $VINS_C)
@@ -238,7 +240,7 @@ run_one() {
   done
   echo "$GPU $VINS" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+ [0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' || { echo "    no vins_bridge IPs after restart (got: $GPU $VINS), abort"; exit 1; }
   docker exec $GPU_C bash -c "mkdir -p /root/thr; pkill -9 -f '[s]witching_node'; pkill -9 -f '[f]usion_node_v2'; pkill -9 -f '[s]witch_slam_node'; pkill -9 -f '[k]eyframe_recorder'; pkill -9 -f '[l]io_bridge'; pkill -9 -f '[g]enz_lio_node'; pkill -9 -f '[i]g_lio_node'; rm -f /root/thr/switching_log_v2_$tag.csv /root/thr/keyframes_$tag.npz /root/thr/aloam.out /root/thr/genz.out /root/thr/iglio.out /root/thr/bridge.out /root/thr/velodyne.out"
-  for f in fusion_core.py fusion_node_v2.py switch_slam_core.py switch_slam_node.py keyframe_recorder.py structure_heading.py lio_bridge.py genz/make_genz_config.py; do
+  for f in fusion_core.py fusion_node_v2.py switch_slam_core.py switch_slam_node.py switching_node_v7.py keyframe_recorder.py structure_heading.py lio_bridge.py genz/make_genz_config.py; do
     docker cp $FUSION_DIR/$f $GPU_C:/root/thr/ || { echo "    docker cp $f failed"; exit 1; }
   done
   [ "$FRONT" = iglio ] && { docker cp $FUSION_DIR/ig_lio/make_iglio_config.py $GPU_C:/root/thr/ || { echo "    docker cp make_iglio_config.py failed"; exit 1; }; }
@@ -263,7 +265,7 @@ run_one() {
     --entrypoint bash ros:noetic -c "export ROS_IP=\$(hostname -i); source /opt/ros/noetic/setup.bash; rosbag play --clock -q -r ${PLAY_RATE:-1.0} $PLAYOPT $BAGS" \
     > $OUT/player_$tag.out 2>&1
   sleep 6
-  docker exec $GPU_C bash -c "pkill -INT -f '[f]usion_node_v2'; pkill -INT -f '[s]witch_slam_node'; pkill -INT -f '[k]eyframe_recorder'"; sleep 6
+  docker exec $GPU_C bash -c "pkill -INT -f '[f]usion_node_v2'; pkill -INT -f '[s]witch_slam_node'; pkill -INT -f '[s]witching_node_v7'; pkill -INT -f '[k]eyframe_recorder'"; sleep 6
   if [ $RECORD_KF = 1 ]; then
     docker cp $GPU_C:/root/thr/keyframes_$tag.npz $OUT/ && echo "    keyframes saved: $OUT/keyframes_$tag.npz ($(du -h $OUT/keyframes_$tag.npz | cut -f1))" \
       || echo "    WARNING: no keyframe file (see kf_$tag.out)"

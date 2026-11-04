@@ -2,7 +2,7 @@
 
 Files: `fusion_v4/switch_slam_core.py` (Algorithm 1 and Eqs. 11-16), `fusion_v4/switch_slam_node.py` (ROS node, drop-in for
 `fusion_node_v2.py`), `fusion_v4/test_switch_slam.py` and `test_switch_slam_node.py` (12 tests), configs `SW`, `SWM`, `SW1` in
-`run_fusion_study.sh`, batch `fusion_v4/batches/switchslam_exact_batch.sh`.
+`run_fusion_study.sh`, batch `fusion_v4/batches/switchslam_exact_batch.sh`. Section 8 adds the generation-1 node (`V7`).
 
 **Status.** Written from the paper (Lee et al., RA-L 9(8), 2024, doi:10.1109/LRA.2024.3421792); the authors released no code. Verified
 so far by unit tests on synthetic data and by a ROS-free plumbing test of the node. **No live run has been made.** Whether it
@@ -71,3 +71,17 @@ REPEAT=1 ONLY="C02 CAVE GEODE MF LC" CFGS="F24 SW" setsid nohup systemd-inhibit 
 # single config by hand:           FRONT=aloam RECORD_KF=1 PLAY_RATE=0.5 ./run_fusion_study.sh SW
 ```
 The log is `switching_log_v2_SW_*.csv` (same columns as the F-configs plus `sw_case`, `sw_status`, `sw_vo_fail`, `sw_lam1-3`, `sw_w`, `sw_degen`, `sw_race`), scored by the same `score_run.py`.
+
+## 8. The generation-1 node, ported (config `V7`)
+
+**What it is.** `fusion_v4/switching_node_v7.py` is the first switching node of the project, the one built before the Schur and Bingham channels: `switchslam_v1/nodes/switching_node_v7.py` (Gazebo form) as used on the Multi Floor bag in `switchslam_v1/multifloor/switching_node_multifloor.py`, which also publishes the fused chain as `/switch_fused_pose`. Chain of versions: `v3` (translation only, speed test) > `v4` (6-DoF) > `v6` (feature-count and jump test, safe LiDAR mode) > `v7` (5-frame status queue, interpolation weight sqrt(3 lam1)). `v5` is an empty file; the repository holds only the import commit, so earlier edits are not recoverable.
+
+**Rule, unchanged.** Detection from the three smallest eigenvalues of `/laser_hessian`, normalised, thresholds from the formula (0.116, 0.271, 0.471). VO failure when fewer than 20 features are tracked or a VINS-Mono step exceeds 1.5 m or 0.8 rad. Status queue of 5 including the current frame: Normal = LiDAR increment; Transition = blend with weight sqrt(3 lam1) on VINS-Mono; Fully = information-weighted 6x6 sum of the two increments with `/vins_mono_hessian` (fall back to LiDAR if the step exceeds 2 m); VO failure = LiDAR increment with the degenerate eigen-directions of the translation block removed (pinv, 2 m guard). The output is the chain of increments, published as `/switch_fused_pose` and logged.
+
+**Changes made for this stack (each marked `# PORT` in the file).** P1 log name `switching_log_v2_<RUN_TAG>.csv`. P2 log time is the scan stamp (bag clock) instead of `time.time()`, which could not be aligned with ground truth. P3 the log carries the A-LOAM scan-to-map pose, the VINS-Mono pose and the Hessian, so `score_run.py` and `fusion_summary.py` read it; the original `feat_count` column is kept. P4 prints the `FUSION_MODE=` line the runner waits for, plus a warning if no synchronised input arrives in 60 s. P5 Hessian messages are cut to 36 entries (the live `/laser_hessian` also carries cost and residual count; the original reshape would fail on 38). No decision line was touched: `test_switching_node_v7.py` loads the original and the port with stubbed ROS, feeds both 299 synthetic scans covering all four modes (a VINS jump and a feature drop included) and requires identical modes, fused poses and published odometry. It passes.
+
+**Not fixed on purpose (properties of the original, they stay):** the LiDAR-IMU extrinsics are ignored and A-LOAM and VINS-Mono world-frame position differences are mixed directly (harmless for Multi Floor and the Cave02 and SubT corridor extrinsics, which are near identity; GEODE has a 2.5 deg yaw offset, so the VINS-driven stretches there carry a small frame error); VO-failure limits are its own, not VINS-Mono's; the final pose is the increment chain, not the scan-to-map result; the queue includes the current frame. Differences from the paper are the five listed in the reply of 4 Nov 2026 and are what `SW` corrects.
+
+**Needs** `/vins_mono_hessian` (`patches/aloam_vins/patch_vinsmono_hessian.py` in the VINS-Mono container; the captured diff of VINS-Mono 90dabb5 contains it). Not run live yet: the unit tests are the only evidence so far.
+
+**Reporting.** Columns: published Switch-SLAM (Table II) | `V7` "generation-1 node, ported" | `SW` "from the paper" | F24. Same bags, replay rates and scorer. Run: `CFGS="F24 SW V7" bash batches/switchslam_exact_batch.sh`, or `FRONT=aloam RECORD_KF=1 PLAY_RATE=0.5 ./run_fusion_study.sh V7`. Check on Multi Floor first: the project's earlier V7-type result was RMSE about 1.39 m; if the port gives a very different number on the same bag, the port (not the rule) is the first suspect.
