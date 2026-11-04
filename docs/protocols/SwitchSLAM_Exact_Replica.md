@@ -1,0 +1,73 @@
+# Switch-SLAM as published: our implementation, what it is, what it is not (4 Nov 2026)
+
+Files: `fusion_v4/switch_slam_core.py` (Algorithm 1 and Eqs. 11-16), `fusion_v4/switch_slam_node.py` (ROS node, drop-in for
+`fusion_node_v2.py`), `fusion_v4/test_switch_slam.py` and `test_switch_slam_node.py` (12 tests), configs `SW`, `SWM`, `SW1` in
+`run_fusion_study.sh`, batch `fusion_v4/batches/switchslam_exact_batch.sh`.
+
+**Status.** Written from the paper (Lee et al., RA-L 9(8), 2024, doi:10.1109/LRA.2024.3421792); the authors released no code. Verified
+so far by unit tests on synthetic data and by a ROS-free plumbing test of the node. **No live run has been made.** Whether it
+reproduces the published numbers is the reproduction check in section 5, to be run on the laptop.
+
+## 1. Why F12 was not this
+
+F12 (`WEIGHT_MODE=switch_ss`) used only the detection rule, inside our VINS-primary fusion. Checking its logged Corridor02 run: the rule
+fired on 2.5 % of FUSED rows, so LiDAR translation was used in 97.5 % of them. F12 therefore behaved as "LiDAR translation, VINS
+rotation" (F14 with a rare fall-back), which is why it scored close to F14 (1.87 against 1.74). The "47 %" in the Corridor02 notes is the
+share of rows with the kappa(S_RR) gate open, a column that `switch_ss` does not use. F12 is a weighting ablation, not a baseline, and
+should not be called Switch-SLAM.
+
+## 2. Equation by equation
+
+| Paper | What it says | Implemented in | Note |
+|---|---|---|---|
+| Eq. 11-12, Sec. III-C | 3 smallest eigenvalues of H_l, normalised to unit norm; degenerate if any is below [0.12, 0.27, 0.48] | `eig_degeneracy`, `LT_PUBLISHED` | Eq. 12 evaluated gives [0.116, 0.271, 0.471]; the printed 0.48 is used (`LT_MODE=formula` for the other). |
+| Status buffer, Fig. 4 | queue Q_s of size n; Normal / Start-End / Fully | `status_of` | n is not given (A2). |
+| Eq. 13 | T_k = T_{k-1} (+) sqrt(3) lam1 dT_l (+) (1 - sqrt(3) lam1) dT_v | `blend` on SO(3) x R^3 | lam1 = smallest normalised eigenvalue, weight <= 1. |
+| Algorithm 1, lines 2-8 | LO guess if VO failed or all lam >= lam_t; interpolation if queue is Start/End; else VO guess | `SwitchSlamCore.decide` | `decide` changes no state. |
+| Sec. III-D | S_vo = fail on VINS-Mono's failure tests; LiDAR only until re-initialised | `vo_fail` | A7. |
+| Eq. 14, 16 line 1-2 | well-conditioned: -H^-1 J^T d; degenerate and VO failed: (U Lambda_p U^-1)^-1 J^T d | `finish`, cases 1 and 2 | Lambda_p drops the flagged eigenpairs; applied as a projection of the converged displacement on the kept eigenvectors (D2). |
+| Eq. 15, 16 line 3 | argmin ||dx + Hv^-1 Jv dv||^2 + ||dx + (U Lambda_p U^-1)^-1 Jl dl||^2 | `finish`, case 3 | Two plain norms: the minimiser is the mean of the two steps (A4). |
+| Algorithm 1 line 10 | push the current status | `buf.append` in `finish` | |
+| Sec. III-F | iSAM2 + Scan Context back end | not used | Table II used no loop closure or GNSS, so the front end is what is compared. |
+
+## 3. Where the paper is silent (choices made, all in the code as parameters)
+
+- **A1 Hessian.** The paper says H_l "in (8)" (scan-to-map). Default here: the scan-to-scan Hessian of the patched laserOdometry (`/laser_hessian`, in every container, used by all F-configs), rotated into the map frame for the projection. `SWM` uses the scan-to-map Hessian (`patch_mapping_hessian.py` must be applied to A-LOAM).
+- **A2 Queue length** n = 5 (`N_BUF`).
+- **A3 Thresholds**: the printed ones.
+- **A4 Eq. 15 weighting.** Literal reading, LiDAR weight 0.5 (`EQ15_W`). `SW1` (weight 1) is a documented variant. Since the VO step is zero when the guess is the VO pose, the literal reading halves the LiDAR correction in the observable directions.
+- **A5 Units.** Eigenvalues of the 6x6 matrix with the rotation block in radians (`D_RAD`), as F12 did.
+- **A6 Degenerate set** = flagged entries among the three smallest eigenvalues.
+- **A7 VO failure** = no VINS-Mono pose for 1 s (lost or still initialising), or a jump above VINS-Mono's own reset thresholds (5 m, 50 deg) between consecutive poses (restart). No warm-up: the paper has none.
+- **A8 check(Q_s)** reads the past statuses only. So the first degenerate scan after a clean queue goes to the VO guess, the next n-1 scans are interpolated, then VO; the end of a degenerate stretch returns to the LiDAR guess at once. (Verified in `test_corridor_modes_and_drift`.)
+
+## 4. Where this stack differs from the authors' (cannot be removed without their code)
+
+- **D1 No IMU preintegration.** The paper's LiDAR-IMU propagation is replaced by A-LOAM's scan-to-scan odometry increment.
+- **D2 Solver.** A-LOAM uses Ceres, not the paper's LM with an explicit H. The remap is applied to the converged displacement (exact for a quadratic cost). A-LOAM's own map is built from its un-remapped solution; only the output trajectory and the next initial guess use the remapped pose. The published pose is chosen so that the guess A-LOAM actually uses equals Algorithm 1's T_init (`pose_to_publish`, tested against laserMapping's T_w_odom bookkeeping).
+- **D3 VINS-Mono is a black box.** Hv and Jv are not available, so Eq. 15 is applied to the steps (A4).
+- **D4 Platform.** Replay at 0.33-0.5x on a Ryzen 5 5600H, against real time on an i7-1165G7; some scans are dropped and the race with the mapping thread is logged (`sw_race`).
+- **D5 Averaging.** The paper reports the mean of three runs.
+
+## 5. Reproduction check (fixed before the first run)
+
+Run `SW` three times on Multi Floor and Long Corridor and compare with Switch-SLAM Table II: Multi Floor 1.61 / 3.63, Long Corridor 2.42 / 5.09 (RMSE / max, m). (The farm, 0.38 / 1.10, needs the Gazebo launcher with `SW` and is a separate step.)
+- **Reproduces the published level**: the mean RMSE of SW is within +-50 % of the published value on both sequences. Then SW is reported as "Switch-SLAM as published (our implementation)" next to the published number.
+- **Does not**: SW is reported on every sequence as "our implementation of Switch-SLAM", the published numbers stay in their own column, and no claim is made about the published system.
+- `SWM` and `SW1` are sensitivity runs, declared here, reported whatever they give, never used to choose a setting.
+- Nothing is tuned on any sequence. All runs are reported.
+
+## 6. Evidence available now
+
+- 12 tests pass (thresholds, normalisation, Algorithm 1 branches, status queue, interpolation weight, VINS jump, Eq. 14 projection, Eq. 15 mean, body-to-map rotation of the eigenvectors, the T_w_odom bookkeeping, a corridor simulation, node plumbing).
+- Detection rule on logged F24 scan-to-scan Hessians: it fires on 1.5 % of scans on Multi Floor, 4.5 % on Long Corridor and 2.1 % on Corridor02 (median normalised eigenvalues 0.25/0.52/0.80, 0.30/0.46/0.83 and 0.29/0.47/0.83). So SW is expected to run as LiDAR-only A-LOAM with a scan-to-scan guess in over 95 % of scans on these three sequences, and the switching to VINS-Mono matters only in the short stretches where the rule fires. Open loop, a prediction, not a result.
+
+## 7. Run
+
+```
+cd fusion_v4 && python3 test_switch_slam.py && python3 test_switch_slam_node.py
+REPEAT=1 ONLY="C02 CAVE GEODE MF LC" CFGS="F24 SW" setsid nohup systemd-inhibit --what=sleep:idle bash batches/switchslam_exact_batch.sh > ~/sw_batch.log 2>&1 < /dev/null & disown
+# reproduction check, three runs:  REPEAT=3 ONLY="MF LC" CFGS="SW" bash batches/switchslam_exact_batch.sh
+# single config by hand:           FRONT=aloam RECORD_KF=1 PLAY_RATE=0.5 ./run_fusion_study.sh SW
+```
+The log is `switching_log_v2_SW_*.csv` (same columns as the F-configs plus `sw_case`, `sw_status`, `sw_vo_fail`, `sw_lam1-3`, `sw_w`, `sw_degen`, `sw_race`), scored by the same `score_run.py`.
