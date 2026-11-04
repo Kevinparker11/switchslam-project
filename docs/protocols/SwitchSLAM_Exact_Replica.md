@@ -93,3 +93,11 @@ The log is `switching_log_v2_SW_*.csv` (same columns as the F-configs plus `sw_c
 ## 10. Short version (one run each on Multi Floor)
 
 `fusion_v4/batches/switchslam_quick.sh`: unit tests; the VINS-Mono and laserOdometry Hessian patches if their markers are missing (idempotent); `SW` and `V7` once on Multi Floor; the scan-to-map patch with a rebuild; `SWM` once. Default: one `SW` run only (about 20 min, estimate); `WITH_V7=1` and `WITH_SWM=1` add one run each (and the patches they need). One run per config is a first look, not the three-run check of section 5: no verdict is claimed from it, and a `SW` value far from 1.61 / 3.63 from a single run is a reason to run the three, not a result. Status: written, syntax-checked, not run.
+
+## 11. First live result (4 Nov 2026, laptop, Multi Floor, 0.5x, one run, commit 3d1014b)
+
+`SW`: ATE RMSE 5.03 m, max 10.22 m (full span). Same session, `F24`: 0.45 / 0.92. Published Switch-SLAM: 1.61 / 3.63. One run, so no verdict under the rule of section 5 (needs three); the single value is 3.1 times the published RMSE.
+
+Log of the run (4126 scans): the rule fired on 1.5 % of scans (62 scans used VINS-Mono: 40 `VO`, 22 `INTERP`); 98.5 % were LiDAR-only scan-to-map with the scan-to-scan initial guess; median normalised eigenvalues 0.25 / 0.52 / 0.80; VINS-Mono counted as failed in 4.9 % of scans (start-up); 9.7 % of scans had an earlier scan still being mapped (`sw_race`). The final pose followed A-LOAM's scan-to-map pose within 0.07 m. The trajectory agreed with `F24`'s A-LOAM trajectory to 0.05 m until about 60 s and left it between 60 s and 120 s (stairs), reaching 7 m at 120 s.
+
+Reading (from the log, not tested by a further run): pure A-LOAM on Multi Floor in this stack scored 26.4 m (F5, earlier study). `SW` at 5.03 m is much better than that because the 62 VINS-Mono scans help, but with the rule firing on 1.5 % of scans `SW` is mostly A-LOAM, and A-LOAM's initial guess here is the scan-to-scan odometry, not the paper's LiDAR-IMU propagation (difference D1, section 4). So the likely cause of the gap is D1 together with a rule that rarely fires on this sequence, not an error in Algorithm 1. This explanation is a hypothesis: no run with an IMU-propagated guess has been made. No setting was changed after seeing this result.
