@@ -141,3 +141,19 @@ Reading: with the Hessian and guess available in this stack the paper's rule har
 ## 15. The failed SWM attempt on Long Corridor (4 Nov 2026) and what it still shows
 
 The first `SWM` run on Long Corridor (11:40-11:54) is **not an SWM result**: the mapping-Hessian patch did not compile (mixed Eigen 3.3 / 3.4 in the container, `#include <eigen3/Eigen/Dense>`), the old binary ran, `/mapping_hessian` never arrived (Hessian present in 0 % of rows), the rule never fired (0.0 % of scans, all `SW_LIDAR`). It is therefore a run of A-LOAM with the scan-to-scan guess and no switching at all: ATE 13.12 / 24.22 m. Next to `SW` (12.58 / 23.53; the rule fired in 4.5 % of scans) and `SWI` (13.81 / 24.78) this is evidence, from three single runs, that on Long Corridor the switching contributed little in either replica: with or without it the result is the A-LOAM result of about 13 m. Run-to-run spread is unknown (one run each). The script was fixed (Eigen include in `laserMapping.cpp`, build check, check that the binary contains `/mapping_hessian`); the real `SWM` run is still to be made.
+
+## 16. SWM on Long Corridor (4 Nov 2026, laptop, 0.5x, one run, commit 48cbd22; mapping patch compiled after the Eigen include fix)
+
+Valid run: `/mapping_hessian` present in 100 % of 2776 rows. ATE RMSE / max **13.19 / 23.83 m** (published 2.42 / 5.09).
+
+| Long Corridor, one run each | RMSE / max (m) | rule fired |
+|---|---|---|
+| Switch-SLAM published (mean of 3) | 2.42 / 5.09 | |
+| A-LOAM, no Hessian (invalid SWM attempt, section 15) | 13.12 / 24.22 | 0 % |
+| SW (scan-to-scan Hessian) | 12.58 / 23.53 | 4.5 % |
+| SWI (SW + gyro prior) | 13.81 / 24.78 | 4.5 % |
+| SWM (scan-to-map Hessian, as in the paper) | 13.19 / 23.83 | 1.4 % (20 INTERP, 19 VO) |
+
+The hypothesis of section 14 (the paper's scan-to-map Hessian would flag the corridor) is **not supported**: the scan-to-map Hessian looks less degenerate to the rule, not more. Median sorted eigenvalues (rad, m units) 181 / 257 / 319 / 1047 / 45080 / 62813; median normalised smallest three 0.39 / 0.56 / 0.73, against thresholds 0.12 / 0.27 / 0.48. The rule fires on 1.4 % of scans, fewer than with the scan-to-scan Hessian (4.5 %). All four variants give 12.6 to 13.8 m, so on this sequence neither the Hessian choice, nor the gyro prior, nor the switching itself changes the result in this stack; with single runs the spread between them (1.2 m) cannot be separated from run-to-run noise.
+
+Statement for the report: our implementations of Switch-SLAM (SW, SWI, SWM) do not reproduce the published Long Corridor result; on Multi Floor one run of SWI (1.51 / 4.35) was close to the published 1.61 / 3.63, on a sequence on which SWI was designed. The remaining differences to the paper (no LiDAR-IMU system, A-LOAM + VINS-Mono in place of the authors' components, unreleased code and unpublished parameters) are listed in sections 3 and 4; which of them causes the Long Corridor gap was not isolated.
