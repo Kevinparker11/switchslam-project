@@ -162,6 +162,7 @@ declare -A CFG=(
   [SWM]="FUSION_MODE=switch_slam HESS_TOPIC=/mapping_hessian N_BUF=5 LT_MODE=published EQ15_W=0.5"  # scan-to-map Hessian as in the paper (needs fusion_v3/patch_mapping_hessian.py in A-LOAM)
   # Generation-1 Switch-SLAM-style node (switching_node_v7.py: the original switching_node_multifloor rule, ported; needs /vins_mono_hessian). docs/protocols/SwitchSLAM_Exact_Replica.md section 8
   [V7]="FUSION_MODE=switching_v7"
+  [SWI]="FUSION_MODE=switch_slam HESS_TOPIC=/laser_hessian N_BUF=5 LT_MODE=published EQ15_W=0.5 GYRO=1"  # variant: LiDAR increment rotation from the integrated gyro (paper: LiDAR-IMU propagation, difference D1). docs/protocols/SwitchSLAM_Exact_Replica.md section 12
   [SW1]="FUSION_MODE=switch_slam HESS_TOPIC=/laser_hessian N_BUF=5 LT_MODE=published EQ15_W=1.0"      # variant: whole projected LiDAR step in Eq. 15 (documented, not the literal reading)
   [G16]="FUSION_MODE=fused C_T=$GENZ_C_T_F8 KAPPA_TH=1e9 SAH=1"            # ablation: F16 rule on GenZ (+ SAH)
   [G9]="FUSION_MODE=fused C_T=$GENZ_C_T C_R=$GENZ_C_R KAPPA_TH=1e9"         # R and T both from Schur: S_RR and S_tt active weights
@@ -186,7 +187,7 @@ for a in "$@"; do [ "$a" = "--dry" ] && DRY=1 || SEL+=("$a"); done
 REPEAT=${REPEAT:-1}; SMOKE=${SMOKE:-0}; RECORD_KF=${RECORD_KF:-0}
 [ -z "$BAGS" ] && { echo "no .bag files found in $BAG_DIR"; exit 1; }
 [ -f "$GT" ] || { echo "ground truth not found: $GT"; exit 1; }
-for f in fusion_core.py fusion_node_v2.py switch_slam_core.py switch_slam_node.py switching_node_v7.py v2_tools.py fusion_summary.py structure_heading.py lio_bridge.py genz/make_genz_config.py; do
+for f in fusion_core.py fusion_node_v2.py switch_slam_core.py switch_slam_node.py gyro_prior.py switching_node_v7.py v2_tools.py fusion_summary.py structure_heading.py lio_bridge.py genz/make_genz_config.py; do
   [ -f "$FUSION_DIR/$f" ] || { echo "missing $FUSION_DIR/$f"; exit 1; }
 done
 if [ "$FRONT" = genz ]; then
@@ -240,7 +241,7 @@ run_one() {
   done
   echo "$GPU $VINS" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+ [0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' || { echo "    no vins_bridge IPs after restart (got: $GPU $VINS), abort"; exit 1; }
   docker exec $GPU_C bash -c "mkdir -p /root/thr; pkill -9 -f '[s]witching_node'; pkill -9 -f '[f]usion_node_v2'; pkill -9 -f '[s]witch_slam_node'; pkill -9 -f '[k]eyframe_recorder'; pkill -9 -f '[l]io_bridge'; pkill -9 -f '[g]enz_lio_node'; pkill -9 -f '[i]g_lio_node'; rm -f /root/thr/switching_log_v2_$tag.csv /root/thr/keyframes_$tag.npz /root/thr/aloam.out /root/thr/genz.out /root/thr/iglio.out /root/thr/bridge.out /root/thr/velodyne.out"
-  for f in fusion_core.py fusion_node_v2.py switch_slam_core.py switch_slam_node.py switching_node_v7.py keyframe_recorder.py structure_heading.py lio_bridge.py genz/make_genz_config.py; do
+  for f in fusion_core.py fusion_node_v2.py switch_slam_core.py switch_slam_node.py gyro_prior.py switching_node_v7.py keyframe_recorder.py structure_heading.py lio_bridge.py genz/make_genz_config.py; do
     docker cp $FUSION_DIR/$f $GPU_C:/root/thr/ || { echo "    docker cp $f failed"; exit 1; }
   done
   [ "$FRONT" = iglio ] && { docker cp $FUSION_DIR/ig_lio/make_iglio_config.py $GPU_C:/root/thr/ || { echo "    docker cp make_iglio_config.py failed"; exit 1; }; }

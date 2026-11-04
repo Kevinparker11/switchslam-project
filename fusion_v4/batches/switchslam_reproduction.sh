@@ -14,7 +14,7 @@ say() { echo "$*" | tee -a "$LOG"; }
 has() { case " $STAGES " in *" $1 "*) return 0;; esac; return 1; }
 cd "$FV4" || exit 1
 say "=== SW reproduction $(date)  stages: $STAGES  commit: $(git -C "$FV4" rev-parse --short HEAD 2>/dev/null)"
-python3 test_switch_slam.py >/dev/null && python3 test_switch_slam_node.py >/dev/null && python3 test_switching_node_v7.py >/dev/null || { say "unit tests failed - not starting"; exit 1; }
+python3 test_switch_slam.py >/dev/null && python3 test_switch_slam_node.py >/dev/null && python3 test_switching_node_v7.py >/dev/null && python3 test_gyro_prior.py >/dev/null || { say "unit tests failed - not starting"; exit 1; }
 if has 1; then
   say "--- stage 1: smoke, 70 s of Multi Floor"
   SMOKE=1 SMOKE_SECS=70 ONLY=MF CFGS="SW V7" REPEAT=1 ZIP=$HOME/Downloads/for_claude_SW_smoke.zip bash batches/switchslam_exact_batch.sh 2>&1 | tee -a "$LOG" | grep -E "SMOKE|rows|modes|VINS|first|NO ROWS|WARNING|did not start|abort|FAILED|MISSING" 

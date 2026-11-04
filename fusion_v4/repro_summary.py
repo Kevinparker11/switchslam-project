@@ -20,7 +20,7 @@ for seq, (d, pr, pm) in dirs.items():
                 try: rows.setdefault(r[0].split("_kf_run")[0], []).append((float(r[3]), float(r[4])))
                 except ValueError: pass
     print("\n%s   published %.2f / %.2f" % (seq, pr, pm))
-    for c in ("F24", "SW", "SWM", "SW1", "V7"):
+    for c in ("F24", "SW", "SWI", "SWM", "SW1", "V7"):
         v = rows.get(c)
         if not v: print("  %-4s no completed runs" % c); continue
         a = np.array(v)
