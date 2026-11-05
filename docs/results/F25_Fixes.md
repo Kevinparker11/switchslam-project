@@ -41,3 +41,13 @@ Request: bring F24 (A-LOAM + VINS-Mono) close to 1 to 2 m on Cave02 (7.55 / 12.6
 Rows 3456 of 3456 (the 0.5x runs lost 3 to 7 % of the scans). F24 **9.09 / 19.42**; A-LOAM path in the same run 9.00 / 17.59; modes VO_FAIL 1191, WARMUP 1160, FUSED 1104; handovers 3.9, 14.6, 3.7 and 52.0 deg.
 - Scan loss is not the cause of the 6 to 9 m spread: with every scan processed the error is 9.09, equal to F24 run 2 at 0.5x (9.15) and above run 1 (6.15).
 - GEODE stairs alpha with A-LOAM + VINS-Mono over five F24/F25A runs: 6.15, 9.15, 9.09 (F24) and 6.58, 8.80 (F25A). Nothing tried (handover trust, replay rate) separates the configurations from this spread. Reported as 6 to 9 m.
+
+## 7. Loop-closure back end on the F24 keyframes (offline, 5 Nov 2026; label "F24 + loops", not the front-end number)
+`run_backend.py --models none,iso --odom-sigma 1.46,0.054` (the fixed noise used for every earlier loop result), one round, on the saved keyframes of the F24 run 1 of each bag.
+| Bag | Front end | F24 + loops (iso) | Loops accepted |
+|---|---|---|---|
+| GEODE stairs alpha | 6.152 / 14.00 | **6.152 / 14.00** | 0 |
+| Cave02 | 7.550 / 12.63 | **7.352 / 12.33** (same with search radius 8 m and 20 m) | 96 |
+- GEODE: the staircase offers no accepted loop, so the back end changes nothing.
+- Cave02: the 96 accepted loops all join scans within the first 100 s (robot standing still), not the start-to-end closure, so the gain is 0.2 m. The radius (8 or 20 m) makes no difference.
+- Nothing tried in this session (handover trust, standstill hold, slower replay, loop closure) lowers the A-LOAM + VINS-Mono numbers on these two bags beyond run noise.
