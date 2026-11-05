@@ -146,6 +146,8 @@ ZUPT_W = float(E("ZUPT_W", "1.0"))
 ZUPT_T = float(E("ZUPT_T", "5.0"))                 # s, LiDAR wander window
 ZUPT_RATIO = float(E("ZUPT_RATIO", "0.5"))         # net displacement / path length below this = wander
 IMU_TOPICS = E("IMU_TOPICS", "/imu/data,/cmu_sp1/imu/data").split(",")
+GUESS_MODE = E("GUESS_MODE", "vins")               # vins (F24: VINS motion in the scan-to-map guess whenever VINS is healthy) | status (F26: Switch-SLAM's degeneracy rule picks LiDAR / interpolation / VIO)
+assert GUESS_MODE in ("vins", "status"), GUESS_MODE
 if OT and TCAP:
     raise SystemExit("TCAP (per-scan T from /laser_cloud_surf_last) and OT_MODE (keyframe T) are alternatives; set one")
 KF_CLOUDS = SAH or OT                      # keyframe scans are needed by SAH and/or the OT channel
@@ -180,6 +182,10 @@ core = fc.FusionCore(R_IL, t_IL, c_t=C_T, c_R=C_R, gate=gate, t_warm=T_WARM, hes
                      rot_c_fail=ROT_C_FAIL, rot_gamma_min=ROT_GAMMA_MIN, t_cap=TCAP or OT,
                      t_mode=OT_MODE if OT else "min", handover=HANDOVER, predict_guard=PREDICT_GUARD,
                      handover_trust=HANDOVER_TRUST, zupt=ZUPT, zupt_T=ZUPT_T, zupt_ratio=ZUPT_RATIO)
+if GUESS_MODE == "status":
+    import guess_status as gs
+    status_guess = gs.StatusGuess(R_IL, t_IL, hess_frame=HESS_FRAME, jump_max=JUMP_MAX)
+guess_kind = {}
 if ZUPT:
     import still_detect as sd
     still_det = sd.StillDetector(window=ZUPT_W, g_thr=ZUPT_G, a_thr=ZUPT_A)
@@ -209,7 +215,7 @@ w.writerow(["time", "mode", "fused_x", "fused_y", "fused_z", "fused_qx", "fused_
             "aft_x", "aft_y", "aft_z", "aft_qx", "aft_qy", "aft_qz", "aft_qw",
             "v_px", "v_py", "v_pz", "v_qx", "v_qy", "v_qz", "v_qw",
             "gate", "kappa_R", "kappa_t", "kth", "wt0", "wt1", "wt2", "wR0", "wR1", "wR2", "dta", "dtv",
-            "hess_src", "cost", "m_res"] + HCOLS + ["sah_corr_deg", "sah_total_deg", "sah_acc", "vio_gamma", "s_vio"] + (["rot_gamma", "rot_e2", "rot_e10"] if ROT_CHECK else []) + (["T_l1", "T_ms", "tcap_ratio"] if TCAP else []) + (["OT_l1", "OT_age", "ot_ratio"] if OT else []) + (["vio_r_slow", "vio_r_fast", "guard_ex"] if VIO_DEBUG else []) + (["handover_deg"] if HANDOVER != "none" else []) + (["handover_skipped"] if HANDOVER_TRUST else []) + (["zupt", "still_gyro", "still_acc"] if ZUPT else []))
+            "hess_src", "cost", "m_res"] + HCOLS + ["sah_corr_deg", "sah_total_deg", "sah_acc", "vio_gamma", "s_vio"] + (["rot_gamma", "rot_e2", "rot_e10"] if ROT_CHECK else []) + (["T_l1", "T_ms", "tcap_ratio"] if TCAP else []) + (["OT_l1", "OT_age", "ot_ratio"] if OT else []) + (["vio_r_slow", "vio_r_fast", "guard_ex"] if VIO_DEBUG else []) + (["handover_deg"] if HANDOVER != "none" else []) + (["handover_skipped"] if HANDOVER_TRUST else []) + (["zupt", "still_gyro", "still_acc"] if ZUPT else []) + (["guess_kind"] if GUESS_MODE == "status" else []))
 cnt = [0]
 
 
@@ -398,6 +404,11 @@ def laser_odom_cb(msg):
     with lock:
         if not core.initialised():
             R, p = odom_to_pose(msg)            # before the first mapped scan: pass A-LOAM odometry through
+        elif GUESS_MODE == "status":
+            R, p = status_guess.guess(core, odom_to_pose(msg), vins_at(t) if PREDICT_WITH_VINS else None, latest_H[0])
+            guess_kind[t] = status_guess.kind
+            for k_ in [k_ for k_ in guess_kind if k_ < t - 5.0]:
+                guess_kind.pop(k_)
         else:
             pred = core.predict(vins_at(t) if PREDICT_WITH_VINS else None)
             R, p = pred
@@ -487,7 +498,8 @@ def aft_cb(msg):
                ([info.get("vio_r_slow", np.nan), info.get("vio_r_fast", np.nan), info.get("guard_ex", np.nan)] if VIO_DEBUG else []) +
                ([info.get("handover_deg", np.nan)] if HANDOVER != "none" else []) +
                ([info.get("handover_skipped", 0)] if HANDOVER_TRUST else []) +
-               ([info.get("zupt", 0), sg, sa] if ZUPT else []))
+               ([info.get("zupt", 0), sg, sa] if ZUPT else []) +
+               ([guess_kind.get(t, "")] if GUESS_MODE == "status" else []))
     cnt[0] += 1
     if cnt[0] % 50 == 0:
         log.flush()
@@ -510,7 +522,7 @@ def main():
         for tp in IMU_TOPICS:
             rospy.Subscriber(tp, Imu, imu_cb, queue_size=1000)
         print("ZUPT=1 IMU_TOPICS=%s ZUPT_G=%g ZUPT_A=%g ZUPT_W=%g ZUPT_T=%g ZUPT_RATIO=%g" % (IMU_TOPICS, ZUPT_G, ZUPT_A, ZUPT_W, ZUPT_T, ZUPT_RATIO))
-    print("HANDOVER_TRUST=%d" % int(HANDOVER_TRUST))
+    print("HANDOVER_TRUST=%d GUESS_MODE=%s" % (int(HANDOVER_TRUST), GUESS_MODE))
     if TCAP:
         from sensor_msgs.msg import PointCloud2
         rospy.Subscriber("/laser_cloud_surf_last", PointCloud2, surf_cb, queue_size=20, buff_size=2 ** 24)
