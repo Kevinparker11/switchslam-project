@@ -41,3 +41,28 @@ class StatusGuess:
         g.prev_o, g.prev_v = odom, vins
         self.kind = dec["kind"]
         return dec["guess"]
+
+
+class OdomFallback:
+    """F27: F24's guess unchanged while the VINS motion is usable; when it is not (VINS absent, still starting, after a VO_FAIL, a step above
+    jump_max / rot_jump_max, or the warm-up before VINS exists) F24 hands A-LOAM the last fused pose with NO motion.  Here the guess is the
+    last fused pose composed with A-LOAM's own scan-to-scan increment instead (what plain A-LOAM would start from).  A step above
+    3 x jump_max (an odometry blow-up) is not used (no motion, as F24)."""
+
+    def __init__(self, jump_max=1.0):
+        self.prev_o, self.jump_max, self.kind = None, float(jump_max), "INIT"
+
+    def guess(self, core, pred, odom):
+        prev, self.prev_o = self.prev_o, odom
+        if core.Rf is None or pred is None:
+            self.kind = "INIT"
+            return pred
+        if core.guess_used_vins or prev is None:
+            self.kind = "VINS"
+            return pred
+        dR, dt = fc.rel_body(prev[0], prev[1], odom[0], odom[1])
+        if np.linalg.norm(dt) > 3.0 * self.jump_max:
+            self.kind = "HOLD"
+            return pred
+        self.kind = "ODOM"
+        return fc.compose(core.Rf, core.pf, dR, dt)

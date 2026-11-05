@@ -146,8 +146,8 @@ ZUPT_W = float(E("ZUPT_W", "1.0"))
 ZUPT_T = float(E("ZUPT_T", "5.0"))                 # s, LiDAR wander window
 ZUPT_RATIO = float(E("ZUPT_RATIO", "0.5"))         # net displacement / path length below this = wander
 IMU_TOPICS = E("IMU_TOPICS", "/imu/data,/cmu_sp1/imu/data").split(",")
-GUESS_MODE = E("GUESS_MODE", "vins")               # vins (F24: VINS motion in the scan-to-map guess whenever VINS is healthy) | status (F26: Switch-SLAM's degeneracy rule picks LiDAR / interpolation / VIO)
-assert GUESS_MODE in ("vins", "status"), GUESS_MODE
+GUESS_MODE = E("GUESS_MODE", "vins")               # vins (F24: VINS motion in the scan-to-map guess whenever VINS is healthy) | status (F26: Switch-SLAM's degeneracy rule picks LiDAR / interpolation / VIO) | vins_odom (F27: F24, but A-LOAM's own increment instead of 'no motion' while the VINS motion is unusable)
+assert GUESS_MODE in ("vins", "status", "vins_odom"), GUESS_MODE
 if OT and TCAP:
     raise SystemExit("TCAP (per-scan T from /laser_cloud_surf_last) and OT_MODE (keyframe T) are alternatives; set one")
 KF_CLOUDS = SAH or OT                      # keyframe scans are needed by SAH and/or the OT channel
@@ -185,6 +185,9 @@ core = fc.FusionCore(R_IL, t_IL, c_t=C_T, c_R=C_R, gate=gate, t_warm=T_WARM, hes
 if GUESS_MODE == "status":
     import guess_status as gs
     status_guess = gs.StatusGuess(R_IL, t_IL, hess_frame=HESS_FRAME, jump_max=JUMP_MAX)
+if GUESS_MODE == "vins_odom":
+    import guess_status as gs
+    odom_fallback = gs.OdomFallback(jump_max=JUMP_MAX)
 guess_kind = {}
 if ZUPT:
     import still_detect as sd
@@ -215,7 +218,7 @@ w.writerow(["time", "mode", "fused_x", "fused_y", "fused_z", "fused_qx", "fused_
             "aft_x", "aft_y", "aft_z", "aft_qx", "aft_qy", "aft_qz", "aft_qw",
             "v_px", "v_py", "v_pz", "v_qx", "v_qy", "v_qz", "v_qw",
             "gate", "kappa_R", "kappa_t", "kth", "wt0", "wt1", "wt2", "wR0", "wR1", "wR2", "dta", "dtv",
-            "hess_src", "cost", "m_res"] + HCOLS + ["sah_corr_deg", "sah_total_deg", "sah_acc", "vio_gamma", "s_vio"] + (["rot_gamma", "rot_e2", "rot_e10"] if ROT_CHECK else []) + (["T_l1", "T_ms", "tcap_ratio"] if TCAP else []) + (["OT_l1", "OT_age", "ot_ratio"] if OT else []) + (["vio_r_slow", "vio_r_fast", "guard_ex"] if VIO_DEBUG else []) + (["handover_deg"] if HANDOVER != "none" else []) + (["handover_skipped"] if HANDOVER_TRUST else []) + (["zupt", "still_gyro", "still_acc"] if ZUPT else []) + (["guess_kind"] if GUESS_MODE == "status" else []))
+            "hess_src", "cost", "m_res"] + HCOLS + ["sah_corr_deg", "sah_total_deg", "sah_acc", "vio_gamma", "s_vio"] + (["rot_gamma", "rot_e2", "rot_e10"] if ROT_CHECK else []) + (["T_l1", "T_ms", "tcap_ratio"] if TCAP else []) + (["OT_l1", "OT_age", "ot_ratio"] if OT else []) + (["vio_r_slow", "vio_r_fast", "guard_ex"] if VIO_DEBUG else []) + (["handover_deg"] if HANDOVER != "none" else []) + (["handover_skipped"] if HANDOVER_TRUST else []) + (["zupt", "still_gyro", "still_acc"] if ZUPT else []) + (["guess_kind"] if GUESS_MODE != "vins" else []))
 cnt = [0]
 
 
@@ -411,6 +414,11 @@ def laser_odom_cb(msg):
                 guess_kind.pop(k_)
         else:
             pred = core.predict(vins_at(t) if PREDICT_WITH_VINS else None)
+            if GUESS_MODE == "vins_odom":
+                pred = odom_fallback.guess(core, pred, odom_to_pose(msg))
+                guess_kind[t] = odom_fallback.kind
+                for k_ in [k_ for k_ in guess_kind if k_ < t - 5.0]:
+                    guess_kind.pop(k_)
             R, p = pred
     publish(msg.header.stamp, R, p)
 
@@ -499,7 +507,7 @@ def aft_cb(msg):
                ([info.get("handover_deg", np.nan)] if HANDOVER != "none" else []) +
                ([info.get("handover_skipped", 0)] if HANDOVER_TRUST else []) +
                ([info.get("zupt", 0), sg, sa] if ZUPT else []) +
-               ([guess_kind.get(t, "")] if GUESS_MODE == "status" else []))
+               ([guess_kind.get(t, "")] if GUESS_MODE != "vins" else []))
     cnt[0] += 1
     if cnt[0] % 50 == 0:
         log.flush()
