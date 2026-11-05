@@ -163,6 +163,8 @@ declare -A CFG=(
   [F24]="FUSION_MODE=fused C_T=3e-2 KAPPA_TH=1e9 SAH=1 ROT_CHECK=1 OT_SRC=geom OT_MODE=gmax VIO_CHECK=1 VIO_CHECK_FAST=5 LIDAR_GUARD_T=2 LIDAR_GUARD_EX=4.325 VIO_CHECK_REF=0.157 VIO_CHECK_FAST_REF=0.277 VIO_CHECK_START=1 HANDOVER=anchor PREDICT_GUARD=1"  # F23 + no VINS motion in the mapping guess while VINS fails. docs/results/F24_Predict_Guard.md
   # F25A = F24 + one fix found in the F24 GEODE log (docs/results/F25_Fixes.md). Developed on GEODE: GEODE is tuned-on data. (A standstill hold, ZUPT=1, was tested offline and gave no gain; code kept, default off, no config.)
   [F25A]="FUSION_MODE=fused C_T=3e-2 KAPPA_TH=1e9 SAH=1 ROT_CHECK=1 OT_SRC=geom OT_MODE=gmax VIO_CHECK=1 VIO_CHECK_FAST=5 LIDAR_GUARD_T=2 LIDAR_GUARD_EX=4.325 VIO_CHECK_REF=0.157 VIO_CHECK_FAST_REF=0.277 VIO_CHECK_START=1 HANDOVER=anchor PREDICT_GUARD=1 HANDOVER_TRUST=1"  # F24 + anchor skipped while VINS is distrusted (GEODE)
+  # F26 = F24 with the scan-to-map guess chosen by Switch-SLAM's degeneracy status (guess_status.py); the fusion is F24's. docs/results/F26_Status_Guess.md
+  [F26]="FUSION_MODE=fused C_T=3e-2 KAPPA_TH=1e9 SAH=1 ROT_CHECK=1 OT_SRC=geom OT_MODE=gmax VIO_CHECK=1 VIO_CHECK_FAST=5 LIDAR_GUARD_T=2 LIDAR_GUARD_EX=4.325 VIO_CHECK_REF=0.157 VIO_CHECK_FAST_REF=0.277 VIO_CHECK_START=1 HANDOVER=anchor PREDICT_GUARD=1 GUESS_MODE=status"
   # Switch-SLAM as published (switch_slam_node.py: Algorithm 1 + Eqs. 11-16, no warm-up/weights/SAH/OT/guards). docs/protocols/SwitchSLAM_Exact_Replica.md
   [SW]="FUSION_MODE=switch_slam HESS_TOPIC=/laser_hessian N_BUF=5 LT_MODE=published EQ15_W=0.5"      # scan-to-scan Hessian (installed on every container), literal Eq. 15
   [SWM]="FUSION_MODE=switch_slam HESS_TOPIC=/mapping_hessian N_BUF=5 LT_MODE=published EQ15_W=0.5"  # scan-to-map Hessian as in the paper (needs fusion_v3/patch_mapping_hessian.py in A-LOAM)
@@ -247,7 +249,7 @@ run_one() {
   done
   echo "$GPU $VINS" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+ [0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' || { echo "    no vins_bridge IPs after restart (got: $GPU $VINS), abort"; exit 1; }
   docker exec $GPU_C bash -c "mkdir -p /root/thr; pkill -9 -f '[s]witching_node'; pkill -9 -f '[f]usion_node_v2'; pkill -9 -f '[s]witch_slam_node'; pkill -9 -f '[k]eyframe_recorder'; pkill -9 -f '[l]io_bridge'; pkill -9 -f '[g]enz_lio_node'; pkill -9 -f '[i]g_lio_node'; rm -f /root/thr/switching_log_v2_$tag.csv /root/thr/keyframes_$tag.npz /root/thr/aloam.out /root/thr/genz.out /root/thr/iglio.out /root/thr/bridge.out /root/thr/velodyne.out"
-  for f in fusion_core.py fusion_node_v2.py still_detect.py switch_slam_core.py switch_slam_node.py gyro_prior.py switching_node_v7.py keyframe_recorder.py structure_heading.py lio_bridge.py genz/make_genz_config.py; do
+  for f in fusion_core.py fusion_node_v2.py still_detect.py guess_status.py switch_slam_core.py switch_slam_node.py gyro_prior.py switching_node_v7.py keyframe_recorder.py structure_heading.py lio_bridge.py genz/make_genz_config.py; do
     docker cp $FUSION_DIR/$f $GPU_C:/root/thr/ || { echo "    docker cp $f failed"; exit 1; }
   done
   [ "$FRONT" = iglio ] && { docker cp $FUSION_DIR/ig_lio/make_iglio_config.py $GPU_C:/root/thr/ || { echo "    docker cp make_iglio_config.py failed"; exit 1; }; }
