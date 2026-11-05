@@ -5,6 +5,7 @@
 # Front end only (the paper's Table II used no loop closure).  Same A-LOAM, VINS-Mono, extrinsics, replay rates and scorer for both.
 #   ONLY="C02 CAVE GEODE MF LC"   sequences, in this order (default).  CFGS="F24 SW"   configurations per sequence.
 #   CFGS="F24 SW V7" adds the generation-1 node (switching_node_v7.py; needs /vins_mono_hessian in the VINS-Mono container).
+#   RATE_GEODE / RATE_CAVE = replay rate (default 0.5); SUFFIX=_r025 puts that sequence's runs in a separate folder (runs_geode_sw_r025).
 #   REPEAT=1 (default: once each, as planned); REPEAT=3 gives the paper's "average of three repeated tests".
 # Needs: python3 test_switch_slam.py passing, containers switchslam_gpu_v2 and vinsmono_test, the external drive for the bags.
 # Detach:  setsid nohup systemd-inhibit --what=sleep:idle bash batches/switchslam_exact_batch.sh > ~/sw_batch.log 2>&1 < /dev/null & disown
@@ -47,18 +48,18 @@ fi
 if want CAVE; then
   D="$ROOT/Cave/cave02_bag"
   if need "$D/cave02.bag" && need "$ROOT/Cave/cave02_gt.txt"; then
-    O=$HOME/runs_cave02_sw; mk_env cave02 "$O" "$D" "$ROOT/Cave/cave02_gt.txt" "$REPO/configs/cave02/cave02_extrinsics.yaml"
-    run Cave02 0.5 "$O/seq.env"
+    O=$HOME/runs_cave02_sw${SUFFIX:-}; mk_env cave02 "$O" "$D" "$ROOT/Cave/cave02_gt.txt" "$REPO/configs/cave02/cave02_extrinsics.yaml"
+    run Cave02 ${RATE_CAVE:-0.5} "$O/seq.env"
   else say "Cave02 skipped (external drive not attached?)"; fi
 fi
 if want GEODE; then
   G="${GEODE_DIR:-$ROOT/GEODE}"
   if need "$G/stairs_alpha.bag" && need "$G/stairs_alpha.txt"; then
-    O=$HOME/runs_geode_sw; mk_env geode "$O" "$G" "$G/stairs_alpha.txt" "$FV4/geode/geode_extrinsics.yaml"
+    O=$HOME/runs_geode_sw${SUFFIX:-}; mk_env geode "$O" "$G" "$G/stairs_alpha.txt" "$FV4/geode/geode_extrinsics.yaml"
     docker exec vinsmono_test mkdir -p /root/vins_output_geode/pose_graph /root/thr
     docker cp "$FV4/geode/geode_config.yaml" vinsmono_test:/root/catkin_ws/src/VINS-Mono/config/geode_config.yaml
     docker cp "$REPO/configs/geode/geode_aloam.launch" switchslam_gpu_v2:/root/geode_aloam.launch
-    run "GEODE stairs" 0.5 "$O/seq.env"
+    run "GEODE stairs" ${RATE_GEODE:-0.5} "$O/seq.env"
   else say "GEODE skipped (bag not found in $G)"; fi
 fi
 if want MF; then
@@ -74,7 +75,7 @@ fi
 
 # collect
 Z=${ZIP:-$HOME/Downloads/for_claude_SW_batch.zip}; T=$(mktemp -d)
-for pair in C02:$HOME/runs_corridor2 CAVE:$HOME/runs_cave02_sw GEODE:$HOME/runs_geode_sw MF:$HOME/runs_v2 LC:$HOME/runs_corridor; do
+for pair in C02:$HOME/runs_corridor2 CAVE:$HOME/runs_cave02_sw${SUFFIX:-} GEODE:$HOME/runs_geode_sw${SUFFIX:-} MF:$HOME/runs_v2 LC:$HOME/runs_corridor; do
   p=${pair%%:*}; d=${pair#*:}
   cp "$d/results_index.csv" "$T/${p}_results_index.csv" 2>/dev/null; cp "$d/failed_runs.csv" "$T/${p}_failed_runs.csv" 2>/dev/null
   for f in "$d"/switching_log_v2_{F24,F25A,SW,SWI,SWM,SW1,V7}_kf_run*.csv "$d"/ate_{F24,F25A,SW,SWI,SWM,SW1,V7}_kf_run*.txt "$d"/node_{F24,F25A,SW,SWI,SWM,SW1,V7}_kf_run*.out "$d"/keyframes_{F24,F25A,SW,SWI,SWM,SW1,V7}_kf_run*.npz; do
@@ -83,7 +84,7 @@ for pair in C02:$HOME/runs_corridor2 CAVE:$HOME/runs_cave02_sw GEODE:$HOME/runs_
 done
 mkdir -p "$(dirname "$Z")"; rm -f "$Z"; (cd "$T" && zip -q "$Z" *) && say "zip: $Z ($(du -h "$Z" | cut -f1))"; rm -rf "$T"
 say "=== results (ATE RMSE / max, m)"
-for pair in C02:$HOME/runs_corridor2 CAVE:$HOME/runs_cave02_sw GEODE:$HOME/runs_geode_sw MF:$HOME/runs_v2 LC:$HOME/runs_corridor; do
+for pair in C02:$HOME/runs_corridor2 CAVE:$HOME/runs_cave02_sw${SUFFIX:-} GEODE:$HOME/runs_geode_sw${SUFFIX:-} MF:$HOME/runs_v2 LC:$HOME/runs_corridor; do
   p=${pair%%:*}; d=${pair#*:}
   grep -E "^(F24|F25A|SW|SWI|SWM|SW1|V7)_kf_run" "$d/results_index.csv" 2>/dev/null | awk -F, -v s=$p '{print s, $1, $(NF-2), $(NF-1)}' | tee -a "$LOG"
 done
