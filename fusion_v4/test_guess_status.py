@@ -41,4 +41,27 @@ print("degenerate, VINS step 1.5 m (> jump_max):", kind, "last guess x", round(f
 assert kind == "LIDAR", "F24's guard: a VINS step above jump_max is treated as absent"
 p, kind = run(None, vins_step=0.30, odom_step=0.10)
 assert kind == "LIDAR", "no Hessian: LiDAR"
+
+# F27: A-LOAM's own increment replaces "no motion" only when the VINS motion was not usable
+core = fc.FusionCore(R_IL, t_IL, c_t=0.03, gate=fc.KappaGate(kth=1e9), t_warm=1e12, predict_guard=True)
+core.Rf, core.pf = np.eye(3), np.zeros(3)
+fb = gs.OdomFallback()
+o0 = (np.eye(3), np.zeros(3)); o1 = (np.eye(3), np.array([0.2, 0, 0])); o2 = (np.eye(3), np.array([0.4, 0, 0]))
+pred = core.predict(None); assert not core.guess_used_vins
+assert np.allclose(fb.guess(core, pred, o0)[1], 0) and fb.kind == "INIT" or fb.kind in ("INIT", "VINS")   # first scan: nothing to difference
+pred = core.predict(None)
+R, p = fb.guess(core, pred, o1)
+print("F27 VINS absent:", fb.kind, "guess x", round(float(p[0]), 3))
+assert fb.kind == "ODOM" and abs(p[0] - 0.2) < 1e-9, "VINS unusable: the last fused pose plus A-LOAM's increment"
+core.prev_v = (np.eye(3), np.zeros(3))
+pred = core.predict((np.eye(3), np.array([0.05, 0, 0]))); assert core.guess_used_vins
+R, p = fb.guess(core, pred, o2)
+print("F27 VINS usable:", fb.kind, "guess x", round(float(p[0]), 3))
+assert fb.kind == "VINS" and abs(p[0] - 0.05) < 1e-9, "VINS usable: F24 exactly"
+pred = core.predict((np.eye(3), np.array([1.5, 0, 0])))        # step above jump_max: guard blocks it
+assert not core.guess_used_vins
+R, p = fb.guess(core, pred, (np.eye(3), np.array([0.6, 0, 0])))
+assert fb.kind == "ODOM" and abs(p[0] - 0.2) < 1e-9
+R, p = fb.guess(core, core.predict(None), (np.eye(3), np.array([10.0, 0, 0])))
+assert fb.kind == "HOLD" and np.allclose(p, core.pf), "odometry blow-up: no motion"
 print("ALL GUESS_STATUS TESTS PASSED")

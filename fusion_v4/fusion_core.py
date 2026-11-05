@@ -654,6 +654,7 @@ class FusionCore:
         # discarded).  False = F24 exactly.
         self.zupt, self.zupt_T, self.zupt_ratio = bool(zupt), float(zupt_T), float(zupt_ratio)
         self.zbuf, self.zupt_now = [], False
+        self.guess_used_vins = False            # set by predict(): True when the VINS motion made the guess (F27 falls back to A-LOAM's increment otherwise)
         # handover: what happens to the fused rotation when FUSED starts (after the warm-up, or after a VINS loss and its
         # re-warm-up).  'none' (default, F0-F21 bit for bit): the fused rotation keeps the LiDAR rotation integrated during the
         # warm-up and continues with VINS increments; a transient VINS rotation error at that instant (VINS lags ~5 deg in a fast
@@ -744,6 +745,7 @@ class FusionCore:
         """initial guess for the next scan: last fused pose moved by the VINS motion since then"""
         if self.Rf is None:
             return None
+        self.guess_used_vins = False
         if self.zupt_now:
             return self.Rf, self.pf               # standstill hold: the guess is where the robot is held
         if vins_now is None or self.prev_v is None:
@@ -755,6 +757,7 @@ class FusionCore:
         if self.predict_guard and (self.prev_mode == "VO_FAIL" or np.linalg.norm(dt) > self.jump_max
                                    or np.linalg.norm(so3_log(dR)) > self.rot_jump_max):
             return self.Rf, self.pf
+        self.guess_used_vins = True
         return compose(self.Rf, self.pf, dR, dt)
 
     def _tortuous(self, t, pa):
