@@ -36,3 +36,8 @@ Request: bring F24 (A-LOAM + VINS-Mono) close to 1 to 2 m on Cave02 (7.55 / 12.6
 - **The 60 deg jump was not the cause of the spread.** F24 run 2 has no handover above 12.5 deg and is the worse run.
 - **Fused = A-LOAM on this bag.** In every run the fused RMSE is within 0.1 m of the A-LOAM path logged in the same run (the fused path is the A-LOAM guess seen through pose feedback, so this is not an independent A-LOAM-alone run). The run-to-run spread (6 to 9 m) is A-LOAM's own, on a degenerate staircase, and the VINS-Mono segments differ from run to run (2, 3, 1 and 0 handovers; FUSED rows 707, 668, 1373, 375).
 - **Verdict.** F25A is not adopted and not claimed. The `HANDOVER_TRUST` code stays (default off, tests pass) as a documented negative result. GEODE with A-LOAM + VINS-Mono is 6 to 9 m with an uncontrolled spread of about 3 m; a single number from this stack on GEODE should be reported with that spread, not alone. Not 1 to 2 m by any change tried.
+
+## 6. GEODE F24 at 0.25x (no scan loss), one run (5 Nov 2026, laptop)
+Rows 3456 of 3456 (the 0.5x runs lost 3 to 7 % of the scans). F24 **9.09 / 19.42**; A-LOAM path in the same run 9.00 / 17.59; modes VO_FAIL 1191, WARMUP 1160, FUSED 1104; handovers 3.9, 14.6, 3.7 and 52.0 deg.
+- Scan loss is not the cause of the 6 to 9 m spread: with every scan processed the error is 9.09, equal to F24 run 2 at 0.5x (9.15) and above run 1 (6.15).
+- GEODE stairs alpha with A-LOAM + VINS-Mono over five F24/F25A runs: 6.15, 9.15, 9.09 (F24) and 6.58, 8.80 (F25A). Nothing tried (handover trust, replay rate) separates the configurations from this spread. Reported as 6 to 9 m.
