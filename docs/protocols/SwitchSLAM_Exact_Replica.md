@@ -157,3 +157,13 @@ Valid run: `/mapping_hessian` present in 100 % of 2776 rows. ATE RMSE / max **13
 The hypothesis of section 14 (the paper's scan-to-map Hessian would flag the corridor) is **not supported**: the scan-to-map Hessian looks less degenerate to the rule, not more. Median sorted eigenvalues (rad, m units) 181 / 257 / 319 / 1047 / 45080 / 62813; median normalised smallest three 0.39 / 0.56 / 0.73, against thresholds 0.12 / 0.27 / 0.48. The rule fires on 1.4 % of scans, fewer than with the scan-to-scan Hessian (4.5 %). All four variants give 12.6 to 13.8 m, so on this sequence neither the Hessian choice, nor the gyro prior, nor the switching itself changes the result in this stack; with single runs the spread between them (1.2 m) cannot be separated from run-to-run noise.
 
 Statement for the report: our implementations of Switch-SLAM (SW, SWI, SWM) do not reproduce the published Long Corridor result; on Multi Floor one run of SWI (1.51 / 4.35) was close to the published 1.61 / 3.63, on a sequence on which SWI was designed. The remaining differences to the paper (no LiDAR-IMU system, A-LOAM + VINS-Mono in place of the authors' components, unreleased code and unpublished parameters) are listed in sections 3 and 4; which of them causes the Long Corridor gap was not isolated.
+
+## 17. Second run of the three far-off results (5 Nov 2026, laptop, 0.5x, same settings, commit f1247e5)
+| Sequence | Variant | Run 1 | Run 2 | Published (RMSE / max) |
+|---|---|---|---|---|
+| Multi Floor | SW | 5.03 / 10.22 | 5.44 / 10.94 | 1.61 / 3.63 |
+| Long Corridor | SW | 12.58 / 23.53 | 13.12 / 23.46 | 2.42 / 5.09 |
+| Long Corridor | SWI | 13.81 / 24.78 | 13.24 / 24.39 | 2.42 / 5.09 |
+- The misses repeat: the two runs of each differ by 0.5 m or less, against gaps to the published value of 3.4 m (Multi Floor SW) and 10.7 to 11.4 m (Long Corridor). They were not bad luck.
+- Verdict by the reproduction rule (within 50 % of the published value): **not reproduced** for SW on Multi Floor and for SW and SWI on Long Corridor, two runs each. SWI on Multi Floor (1.51 / 4.35) is close in one run only and is not repeated, so it is not a reproduction claim.
+- The cause of the gap to the paper is still not isolated (stack differences D1 to D5 and unspecified parameters A1 to A8 in sections 2 to 3; Hessian choice and gyro prior did not close it on Long Corridor, sections 13 to 16).
