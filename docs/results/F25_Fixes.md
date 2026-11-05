@@ -23,3 +23,16 @@ Request: bring F24 (A-LOAM + VINS-Mono) close to 1 to 2 m on Cave02 (7.55 / 12.6
 - `python3 test_f25.py` (handover with a distrusted and a trusted VINS, hold on wander, no hold for a constant-speed run, no hold when the IMU is not quiet, detector); `test_fusion_core.py`, `test_handover.py`, `test_predict_guard.py`, `test_gyro_prior.py`, `test_t_cap.py` still pass.
 - Live check of the fix (about 6 min at 0.5x), same environment as the F24 GEODE run: `RECORD_KF=1 SEQ_ENV=<GEODE seq.env> bash fusion_v4/run_fusion_study.sh F25A` (config `F25A` in `run_fusion_study.sh`). Expect the second handover row to show `handover_skipped = 1`; expected result about 5.5 m, not 1 to 2 m.
 - Regression before F25A replaces F24 anywhere: it must equal F24 on the frozen sequences. The flag acts only when a checked VINS is distrusted at the handover, so Multi Floor, Long Corridor, Farm and Corridor02 should be identical rows unless such a handover occurs; check `handover_skipped` there.
+
+## 5. Live test of F25A on GEODE stairs alpha (5 Nov 2026, laptop, 0.5x, two runs each, same session)
+| Run | Full-span ATE RMSE / max (m) | A-LOAM path inside the same run (RMSE / max) | Handovers (row: deg) | F25A skipped |
+|---|---|---|---|---|
+| F24 run 1 | 6.15 / 14.00 | 6.07 / 13.31 | 460: 0.9, 2905: **60.2** | - |
+| F24 run 2 | 9.15 / 25.44 | 9.11 / 24.41 | 339: 5.6, 1107: 12.5, 1962: 8.4 | - |
+| F25A run 1 | 6.58 / 15.80 | 5.70 / 15.19 | 339: 3.0 | 4 handovers |
+| F25A run 2 | 8.80 / 19.67 | 8.73 / 20.63 | none | 2 handovers |
+
+- **The fix fires but does not help.** F24 mean 7.65, F25A mean 7.69. The replay prediction (6.07 to 5.48) is not confirmed; two runs each cannot separate a 0.6 m effect from a spread of about 3 m between runs of the same configuration (F24: 6.15 and 9.15).
+- **The 60 deg jump was not the cause of the spread.** F24 run 2 has no handover above 12.5 deg and is the worse run.
+- **Fused = A-LOAM on this bag.** In every run the fused RMSE is within 0.1 m of the A-LOAM path logged in the same run (the fused path is the A-LOAM guess seen through pose feedback, so this is not an independent A-LOAM-alone run). The run-to-run spread (6 to 9 m) is A-LOAM's own, on a degenerate staircase, and the VINS-Mono segments differ from run to run (2, 3, 1 and 0 handovers; FUSED rows 707, 668, 1373, 375).
+- **Verdict.** F25A is not adopted and not claimed. The `HANDOVER_TRUST` code stays (default off, tests pass) as a documented negative result. GEODE with A-LOAM + VINS-Mono is 6 to 9 m with an uncontrolled spread of about 3 m; a single number from this stack on GEODE should be reported with that spread, not alone. Not 1 to 2 m by any change tried.
