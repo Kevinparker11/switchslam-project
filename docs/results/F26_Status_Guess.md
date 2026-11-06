@@ -44,3 +44,6 @@ ATE RMSE / max in m, Umeyama SE(3), no scale, full span, no loop closure.
 - **Not claimed:** no tuned result, no reduction to 1 to 2 m. Cave02 and GEODE remain development data.
 
 **Next (not run):** F16 and F23 on Cave02 with today's code (about 72 min) to see whether F24 regressed or the draw differs from 19 Oct; a second F26 Cave02 run to see if 6.2 repeats.
+
+## Corridor02, F26, one run (planned 6 Nov 2026, written before the run)
+`ONLY=C02 CFGS=F26 REPEAT=1` at the replay rate of the F24 run on this bag (0.33x, about 45 min); the rate is not raised, because scan loss would make it not comparable with the F24 reference. Reference: F24 1.47 / 2.51 (n=1), F16 1.71 +- 0.07, F20 live 1.75. Corridor02 is development data. Reading rule fixed now: F26 above 1.75 (the highest value seen on this bag) = worse than the earlier versions; 1.2 to 1.75 = no visible difference at n = 1; below 1.2 = a hint of a gain, not a result. Guess-kind share (LiDAR / interpolated / VINS) is reported from the log, as for the other bags.
