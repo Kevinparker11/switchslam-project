@@ -164,7 +164,7 @@ Switch-SLAM is the fair main target: a LiDAR–camera system without loop closur
 | D²-LIO paper: FAST-LIO2 / D²-LIO | — | 1.08 / 1.65 | No | Reference only | Earlier notes |
 | LIO-SAM + LP-ICP (arXiv 2501.02580) | — | 11.92 | Yes | Reference only | Read from the paper |
 | SuperLoc (arXiv 2412.02901, Table III) | 0.315 (Floor01) | 0.817 (Corridor01) | No (odometry) | Closest published match on both sequences; its ATE is not defined in the paper | **Verified**: Table III, its caption and the text read twice on 19 Oct |
-| Corridor02 | — | — | — | No published SLAM result found; SuperLoc's "Corridor02" is a different sequence | — |
+| Corridor02 | — | — | — | Corrected 6 Nov: SuperLoc's "Corridor02" (RC1, 893 s, 690 m) IS this sequence; GenZ-LIO Table 4 reports it (best 0.69, iG-LIO 1.48, DLIO 1.39); see Published_Comparison_All_Datasets.md, Update 6 Nov | — |
 
 FAST-LIO2 and LIO-SAM are reported to fail on Multi Floor (NV-LIO, qualitative). The GenZ-LIO (T-FR 2026) table covers both sequences but could not be read.
 
