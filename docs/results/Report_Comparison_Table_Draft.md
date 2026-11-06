@@ -8,7 +8,7 @@ Source data for the report's comparison tables (Tables 5.2 and 5.7 in the number
 | Long Corridor | 2.42 / 5.09 | 12.58 / 23.53, 13.12 / 23.46 (n=2) | 13.81 / 24.78, 13.24 / 24.39 (n=2) | 2.12 / 5.31, 2.15 / 5.57, 1.75 / 3.53 (n=3, mean 2.01) | same, s.14, 17 |
 | Farm (Gazebo L route) | 0.38 / 1.10 | 81.16 (n=1, cause not found) | **[PENDING]** | 0.657 / 0.897 (n=1) | Farm docs; F24_Predict_Guard s.5 |
 | Corridor02 | no published value | **[PENDING]** | **[PENDING]** | 1.47 / 2.51 (n=1, development data) | F24_Live_Corridor02_Cave02_GEODE |
-| Cave02 | no published value | **[PENDING]** | **[PENDING]** | 7.55 / 12.63 (n=1, flagged: earlier F8/F16 4.4) | same |
+| Cave02 | no published value | **[PENDING]** | **[PENDING]** | 7.55 / 12.63 (n=1, flagged: earlier F8/F16 4.4); F26 6.23 / 10.56, F27 6.62 / 11.21 (n=1 each, development variants) | same |
 | GEODE stairs alpha | no published value | **[PENDING]** | **[PENDING]** | 6.15 / 14.00, 9.15 / 25.44 (0.5x), 9.09 / 19.42 (0.25x) (n=3) | same; F25_Fixes s.5, 6 |
 
 ## Reading (what can be said)
