@@ -38,6 +38,8 @@ last_linear = [0.0]
 last_pos = [None]
 obstacle_ahead = [False]
 turn_direction = [1.0]
+blocked_since = [None]
+current_wp = [0]          # index of the waypoint being driven to (used to pick the avoidance turn direction)
 
 
 def model_callback(msg):
@@ -67,8 +69,22 @@ def lidar_callback(msg):
     was_blocked = obstacle_ahead[0]
     obstacle_ahead[0] = min_forward_dist < OBSTACLE_DISTANCE
     if obstacle_ahead[0] and not was_blocked:
-        turn_direction[0] = 1.0 if np.random.rand() > 0.5 else -1.0
-        print("Obstacle at %.2fm, turning to avoid." % min_forward_dist)
+        # 7 Nov 2026 fix (first Plane attempt stuck at the fence after waypoint 3): turn TOWARD the current waypoint, not at random
+        # (random left/right at a fence with the target on the right made it turn away from the target, then back into the fence).
+        # Random only when the target is straight ahead (|heading error| < 0.1 rad).
+        direction = "random"
+        if current_pos["x"] is not None and current_wp[0] < len(WAYPOINTS):
+            tx, ty = WAYPOINTS[current_wp[0]]
+            e = np.arctan2(ty - current_pos["y"], tx - current_pos["x"]) - current_pos["yaw"]
+            e = np.arctan2(np.sin(e), np.cos(e))
+            if abs(e) >= 0.1:
+                turn_direction[0] = 1.0 if e > 0 else -1.0
+                direction = "left" if e > 0 else "right"
+            else:
+                turn_direction[0] = 1.0 if np.random.rand() > 0.5 else -1.0
+        else:
+            turn_direction[0] = 1.0 if np.random.rand() > 0.5 else -1.0
+        print("Obstacle at %.2fm, turning %s to avoid." % (min_forward_dist, direction))
 
 
 def spin_once(pub, rate):
@@ -105,12 +121,28 @@ def main():
     wp_idx = 0
     while not rospy.is_shutdown() and wp_idx < len(WAYPOINTS):
         cmd = Twist()
+        current_wp[0] = wp_idx
         if obstacle_ahead[0]:
+            if blocked_since[0] is None:
+                blocked_since[0] = rospy.get_time()
+            if rospy.get_time() - blocked_since[0] > 12.0:
+                # still blocked after 12 s of turning: back off 3 s straight behind, then carry on (added 7 Nov 2026)
+                print("Blocked for 12 s, backing off.")
+                t0 = rospy.get_time()
+                while not rospy.is_shutdown() and rospy.get_time() - t0 < 3.0:
+                    b = Twist(); b.linear.x = -0.2
+                    pub.publish(b)
+                    rate.sleep()
+                pub.publish(Twist())
+                last_linear[0] = 0.0
+                blocked_since[0] = None
+                continue
             cmd.angular.z = turn_direction[0] * TURN_SPEED
             cmd.linear.x = 0.0
             pub.publish(cmd)
             rate.sleep()
             continue
+        blocked_since[0] = None
         tx, ty = WAYPOINTS[wp_idx]
         dx, dy = tx - current_pos["x"], ty - current_pos["y"]
         if np.hypot(dx, dy) < GOAL_TOLERANCE:
