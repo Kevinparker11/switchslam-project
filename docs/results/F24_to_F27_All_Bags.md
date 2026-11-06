@@ -18,6 +18,7 @@ Separate line, not F-series: SW / SWI / SWM = our replica of Switch-SLAM (Switch
 | Multi Floor | 0.45 / 0.92 (n=1) | not run | 0.54 / 1.01 (n=1) | not run |
 | Long Corridor | 2.12 / 5.31, 2.15 / 5.57, 1.75 / 3.53 (n=3, mean 2.01) | not run | 2.10 / 3.73 (n=1) | not run |
 | Farm L route, sideways RGB 60 Hz camera (3 Nov) | 0.657 / 0.897 (n=1) | not run | not run | not run |
+| Farm L route, forward RGB 60 Hz camera (paper sensors, 7 Nov) | 0.472 / 1.068 (n=1; VINS alone 14.47) | not run | not run | not run |
 | Farm L route, forward grey 20 Hz camera (not the paper's sensors) | 0.255 / 0.568 (n=1) | not run | not run | not run |
 | Corridor02 | 1.47 / 2.51 (n=1) | not run | not run | not run |
 | Cave02 | 7.55 / 12.63 (n=1) | not run | 6.23 / 10.56 (n=1) | 6.62 / 11.21 (n=1) |
