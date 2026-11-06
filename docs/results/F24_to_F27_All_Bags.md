@@ -20,7 +20,7 @@ Separate line, not F-series: SW / SWI / SWM = our replica of Switch-SLAM (Switch
 | Farm L route, sideways RGB 60 Hz camera (3 Nov) | 0.657 / 0.897 (n=1) | not run | not run | not run |
 | Farm L route, forward RGB 60 Hz camera (paper sensors, 7 Nov) | 0.472 / 1.068 (n=1; VINS alone 14.47) | not run | 0.290 / 0.562 (n=1; VINS alone 4.31, no VO_FAIL) | not run |
 | Farm L route, forward grey 20 Hz camera (not the paper's sensors) | 0.255 / 0.568 (n=1) | not run | not run | not run |
-| Corridor02 | 1.47 / 2.51 (n=1) | not run | not run | not run |
+| Corridor02 | 1.47 / 2.51 (n=1) | not run | 1.93 / 3.46 (n=1; worse than F24, F16, F20; guess LiDAR 98 %) | not run |
 | Cave02 | 7.55 / 12.63 (n=1) | not run | 6.23 / 10.56 (n=1) | 6.62 / 11.21 (n=1) |
 | GEODE stairs alpha | 6.15 / 14.00, 9.15 / 25.44 (0.5x), 9.09 / 19.42 (0.25x) (n=3) | 6.58 / 15.80, 8.80 / 19.67 (n=2) | 6.36 / 14.07 (n=1) | 6.97 / 16.40 (n=1) |
 
@@ -30,4 +30,4 @@ Offline, not a version: F24 + loop-closure back end on the saved keyframes: Cave
 - F25A, F26 and F27 do not beat F24 beyond its run-to-run spread on any bag where they were run (GEODE spread 6.15 to 9.15).
 - Cave02: F26 and F27 are 0.9 to 1.3 m below the single F24 run, every 120 s block lower; one run each, a hint only. All are above the old F8 / F16 runs (4.0 to 5.1).
 - Multi Floor 0.54 against 0.45 (slightly worse, n=1). Long Corridor 2.10 is inside the F24 spread.
-- Never run: F25A on anything but GEODE; F27 on Farm, Corridor02, Multi Floor and Long Corridor; F26 on Corridor02 (planned, not reported yet). F26 on Farm: one live run only, inside F24's own spread on the forward rigs (0.255 to 0.472), not a result. Cave02 and GEODE are development data for F25 to F27.
+- Never run: F25A on anything but GEODE; F27 on Farm, Corridor02, Multi Floor and Long Corridor. F26 on Farm: one live run only, inside F24's own spread on the forward rigs (0.255 to 0.472), not a result. Cave02 and GEODE are development data for F25 to F27.
