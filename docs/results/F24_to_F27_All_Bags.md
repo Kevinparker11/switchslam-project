@@ -24,7 +24,7 @@ Separate line, not F-series: SW / SWI / SWM = our replica of Switch-SLAM (Switch
 | Cave02 | 7.55 / 12.63 (n=1) | not run | 6.23 / 10.56 (n=1) | 6.62 / 11.21 (n=1) |
 | GEODE stairs alpha | 6.15 / 14.00, 9.15 / 25.44 (0.5x), 9.09 / 19.42 (0.25x) (n=3) | 6.58 / 15.80, 8.80 / 19.67 (n=2) | 6.36 / 14.07 (n=1) | 6.97 / 16.40 (n=1) |
 
-Offline, not a version: F24 + loop-closure back end on the saved keyframes: Cave02 7.352 / 12.33 (96 loops, all in the first 100 s), GEODE 6.152 / 14.00 (0 loops).
+Offline, not a version: loop-closure back end on the saved keyframes: Corridor02 F24 1.471 -> **1.110 / 2.15** (22 loops), F26 1.931 -> 2.006 / 3.53 (13 loops); Cave02 F24 7.352 / 12.33 (96 loops, all in the first 100 s); GEODE F24 6.152 / 14.00 (0 loops). One recording each.
 
 ## Reading
 - F25A, F26 and F27 do not beat F24 beyond its run-to-run spread on any bag where they were run (GEODE spread 6.15 to 9.15).
