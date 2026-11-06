@@ -9,3 +9,13 @@
 **Precondition (FC-P0, else void, not adjusted):** `rostopic hz` shows /imu/data about 200 Hz, /camera/image_raw about 20 Hz, /velodyne_points about 10 Hz, and VINS-Mono initialises in the wiggle (new rows in vins_result_no_loop.csv).
 
 **Reading rules (fixed now).** Reference = the 3 Nov F24 run on the sideways rig (fused 0.657 / 0.897, A-LOAM output 0.509 / 0.967, VINS-Mono alone 2.067 / 3.306, VINS path 9.1 % short). Reported: the same three rows for the new run. One run supports no claim: a difference is called a hint only if VINS-alone differs by more than 50 % from 2.067 or fused by more than 0.2 m from 0.657; otherwise "no visible difference at n = 1". The Farm rule (0.38 / 1.10) is reported but this run is not a re-test of it. Nothing is changed after the number; if VINS fails to initialise or the driver sticks, the run is reported as such and a re-run is announced.
+
+## Live result (7 Nov 2026; one run, F24, forward-camera rig; owner's `score_fused.py` printout, logs in ~/farm_fwd)
+GT path after the reset 78.8 m (6330 GT samples; the reset jump in the file is 0.02 m, i.e. the teleport was before the logger window); 3206 log rows after the reset, modes FUSED 3200 / WARMUP 6; rotation-check closed on 0 of 3200 FUSED rows.
+| Output | forward-camera rig (this run) ATE / max / end-point (m) | sideways rig, 3 Nov F24 (reference) |
+|---|---|---|
+| **F24 fused** | **0.255 / 0.568 / 0.201** | 0.657 / 0.897 / 0.673 |
+| A-LOAM output (fed by the fused pose) | 0.371 / 0.749 / 0.536 | 0.509 / 0.967 / 0.426 |
+| VINS-Mono alone | 1.200 / 2.427 / 1.201 | 2.067 / 3.306 / 2.445 |
+**Reading by the rules fixed above.** Fused differs from 0.657 by 0.40 m (more than 0.2 m): a hint, at n = 1. VINS-Mono alone is 42 % lower than 2.067 (the rule needed more than 50 %): no hint from that row. Against the Farm rule (0.38 / 1.10): 0.255 and 0.568 are inside both numbers, reported only (this run is not a re-test of the rule, the rig differs). Not recorded: the FC-P0 sensor rates (step 1b printout not sent); VINS initialised and ran the whole route.
+**Not claimed.** That the forward camera is the cause: the new extras file also changes camera rate and image format, the A-LOAM output of the same run moved by 0.14 m (0.509 to 0.371), which is the size of the run-to-run spread of the old node's A-LOAM outputs (0.32 to 0.48), and no repeat exists on either rig. What is visible: in this run the fused output is better than the A-LOAM output it is built around (0.255 against 0.371), which was not the case on 3 Nov (0.657 against 0.509). Next (if wanted): two more forward-rig runs and one more sideways-rig F24 run for the spread, each from a full clean restart; the result lies within 50 % of the 0.38 line, so three runs are the rule.
