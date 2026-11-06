@@ -63,7 +63,7 @@ Reading: front end against front end, F16 (2.27 ± 0.45) ties Switch-SLAM (2.42)
 | F0 VINS-Mono | 4.03 ± 0.01 | no |
 | F5 A-LOAM only | 66 ± 24 | no |
 
-No published SLAM or odometry ATE was found for this sequence. Only an internal comparison is possible: F16 −58 % against VINS-Mono, −69 % with loops.
+When this section was written (21 Oct) no published ATE had been found for this sequence; GenZ-LIO Table 4 reports it (see Update 6 Nov at the end of this file: the SuperLoc release's Corridor02 is this sequence). Internal comparison: F16 −58 % against VINS-Mono, −69 % with loops.
 
 ## Cave02 (SubT-MRS Laurel Caverns, handheld)
 
@@ -103,7 +103,7 @@ GenZ-LIO Table 4: ATE RMSE (m), LiDAR-inertial odometry, no loop closure, × = d
 | Multi Floor (SubT-MRS) | × | 2.84 | 0.64 | 1.71 | 13.41 | 3.47 | 0.25 | × | 0.26 | 0.617 (F8) | 0.347 (F8) |
 | Long Corridor (SubT-MRS) | 1.77 | 9.76 | 1.74 | 29.10 | 26.52 | 2.29 | 1.55 | 2.01 | 1.90 | 2.27 (F16) | 1.538 (F16) |
 | Cave 02 (SuperLoc release) | 4.49 | 0.81 | 3.98 | 6.57 | × | 0.57 | 0.43 | 0.43 | 0.44 | 4.40 (F16) | – |
-| Corridor 02 (SuperLoc release; may not be our Corridor02, see earlier note) | 1.89 | 2.88 | 1.98 | 1.74 | 65.59 | 1.39 | 1.48 | 0.73 | 0.69 | 1.708 (F16) | 1.250 (F16) |
+| Corridor 02 (SuperLoc release; same sequence as ours, see Update 6 Nov) | 1.89 | 2.88 | 1.98 | 1.74 | 65.59 | 1.39 | 1.48 | 0.73 | 0.69 | 1.708 (F16) | 1.250 (F16) |
 
 Reading: current LiDAR-inertial odometries (iG-LIO, GenZ-LIO) beat all our results on Multi Floor, Long Corridor and Cave02 without loop closure. Our front end beats Switch-SLAM and the LVIO baselines, not the best LIO methods. Cave 02 is very likely our sequence (same name, VLP-16 handheld caves from the SuperLoc release); Corridor 02 identity is unconfirmed.
 
@@ -122,3 +122,15 @@ GEODE Table 6 (ATE, m), stairs, device α (Velodyne VLP-16, the bag we run): LIO
 | Long Corridor | 0.817 SuperLoc, 1.55 iG-LIO | not run | not run | not run |
 
 Replays of recorded runs (4 recordings on Multi Floor and GEODE, 1 on Corridor02 and Cave02). G19 was designed after the Cave02/GEODE failures were seen, so these two are development results; Long Corridor is the clean test. Details: `GenZ_fusion_v4_VIO_Consistency_Results.md`.
+
+
+## Update 6 Nov 2026: which papers use Corridor02, and what they report
+**Identity (corrects the earlier "unconfirmed" and "a different sequence" notes).** The SuperLoc dataset page (superodometry.com/superloc) lists Corridor02: source SuperLoc, Hawkins, platform RC1, RGB + LiDAR + IMU, length 690 m, duration 893 s. Our bag: RC1, 893 s, GT path 695.2 m (the 5 m difference is a different path measure of the same kind of trajectory; platform, place and duration match exactly). So the SuperLoc-release Corridor02 is our sequence. It is not SubT-MRS "Long Corridor" (that is Corridor01: RC2, 617 m, 279 s). Not to be confused with M3DGR "corridor02" (a different dataset, below).
+**Papers with results on this Corridor02 (searched 6 Nov 2026; two found):**
+| Paper | What it reports for Corridor02 | Values |
+|---|---|---|
+| GenZ-LIO (Lee et al., arXiv 2603.16273; "Corridor 02 (from corridor to open space)", VLP-16) | translational ATE (m), no loop closure, benchmark table of 9 methods; metric called "average absolute translational error" in the v1 text, "RMSE" in our earlier reading of the uploaded v3 (not settled) | FAST-LIO2 1.89, Faster-LIO 2.88, AdaLIO 1.98, Point-LIO 1.74, LIO-EKF 65.59, DLIO 1.39, iG-LIO 1.48, PV-LIO 0.73, **GenZ-LIO 0.69** (values from our 21 Oct reading of the v3 PDF; the web fetch of 6 Nov did not show the table cells, so they were not re-checked) |
+| SuperLoc (Zhao et al., arXiv 2412.02901) | Table II, **outlier percentage** (not ATE) on Corridor02 (690 m): HDL_LOC 42.45 %, FAST_LIO_LOC 73.99 %, SuperLoc 23.99 %. Table III (ATE) has no Corridor02 column (it has Corridor01 = Long Corridor: SuperLoc 0.817). The paper's Fig. 6 caption attributes 3.55 % to "690 meters of travel", which conflicts with Table II (3.55 % is under Corridor01, 617 m). | outlier %, as listed |
+**Our Corridor02 against those (front end only, no loops):** F24 1.47 (n=1), F16 1.64 to 1.84 (n=6), F20 1.73 to 1.79 (n=3), F26 1.93 (n=1), F8 2.07 to 2.19 (n=4), VINS-Mono alone 4.03, unfed A-LOAM 46 to 93. Ranked among the published ATEs: F24 1.47 is level with iG-LIO 1.48 and below FAST-LIO2 1.89, AdaLIO 1.98, Faster-LIO 2.88, LIO-EKF 65.59; above DLIO 1.39, PV-LIO 0.73 and GenZ-LIO 0.69. Caveats: those methods are tuned per sequence and may use other alignment and span than our Umeyama over the full span; differences under about 0.1 m are ties.
+**Papers that name a corridor but do not use this Corridor02 (checked):** Ground-Fusion++ (arXiv 2507.08364) uses M3DGR "Corridor01/02" (Avia LiDAR, ground robot, a different dataset): Table VIII localisation accuracy corridor01 / corridor02: LIO subsystem 6.14 / 26.66, Ground-Fusion++ with [63] 4.72 / 2.12, Ground-Fusion++ 1.67 / 1.73; GenZ-LIO also runs M3DGR corridor_01/02 (`avia_corridor_*.yaml`, its repo). Super Odometry 2.0 (arXiv 2608.25427) uses Corridor01 only (SuperLoc 0.817; same table as SuperLoc). Safety-critical LIO with a deterministic protection level (arXiv 2605.09383) uses SubT-MRS Long_Corridor with a coverage-ratio metric, not ATE. CURL-SLAM (2506.21077) and Odyssey (2512.14428) do not use it. Switch-SLAM runs Long Corridor and Multi Floor only.
+**Limits of this search:** web search and fetch; papers not indexed or not readable (GenZ-LIO's table cells, SuperLoc v2 table captions) may contain more; the SuperLoc project page has comparison videos only for Cave, Multi-Floor and Long Corridor.
