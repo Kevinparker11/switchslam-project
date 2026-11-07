@@ -15,7 +15,7 @@ Separate line, not F-series: SW / SWI / SWM = our replica of Switch-SLAM (Switch
 ## Values on every bag
 | Bag | F24 | F25A | F26 | F27 |
 |---|---|---|---|---|
-| Multi Floor | 0.45 / 0.92 (n=1) | not run | 0.54 / 1.01 (n=1) | not run |
+| Multi Floor | 0.45 / 0.92, 1.01 / 1.73, 0.69 / 1.24 (n=3, mean 0.72 / 1.30) | not run | 0.54 / 1.01 (n=1) | not run |
 | Long Corridor | 2.12 / 5.31, 2.15 / 5.57, 1.75 / 3.53 (n=3, mean 2.01) | not run | 2.10 / 3.73 (n=1) | not run |
 | Farm L route, sideways RGB 60 Hz camera (3 Nov) | 0.657 / 0.897 (n=1) | not run | not run | not run |
 | Farm L route, forward RGB 60 Hz camera (paper sensors, 7 Nov) | 0.472 / 1.068 (n=1; VINS alone 14.47) | not run | 0.290 / 0.562 (n=1; VINS alone 4.31, no VO_FAIL) | not run |
@@ -29,5 +29,5 @@ Offline, not a version: loop-closure back end on the saved keyframes: Corridor02
 ## Reading
 - F25A, F26 and F27 do not beat F24 beyond its run-to-run spread on any bag where they were run (GEODE spread 6.15 to 9.15).
 - Cave02: F26 and F27 are 0.9 to 1.3 m below the single F24 run, every 120 s block lower; one run each, a hint only. All are above the old F8 / F16 runs (4.0 to 5.1).
-- Multi Floor 0.54 against 0.45 (slightly worse, n=1). Long Corridor 2.10 is inside the F24 spread.
+- Multi Floor F26 0.54 (n=1) is inside the F24 spread of 0.45 to 1.01; no difference shown. Long Corridor 2.10 is inside the F24 spread.
 - Never run: F25A on anything but GEODE; F27 on Farm, Corridor02, Multi Floor and Long Corridor. F26 on Farm: one live run only, inside F24's own spread on the forward rigs (0.255 to 0.472), not a result. Cave02 and GEODE are development data for F25 to F27.
