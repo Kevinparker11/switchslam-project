@@ -13,6 +13,22 @@ Write a **comprehensive, purely theoretical review paper** on **LiDAR degeneracy
 - Everything in it comes from the published literature. It explains and organises that literature, compares it and critically analyses it.
 - Its value is synthesis: a clear explanation of what LiDAR degeneracy is, how the field understood it over time, what has been identified and used, where the gaps are, which solutions are possible, and where future work should go.
 
+**The goal: one paper that tells the whole story.** A reader who reads only this paper should come away knowing the **past, present and future** of LiDAR degeneracy:
+- **Past:** where the problem came from and how it was first understood.
+- **Present:** every approach in use today, how they relate, and what each can and cannot do.
+- **Future:** what is still open and where the field should go.
+
+That makes **coverage the main requirement**. Source **all available papers** on LiDAR degeneracy, from every database, publisher and preprint server you can reach, plus the related papers needed to understand it. There is **no upper limit** on references: a review of this scope will likely need 150 to 250 or more. The only limits are relevance and verification, so every reference must exist, be checked, and earn its place. Do not pad, and do not leave out a relevant paper to keep the list short.
+
+**"Related papers"** means the work needed to understand the topic fully:
+- the origins of scan registration and ICP;
+- LiDAR odometry and SLAM system families;
+- observability, information and conditioning theory in state estimation;
+- degeneracy in other sensors where it affects LiDAR fusion (visual, thermal, radar);
+- multi-sensor fusion architectures;
+- datasets and benchmarks for degraded environments;
+- the earlier SLAM and LiDAR surveys this review builds on.
+
 The paper should take the reader through these questions in order:
 1. **What it is:** the fundamentals of LiDAR-based localisation and the theory of degeneracy (observability, information, conditioning).
 2. **From the beginning:** how the problem was first recognised (ICP stability and stable sampling, 2001 to 2003) and how it evolved through LOAM-era odometry, solver-level degeneracy analysis, localizability-aware registration, multi-sensor fusion and recent statistical and learning approaches, up to 2026.
@@ -22,10 +38,10 @@ The paper should take the reader through these questions in order:
 6. **Possible solutions:** directions that are grounded in theory and in the existing literature for each gap. Present them as proposals and discussion, not as tested results.
 7. **Future work:** a research roadmap.
 
-**Sample format.** I uploaded a sample review only to show what a review paper looks like: Yarovoi and Cho, "Review of simultaneous localization and mapping (SLAM) for construction robotics applications," *Automation in Construction*, vol. 162, 105344, 2024, doi: 10.1016/j.autcon.2024.105344. It has background, limitations, algorithm families, conceptual figures and a narrative style. **Do not copy its structure exactly. Do not include anything like its "Experiments and results" section**, because my paper must be purely theoretical. My paper must also be deeper and more comprehensive, with about 100 to 130 references against its roughly 76.
+**Sample format.** I uploaded a sample review only to show what a review paper looks like: Yarovoi and Cho, "Review of simultaneous localization and mapping (SLAM) for construction robotics applications," *Automation in Construction*, vol. 162, 105344, 2024, doi: 10.1016/j.autcon.2024.105344. It has background, limitations, algorithm families, conceptual figures and a narrative style. **Do not copy its structure exactly. Do not include anything like its "Experiments and results" section**, because my paper must be purely theoretical. My paper must be far deeper and more comprehensive. It should be the complete reference work on this one topic, with all available papers rather than the sample's roughly 76.
 
 Working title (improve it if you can):
-**"LiDAR Degeneracy in Simultaneous Localization and Mapping: A Comprehensive Review of Theory, Detection, Mitigation, Multi-Sensor Fusion, Research Gaps and Future Directions"**
+**"LiDAR Degeneracy in Simultaneous Localization and Mapping: Past, Present and Future: A Comprehensive Review of Theory, Detection, Mitigation, Multi-Sensor Fusion, Research Gaps and Future Directions"**
 
 Target journals: check each one's current scope, Scopus indexing, acceptance of review articles, length limits and fees, then recommend one. The candidates are:
 - IEEE Access
@@ -66,7 +82,11 @@ A comprehensive review still needs a transparent selection method. Reviewers exp
   - ("LiDAR-visual-inertial" OR "LiDAR-inertial-visual") AND ("degenerate" OR "failure detection" OR "switching")
   - ("geometrically degenerate" OR "feature-poor" OR "self-similar") AND ("tunnel" OR "corridor" OR "cave" OR "mine" OR "open field")
   - ("degeneracy" OR "localizability") AND ("dataset" OR "benchmark")
-- **Time window:** 2001 to November 2026.
+- **Time window:** from the origins of scan registration (Besl and McKay 1992; Chen and Medioni 1991/1992) to November 2026. Do not apply a lower date cut-off to degeneracy-specific papers. Older range-sensor and sonar work on localizability also counts.
+- **Coverage completeness check:** coverage is the main requirement, so prove it before drafting.
+  1. Run "cited by" forward searches (Google Scholar or Semantic Scholar) on the core papers: Gelfand 2003, Zhang et al. 2016, Hinduja 2019, X-ICP, Tuna et al. 2025, Switch-SLAM, DCReg, GEODE and SubT-MRS. Screen every citing paper.
+  2. Compare the included set against the Awesome-Algorithms-Against-Degeneracy list and against the reference lists of the three most recent degeneracy papers you find. Report how many of their relevant entries you include, and why any are left out.
+  3. Repeat the searches until a new round adds almost no relevant papers. State in the paper that the search reached this saturation point, and give the date.
 - **Inclusion:** peer-reviewed papers, or arXiv preprints with clear technical content, that define, analyse, detect or mitigate degeneracy in LiDAR-based estimation; papers that fuse other sensors because of LiDAR degeneracy; datasets for degenerate scenes; and the foundational SLAM and LiDAR odometry papers needed for background.
 - **Exclusion:** papers not about LiDAR or range sensing (unless they are essential background), non-English papers, patents, and papers whose existence cannot be confirmed.
 - **For each included paper, record:** the problem addressed, the sensors, the core idea, the assumptions, the strengths, the limitations, the datasets used, and the year. Build the comparison tables from this record.
@@ -142,7 +162,7 @@ Use the IEEEtran journal template, in this order. The section names are a guide;
 - **XV. Conclusion.**
 - **Acknowledgment** (with the AI disclosure), **References**, and **author biographies** with photo placeholders if the journal asks for them.
 
-Length: about 12,000 to 15,000 words including tables. Check the chosen journal's limit.
+Length: whatever full coverage needs, probably 15,000 to 22,000 words including tables. Check the chosen journal's limit and tell me if it is too short. A long review may need a journal that allows long surveys, such as IEEE Access, or a split into two parts.
 
 ---
 
@@ -172,7 +192,7 @@ Length: about 12,000 to 15,000 words including tables. Check the chosen journal'
 
 ---
 
-## 6. Seed reference list (start here, then extend to about 100 to 130)
+## 6. Seed reference list (start here, then extend to all available papers)
 
 ### 6.1 Already verified (IEEE strings checked against Crossref or arXiv on 9 Oct 2026; re-check DOIs)
 
@@ -313,7 +333,7 @@ The seed list is thin in these areas. Search for them specifically:
 Work in phases and save each phase's output as a file, so nothing is lost if the chat runs long. After each phase, send me a two-line status. Stop and ask me only when a decision is mine.
 
 1. **Search and screening.** Run the queries and keep the log. Check that no existing survey already covers this exact scope. If one does, tell me at once and propose how to differentiate. Output: `search_log.csv` and `selection_counts.md`.
-2. **Reference database.** One row per included paper: IEEE string, DOI or arXiv ID, the source you opened to verify it, the category, and the fields listed in Section 3. Output: `references.xlsx` and `refs.bib`. Target 100 to 130 rows.
+2. **Reference database.** One row per included paper: IEEE string, DOI or arXiv ID, the source you opened to verify it, the category, and the fields listed in Section 3. Output: `references.xlsx` and `refs.bib`. Include every relevant paper the search finds, with no row target, and report the final count.
 3. **Outline.** The section and subsection plan, with the references assigned to each section. Show it to me before drafting.
 4. **Drafting.** Write section by section in LaTeX (IEEEtran journal). Every factual sentence about a paper carries its citation. Keep a consistent notation table.
 5. **Tables and figures.** Build the tables from the reference database. Draw the figures yourself.
