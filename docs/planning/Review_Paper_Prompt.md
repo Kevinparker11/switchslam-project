@@ -1,156 +1,172 @@
-# Prompt: systematic review paper on LiDAR degeneracy (paste everything below into a new chat)
+# Prompt: comprehensive theoretical review paper on LiDAR degeneracy (paste everything below into a new chat)
 
 ---
 
 ## 1. Who I am and what I want
 
-I am Kavinkumar S (CB.EN.P2MFA25004), M.Tech student in Manufacturing and Automation, Department of Mechanical Engineering, Amrita School of Engineering, Coimbatore, Amrita Vishwa Vidyapeetham, India. My advisor is Dr. G. Sivasankar, Department of Mechanical Engineering. My thesis is "Degeneracy Detection and Mitigation in LiDAR-Inertial-Visual SLAM" (November 2026).
+I am Kavinkumar S (CB.EN.P2MFA25004), M.Tech student in Manufacturing and Automation, Department of Mechanical Engineering, Amrita School of Engineering, Coimbatore, Amrita Vishwa Vidyapeetham, India. My advisor is Dr. G. Sivasankar, Department of Mechanical Engineering.
 
-Write a **journal review paper** that I can submit to a Scopus-indexed journal. The format is IEEE (IEEEtran, journal mode). The paper must be a real systematic review, publishable on its merits. It should contain about 100 to 130 references. Every reference must exist, be relevant, and be verified by you. Do not pad the list. If only 90 good papers exist, use 90 and tell me.
+Write a **comprehensive, purely theoretical review paper** on **LiDAR degeneracy in SLAM and LiDAR odometry**. I want to submit it to a Scopus-indexed journal, in IEEE format (IEEEtran, journal mode).
 
-Working title (you may improve it):
-**"LiDAR Degeneracy in SLAM: A Systematic Review of Detection, Mitigation, Multi-Sensor Fusion, and Evaluation Practice"**
+**This is a review paper, not a research paper.**
+- It has no experiments, no new results, no case study, no simulations, and no benchmark runs of its own.
+- Everything in it comes from the published literature. It explains and organises that literature, compares it and critically analyses it.
+- Its value is synthesis: a clear explanation of what LiDAR degeneracy is, how the field understood it over time, what has been identified and used, where the gaps are, which solutions are possible, and where future work should go.
 
-Target journals, in order. Check the current scope, Scopus indexing, article type, length limit and fees of each before choosing, and tell me what you found:
-1. IEEE Access (survey/review articles accepted; IEEE template).
-2. IEEE Sensors Journal (review articles).
-3. Robotics and Autonomous Systems (Elsevier) or Journal of Field Robotics (Wiley), if IEEE does not fit.
-4. Sensors or Remote Sensing (MDPI), as a fallback.
-Write the paper in the IEEE format first. Reformatting for another journal can happen later.
+The paper should take the reader through these questions in order:
+1. **What it is:** the fundamentals of LiDAR-based localisation and the theory of degeneracy (observability, information, conditioning).
+2. **From the beginning:** how the problem was first recognised (ICP stability and stable sampling, 2001 to 2003) and how it evolved through LOAM-era odometry, solver-level degeneracy analysis, localizability-aware registration, multi-sensor fusion and recent statistical and learning approaches, up to 2026.
+3. **What has been identified:** causes, types and environments of degeneracy, and how each manifests in the estimator.
+4. **What has been used:** detection methods, mitigation methods, fusion strategies, back-end treatments, datasets and evaluation practice.
+5. **Research gaps:** what is missing, inconsistent or unproven in the literature.
+6. **Possible solutions:** directions that are grounded in theory and in the existing literature for each gap. Present them as proposals and discussion, not as tested results.
+7. **Future work:** a research roadmap.
+
+**Sample format.** I uploaded a sample review only to show what a review paper looks like: Yarovoi and Cho, "Review of simultaneous localization and mapping (SLAM) for construction robotics applications," *Automation in Construction*, vol. 162, 105344, 2024, doi: 10.1016/j.autcon.2024.105344. It has background, limitations, algorithm families, conceptual figures and a narrative style. **Do not copy its structure exactly. Do not include anything like its "Experiments and results" section**, because my paper must be purely theoretical. My paper must also be deeper and more comprehensive, with about 100 to 130 references against its roughly 76.
+
+Working title (improve it if you can):
+**"LiDAR Degeneracy in Simultaneous Localization and Mapping: A Comprehensive Review of Theory, Detection, Mitigation, Multi-Sensor Fusion, Research Gaps and Future Directions"**
+
+Target journals: check each one's current scope, Scopus indexing, acceptance of review articles, length limits and fees, then recommend one. The candidates are:
+- IEEE Access
+- IEEE Sensors Journal
+- Sensors or Remote Sensing (MDPI)
+- Robotics and Autonomous Systems
+- Journal of Field Robotics
+- Automation in Construction, if an infrastructure, tunnel or construction angle fits
+
+Write in IEEE format first.
 
 ---
 
 ## 2. Rules you must follow (non-negotiable)
 
-1. **No invented references.** Before you cite a paper, open a source that confirms it exists: the DOI or Crossref record, the arXiv abstract page, the publisher page, CVF Open Access, RSS proceedings or IEEE Xplore. Record which one you opened.
-2. **No invented numbers.** Every number taken from a paper (RMSE, thresholds, dataset sizes) must come from text you actually read. If you only saw an abstract, cite only what the abstract says. Mark anything you could not check as "not verified" and leave it out of the manuscript.
-3. **Mark preprints.** arXiv-only papers are cited as "arXiv:xxxx.xxxxx" with the year. Look for a published version first, and cite that if it exists.
-4. **IEEE reference style.** Use more than six authors -> first author et al. Give the full venue, volume, issue, pages, month, year and DOI where they exist. Number the references in order of first citation.
-5. **Paraphrase, do not copy.** Target under 15% similarity. Do not copy figures from other papers. Redraw every diagram yourself as original vector art.
-6. **Be honest about the literature.** Say clearly where the evidence is weak. Examples: thresholds are tuned on the authors' own data; there are few detection labels; methods are run on different sequences; some results were never reproduced.
-7. **No em dashes** in the manuscript. Use plain, direct academic English.
-8. **AI disclosure.** IEEE requires disclosure of AI-generated text. Draft a short acknowledgment that states AI assistance was used for literature search, drafting and editing, and that the authors verified all content.
-9. **Keep a search log.** Record every database, query, date, hit count, and the number screened, excluded and included. The PRISMA diagram must use these real counts, not made-up ones.
+1. **No invented references.** Before you cite any paper, open a source that confirms it exists: the DOI or Crossref record, the arXiv abstract page, IEEE Xplore, the publisher page, CVF Open Access or the RSS proceedings. Record which source you opened.
+2. **No invented claims or numbers.** Every statement about a paper must come from text you actually read. If you saw only the abstract, say only what the abstract says. If you quote numbers from a paper (for example, reported thresholds or reported accuracy), give them exactly as written, with the citation, and keep them few. This is a theoretical review, not a results table.
+3. **No original experiments or unpublished results.** Do not include results from my thesis or from any unpublished work.
+4. **Mark preprints.** Cite arXiv-only papers as arXiv preprints with their ID. Look for a published version first.
+5. **IEEE reference style.** Use first author et al. when there are more than six authors. Give the full venue, volume, issue, pages, month, year and DOI where they exist. Number references in order of first citation.
+6. **Paraphrase, do not copy.** Aim for under 15% similarity. Do not reuse any figure from another paper. Draw every figure yourself as original, conceptual vector art.
+7. **Be balanced and critical.** For each family of methods, give its idea, its strengths, its limitations and its assumptions. Where the literature is weak (thresholds tuned on the authors' own data, few labelled benchmarks, methods tested on different sequences, results not reproduced), say so with citations.
+8. **Mark proposals as proposals.** The "possible solutions" must be reasoned from the literature and theory. Mark each one as a proposed direction, and never claim it has been shown to work.
+9. **Style.** No em dashes. Plain, precise academic English. Define every symbol and every acronym at first use.
+10. **AI disclosure.** IEEE requires disclosure of AI-generated content. Draft an acknowledgment stating that AI tools assisted with literature search, drafting and editing, and that the authors verified all content.
+11. **Keep a search log.** Record each database, query, date, hit count, and the number screened, excluded and included. Any PRISMA diagram must use these real counts.
 
 ---
 
-## 3. Review methodology (write it into the paper as Section II)
+## 3. Literature selection (a short method section in the paper)
 
-Follow **PRISMA 2020** for a systematic review, adapted to robotics.
+A comprehensive review still needs a transparent selection method. Reviewers expect one. Keep it to about one page, following PRISMA 2020 in a light form.
 
-- **Databases:** IEEE Xplore, Scopus, Web of Science (if reachable), Google Scholar, arXiv (cs.RO, cs.CV), ACM Digital Library, ScienceDirect, SpringerLink, Wiley, MDPI, plus RSS and CVF proceedings.
-- **Snowballing:** check backward and forward citations from the seed papers in Section 7. Also use the GitHub list "Awesome-Algorithms-Against-Degeneracy" (github.com/thisparticle/Awesome-Algorithms-Against-Degeneracy), maintained by the GEODE authors, as a seed source.
-- **Example search strings** (adapt them per database):
+- **Databases:** IEEE Xplore, Scopus, Web of Science (if reachable), Google Scholar, arXiv (cs.RO, cs.CV), ACM Digital Library, ScienceDirect, SpringerLink, Wiley, MDPI, and the RSS and CVF proceedings.
+- **Snowballing:** check backward and forward citations from the seed papers in Section 6. Also use the GitHub list "Awesome-Algorithms-Against-Degeneracy" (github.com/thisparticle/Awesome-Algorithms-Against-Degeneracy) as a seed source.
+- **Example queries** (adapt per database):
   - ("LiDAR" OR "laser scan") AND ("degeneracy" OR "degenerate" OR "localizability" OR "ill-conditioned" OR "observability") AND ("SLAM" OR "odometry" OR "registration" OR "ICP")
-  - ("LiDAR-visual-inertial" OR "LiDAR-inertial-visual" OR "LVI") AND ("degenerate" OR "failure detection" OR "switching")
-  - ("geometrically degenerate" OR "feature-poor" OR "self-similar") AND ("tunnel" OR "corridor" OR "cave" OR "open field")
+  - ("LiDAR-visual-inertial" OR "LiDAR-inertial-visual") AND ("degenerate" OR "failure detection" OR "switching")
+  - ("geometrically degenerate" OR "feature-poor" OR "self-similar") AND ("tunnel" OR "corridor" OR "cave" OR "mine" OR "open field")
   - ("degeneracy" OR "localizability") AND ("dataset" OR "benchmark")
-- **Time window:** 2001 (Rusinkiewicz and Levoy ICP variants) and 2003 (Gelfand stable sampling) to November 2026. Weight the review toward 2016 to 2026.
-- **Inclusion:** peer-reviewed journal and conference papers, or arXiv preprints with clear technical content, that (a) define, detect or mitigate degeneracy in LiDAR-based state estimation, or (b) fuse other sensors because of LiDAR degeneracy, or (c) provide datasets or benchmarks for degenerate scenes. Also include foundational SLAM and LiDAR odometry papers needed for context.
-- **Exclusion:** papers that are not about LiDAR or range sensing (unless they are directly needed, for example VINS-Mono as a fusion component), non-English papers, patents, and papers whose existence cannot be confirmed.
-- **Data extraction per paper:** the sensor setup; the degeneracy statistic; the threshold and how it was chosen; the mitigation; the fusion strategy; the datasets; the metrics; the main result; whether code is released; and whether detection was scored against labels.
-- **Quality appraisal:** a simple checklist per paper. Did it use a public dataset? Report repeated runs? Release code? Compare against prior degeneracy methods? Score detection against labels? Choose thresholds on separate data from evaluation?
+- **Time window:** 2001 to November 2026.
+- **Inclusion:** peer-reviewed papers, or arXiv preprints with clear technical content, that define, analyse, detect or mitigate degeneracy in LiDAR-based estimation; papers that fuse other sensors because of LiDAR degeneracy; datasets for degenerate scenes; and the foundational SLAM and LiDAR odometry papers needed for background.
+- **Exclusion:** papers not about LiDAR or range sensing (unless they are essential background), non-English papers, patents, and papers whose existence cannot be confirmed.
+- **For each included paper, record:** the problem addressed, the sensors, the core idea, the assumptions, the strengths, the limitations, the datasets used, and the year. Build the comparison tables from this record.
 
 ---
 
 ## 4. Required structure of the manuscript
 
-Use the IEEEtran journal template with this order:
+Use the IEEEtran journal template, in this order. The section names are a guide; improve them if you can.
 
-- **Title, authors, affiliations.** Authors: Kavinkumar S and Dr. G. Sivasankar (confirm the advisor's designation and both email addresses with me).
-- **Abstract** (200 to 250 words, one paragraph, no citations) and **Index Terms** (6 to 8).
-- **I. Introduction:** why degeneracy matters (tunnels, corridors, caves, mines, open fields, planetary analogues; DARPA SubT); the scope; how this review differs from existing surveys (find and compare all prior SLAM and LiDAR surveys, for example Cadena 2016 and Ebadi 2024, and any degeneracy-specific surveys you find); and a contributions list.
-- **II. Review Methodology:** PRISMA flow, databases, queries, criteria, and counts.
-- **III. Background and Definitions:** the registration problem; point-to-plane and point-to-line residuals; the Gauss-Newton Hessian H = JᵀJ and its rotation and translation blocks; Fisher information and observability; types of degeneracy (translational, rotational, coupled; geometric versus solver-induced; full versus partial); and the scale disparity between rotation and translation.
-- **IV. Degeneracy Detection.** Sub-taxonomy:
-  - (A) Hessian eigenvalue and condition-number methods: Zhang et al. 2016; Hinduja 2019; Switch-SLAM; DCReg Schur-complement.
-  - (B) Per-correspondence localizability: X-ICP, LP-ICP.
-  - (C) Pre-solve scan or map geometry: Gelfand covariance; SuperLoc; ICET; LF-GICP; normal-vector methods such as NV-LIO(M).
-  - (D) Probabilistic and noise-aware: DRPM by Hatleskog and Alexis.
-  - (E) Learning-based: Nubert et al. 2022.
-  - (F) Perturbation and re-optimisation: LiLi.
-  - (G) Frame and scale invariance: "Degenerate in Whose Frame?", arXiv 2608.15532.
-  - Include a subsection on **how thresholds are chosen** (empirical, user-defined, basin of convergence, statistical) and their portability.
-- **V. Degeneracy Mitigation in Registration:** solution remapping; truncated SVD; Tikhonov regularisation; equality and inequality constraints; preconditioned conjugate gradient (DCReg); stable sampling; adaptive point-to-point and point-to-plane weighting (GenZ-ICP); point-to-line terms; robust kernels; and the field comparison of these strategies by Tuna et al. (T-FR 2025).
-- **VI. Multi-Sensor Fusion Under LiDAR Degeneracy:**
-  - (A) Switching and failure detection: Switch-SLAM; LVI-SAM and VINS-Mono failure detection; Super Odometry; CompSLAM.
-  - (B) Tightly coupled LiDAR-visual-inertial systems: LIC-Fusion, VIL-SLAM, R2LIVE, R3LIVE, FAST-LIVO, FAST-LIVO2, and others you find.
-  - (C) Direction-wise or selective fusion: Selective KF ("Fuse only what matters"), SA-LIVO, Liao et al. arXiv 2412.07513, ALIVE-LIO, MM-LINS, D²-LIO, RELEAD.
-  - (D) Other modalities: radar, thermal, UWB, wheel and leg odometry. Search for these; I have few seeds here.
-  - (E) Visual degeneracy happening at the same time, which matters for fusion.
-- **VII. Back-End and Loop Closure in Degenerate Scenes:** degeneracy-aware factors (Hinduja), DARE-SLAM, pose-graph consequences, and the risk of false loop closures in self-similar corridors.
-- **VIII. Datasets, Ground Truth and Evaluation Practice:** a table of every degeneracy-relevant dataset (Section 7.4); how ground truth is produced (FARO or Leica scans, total station, RTK); metrics (ATE RMSE and max, RPE, degeneracy ratio, detection precision and recall); the shortage of per-frame degeneracy labels; and the practice of inducing degeneracy artificially (range limits, FOV cuts).
-- **IX. Comparative Analysis:** cross-paper results tables on shared sequences (SubT-MRS Multi Floor, Long Corridor, Cave02, Corridor02; GEODE; CERBERUS). State clearly that numbers from different papers are not directly comparable unless the setup matches.
-- **X. Open Challenges and Future Directions:** threshold calibration with a statistical null; labelled benchmarks; frame equivariance; reproducibility; solid-state and low-cost LiDARs; learning-based detectors that generalise; joint LiDAR and visual degeneracy; compute limits on embedded platforms; and standard reporting (repeated runs, held-out data).
-- **XI. Conclusion.**
-- **Acknowledgment** (including the AI disclosure), **References**, and **author biographies** with photo placeholders (IEEE Access needs them).
+- **Title, authors, affiliations.** Authors: Kavinkumar S and Dr. G. Sivasankar. I will confirm the designation and emails.
+- **Abstract** (200 to 250 words, no citations) and **Index Terms** (6 to 8).
+- **I. Introduction:** why localisation fails in tunnels, corridors, mines, caves, open fields and planetary-like terrain; why LiDAR is preferred and where it breaks down; the scope; how this review differs from existing SLAM surveys (find and compare all of them, for example Cadena 2016 and Ebadi 2024, and any LiDAR or degeneracy surveys); a contributions list; and the paper organisation.
+- **II. Review Methodology:** a short version of Section 3 above, with a PRISMA flow figure.
+- **III. Fundamentals:**
+  - LiDAR sensing and its error sources;
+  - the SLAM and odometry pipeline;
+  - scan registration (ICP variants; point-to-point, point-to-plane and point-to-line residuals);
+  - optimisation (Gauss-Newton, Levenberg-Marquardt);
+  - filtering (EKF and iterated EKF) versus factor graphs;
+  - the information matrix H = JᵀJ, its rotation and translation blocks, Fisher information and the Cramér-Rao bound, and observability;
+  - a formal definition of degeneracy and localizability.
+- **IV. Evolution of the Field:** a narrative history from ICP stability and stable sampling, through LOAM and its derivatives, Zhang et al.'s degeneracy factor and solution remapping, localizability-aware registration, LiDAR-visual-inertial fusion and switching, to recent probabilistic, frame-invariant and learning-based approaches. Include a timeline figure.
+- **V. What Causes Degeneracy: Identification and Taxonomy:**
+  - Geometric causes: corridors and tunnels (one sliding direction), cylinders and pipes (rotation and translation), open planes and fields, self-similar or repetitive structures, and stairs.
+  - Sensor causes: field of view, range limits, sparse beams, solid-state scan patterns, and reflective or absorbing surfaces.
+  - Motion causes: aggressive rotation and motion distortion.
+  - Algorithm-induced causes: feature selection, correspondence rejection, regularisation masking, and scale disparity between rotation and translation.
+  - Types: translational, rotational, coupled; partial versus full; transient versus persistent.
+  - The effects on the estimator: drift, divergence, map corruption and false loop closures.
+- **VI. Degeneracy Detection.** Sub-taxonomy:
+  - (A) Hessian eigenvalue and condition-number methods (Zhang et al. 2016; Hinduja et al. 2019; Switch-SLAM; DCReg's Schur-complement analysis);
+  - (B) per-correspondence localizability (X-ICP, LP-ICP);
+  - (C) pre-solve geometric indicators from scan or map normals (Gelfand covariance; SuperLoc; ICET; LF-GICP; normal-vector methods such as NV-LIOM);
+  - (D) probabilistic and noise-aware detection (Hatleskog and Alexis);
+  - (E) learning-based localizability (Nubert et al.);
+  - (F) perturbation and re-optimisation methods (LiLi);
+  - (G) frame and scale invariance of detectors (arXiv 2608.15532).
+  - Also include a subsection on **how detection thresholds are set** and why their portability is a problem (eigenvalues depend on point count, weights, scene scale, noise and body frame).
+- **VII. Degeneracy Mitigation in Registration:** solution remapping, truncated SVD, Tikhonov regularisation, equality and inequality constraints, preconditioned conjugate gradient (DCReg), geometrically stable sampling, adaptive cost weighting (GenZ-ICP), point-to-line terms, and robust kernels. Include the field comparison of these strategies by Tuna et al. (T-FR 2025). Give a table of each strategy's idea, the stage of the solver where it acts, and its limitation.
+- **VIII. Multi-Sensor Fusion as Mitigation:**
+  - (A) IMU-aided LiDAR odometry and why the IMU alone is not enough;
+  - (B) switching and failure detection (Switch-SLAM, LVI-SAM, VINS-Mono failure handling, Super Odometry, CompSLAM);
+  - (C) tightly coupled LiDAR-visual-inertial systems (LIC-Fusion, VIL-SLAM, R2LIVE, R3LIVE, FAST-LIVO and FAST-LIVO2);
+  - (D) direction-wise or selective fusion (Selective KF "Fuse only what matters", SA-LIVO, Liao et al., ALIVE-LIO, MM-LINS, D²-LIO, RELEAD);
+  - (E) other modalities: radar, thermal, UWB, wheel and leg odometry (search for these);
+  - (F) the problem of visual degeneracy occurring at the same time (darkness, texture-less walls, smoke).
+- **IX. Back-End and Loop Closure in Degenerate Environments:** degeneracy-aware factors, DARE-SLAM, false loop closures in self-similar places, and pose-graph consequences.
+- **X. Datasets and Evaluation Practice:** a table of degeneracy-relevant datasets (platform, sensors, environment, degeneracy type, ground-truth source); the metrics in use (ATE, RPE, detection accuracy); the shortage of per-frame degeneracy labels; artificial induction of degeneracy (range limits, field-of-view cuts); and reproducibility issues.
+- **XI. Critical Discussion:** a side-by-side comparison of the method families (assumptions, cost, need for tuning, need for extra sensors, real-time suitability, maturity). State what the field agrees on and where it disagrees. Use a qualitative comparison table, not a new benchmark.
+- **XII. Research Gaps:** give each gap its own numbered paragraph, with citations showing why it is a gap. Examples to check and expand:
+  - thresholds without a statistical basis;
+  - few labelled benchmarks for detection;
+  - frame and scale dependence of detectors;
+  - detectors not scored against labels;
+  - weak cross-paper comparability and reproducibility;
+  - joint LiDAR and visual degeneracy;
+  - solid-state and low-cost LiDARs;
+  - generalisation of learning-based detectors;
+  - embedded compute limits;
+  - degeneracy-aware loop closure and relocalisation;
+  - standard reporting (repeated runs, held-out data).
+- **XIII. Possible Solutions:** for every gap, one or more proposed directions grounded in theory or in adjacent literature. Examples: statistically calibrated tests on the smallest eigenvalue; noise-aware or precision-based thresholds (analogous to GNSS dilution of precision); frame-equivariant metrics; geometry-based ground-truth labels from analytic or surveyed scenes; direction-wise information fusion; uncertainty-aware learning; and benchmark and reporting protocols. Label each as proposed.
+- **XIV. Future Directions and Roadmap:** short-term, medium-term and long-term items, with a roadmap figure.
+- **XV. Conclusion.**
+- **Acknowledgment** (with the AI disclosure), **References**, and **author biographies** with photo placeholders if the journal asks for them.
 
-Length: about 12,000 to 16,000 words including tables. Check the target journal's limit.
+Length: about 12,000 to 15,000 words including tables. Check the chosen journal's limit.
 
 ---
 
-## 5. Required tables and figures (all original)
+## 5. Required tables and figures (all original and conceptual)
 
 **Tables:**
-1. Comparison with existing surveys: scope, year, number of references, and whether each covers detection, mitigation, fusion and datasets.
-2. PRISMA counts per database.
-3. Detection methods: statistic, matrix used (full H, blocks, Schur, normals), pre- or post-solve, how the threshold is set, frame-invariant or not, code released, scored against labels or not.
-4. Mitigation methods: type (hard, soft, regularised, preconditioned, sampling), where it acts in the solver, and the main limitation.
-5. Fusion systems: sensors, coupling (loose, tight, switching, direction-wise), decision variable, back end, and datasets.
-6. Datasets: platform, LiDAR, camera, IMU, environment, degeneracy type, GT source and accuracy, and availability.
-7. Cross-paper results on shared sequences, with a column saying what differs between setups.
-8. Quality-appraisal summary across included papers.
-9. Open problems mapped to the papers that partly address them.
+1. Comparison with existing surveys (scope, year, number of references, and whether each covers theory, detection, mitigation, fusion, datasets and gaps).
+2. Literature-selection counts per database.
+3. Causes and types of degeneracy, with example environments and the affected degrees of freedom.
+4. Detection methods: statistic, matrix used (full H, blocks, Schur complement, normals), pre-solve or post-solve, how the threshold is set, frame-invariant or not, and whether code is released.
+5. Mitigation methods: idea, solver stage, and limitation.
+6. Fusion strategies: sensors, coupling type, decision variable, strengths and weaknesses.
+7. Datasets for degenerate environments.
+8. Qualitative comparison of the method families.
+9. Research gaps mapped to possible solutions and to the papers that partly address them.
 
-**Figures:** draw these as vector graphics (TikZ or SVG to PDF):
-1. PRISMA 2020 flow diagram with the real counts.
-2. Taxonomy tree of the field.
-3. Publications per year and per category (from your extraction table).
-4. Degenerate geometries: corridor (one sliding direction), tunnel or cylinder (two directions), open plane, and stairs, with the weak directions marked.
-5. Detection pipeline positions: pre-solve versus in-solve versus post-solve.
-6. Fusion architectures: switching versus tightly coupled versus direction-wise.
-7. A timeline of the main milestones, 2003 to 2026.
-
----
-
-## 6. What my own project found (use it as critical-analysis input, clearly labelled)
-
-These are results from my thesis. They are **not published**. In the review, use them only (a) as a short labelled "reproducibility case study" box or subsection, or (b) in the open-challenges discussion. Write "in the authors' re-implementation" every time. If the target journal does not accept new experimental results in a review, move this material to the discussion and remove the numbers. Ask me before using them.
-
-**System:** A-LOAM (LiDAR) plus VINS-Mono (visual-inertial). The final version is "F24", a VIO-primary fusion. It adds a Schur-complement information-weighted LiDAR translation correction, VIO consistency checks, a LiDAR guard, an anchored handover and a prediction guard. It was compared against my re-implementation of Switch-SLAM's Algorithm 1 ("SW"), with frozen settings. Metric: ATE RMSE and max (m), Umeyama SE(3) alignment, no scale, full trajectory, front end only (no loop closure) unless stated.
-
-**Switch-SLAM published front-end results (Table II, RA-L 2024; mean of 3 runs):** Multi Floor 1.61 / 3.63; Long Corridor 2.42 / 5.09; Farm (Gazebo) 0.38 / 1.10.
-
-**Replication finding:** my SW re-implementation did **not** reproduce the published numbers. Multi Floor gave 5.03 / 10.22 and 5.44 / 10.94 (two runs). On Long Corridor, both SW and the SWI variant gave about 13 m (two runs each). A variant (SWI) reached 1.51 / 4.35 on Multi Floor in one run, which is not a reproduction claim. The causes are not isolated. The candidates are stack differences and parameters the paper does not specify. Use this to support the reproducibility point: published detectors leave key parameters unspecified.
-
-**Threshold critique (my own analysis; I found no published critique).** Switch-SLAM normalises the three smallest Hessian eigenvalues and gives thresholds λ_t = e_m - sqrt(0.103·e_m), with expectations e = [0.289, 0.498, 0.749] and thresholds [0.12, 0.27, 0.48]. It calls 0.103 the chi-square value for 2 DOF at 95%. But the chi-square(2) CDF at 0.103 is 1 - exp(-0.0515) ≈ 0.050. So 0.103 is the **lower** 5% point; the upper 95% critical value is 5.991. Putting 5.991 into the formula gives negative thresholds, so the rule could never fire. In addition, Pearson's statistic needs counts, and the semicircle law does not apply to the positive semidefinite matrix JᵀJ. Present this as "our analysis indicates" and invite verification. Do not overstate it.
-
-**F24 results (development data unless marked; n = number of runs):**
-- Multi Floor: 0.45 / 0.92, 1.01 / 1.73, 0.69 / 1.24 (n=3, mean 0.72 / 1.30).
-- Long Corridor: 2.12 / 5.31, 2.15 / 5.57, 1.75 / 3.53 (n=3).
-- SubT-MRS Corridor02 (the SuperLoc release: Hawkins, RC1, 690 m, 893 s): 1.47 / 2.51 (n=1). With an offline loop-closure back end: 1.11 / 2.15.
-- Cave02: 7.55 / 12.63 (n=1). Earlier versions reached about 4.4, so this is a possible regression. More runs are in progress; I will send you the updated numbers.
-- GEODE stairs alpha (0.5x replay): 6.15 / 14.00 and 9.15 / 25.44. At 0.25x: 9.09 / 19.42. The results are limited by A-LOAM.
-- Gazebo Farm: 0.657 / 0.897 on the original rig. On the forward-camera RGB 60 Hz rig: 0.472 / 1.068 (n=1). The forward rig is not paper-matched.
-- Multi Floor, Long Corridor and Farm were used during design, so they are **not held-out**.
-
-**Published results on Corridor02** (from GenZ-LIO Table 4, read on 21 Oct 2026; **re-verify before use**): FAST-LIO2 1.89, Faster-LIO 2.88, AdaLIO 1.98, Point-LIO 1.74, LIO-EKF 65.59, DLIO 1.39, iG-LIO 1.48, PV-LIO 0.73, GenZ-LIO 0.69 (ATE RMSE, m).
-
-**Published Cave02 context (DCReg Table 5, scan-to-map localisation with a prior map, so not comparable to odometry):** DCReg 4.57 cm against minimum-eigenvalue variants of 209 to 566 cm.
-
-**Lessons from the project for the open-challenges section:**
-- Detection thresholds are almost always tuned on the authors' own data.
-- Only Switch-SLAM scores detection against labels. Its labels come from GNSS-versus-ICP disagreement on part of one dataset.
-- Several papers induce degeneracy artificially (DCReg range limits; Switch-SLAM cuts the CERBERUS field of view to 180°).
-- Methods are evaluated on different sequences, so cross-paper comparison is weak.
-- Results vary run to run. My Multi Floor RMSE ranged from 0.45 to 1.01 across three identical runs. Single-run results support no claim.
-- Fixed eigenvalue thresholds depend on point count, weights, scene scale, noise (Hatleskog and Alexis), and the body frame (arXiv 2608.15532).
+**Figures** (drawn by you as TikZ or SVG, then exported to PDF):
+1. The LiDAR SLAM pipeline, showing where degeneracy enters.
+2. Degenerate geometries: corridor, tunnel or cylinder, open plane and stairs, with the unconstrained directions marked.
+3. A sketch of the information-matrix eigenvalue spectrum in normal versus degenerate scenes.
+4. A taxonomy tree of the whole field.
+5. A timeline from 2001 to 2026.
+6. Where detection sits: pre-solve, in-solve and post-solve.
+7. Fusion architectures: switching, tightly coupled and direction-wise.
+8. The PRISMA flow, with the real counts.
+9. The future-work roadmap.
 
 ---
 
-## 7. Seed reference list (start here, then extend to about 100 to 130)
+## 6. Seed reference list (start here, then extend to about 100 to 130)
 
-### 7.1 Already verified (IEEE strings checked against Crossref or arXiv on 9 Oct 2026; re-check DOIs)
+### 6.1 Already verified (IEEE strings checked against Crossref or arXiv on 9 Oct 2026; re-check DOIs)
 
 1. C. Cadena *et al.*, "Past, present, and future of simultaneous localization and mapping: Toward the robust-perception age," *IEEE Trans. Robot.*, vol. 32, no. 6, pp. 1309-1332, Dec. 2016, doi: 10.1109/TRO.2016.2624754.
 2. K. Ebadi *et al.*, "Present and future of SLAM in extreme environments: The DARPA SubT challenge," *IEEE Trans. Robot.*, vol. 40, pp. 936-959, 2024, doi: 10.1109/TRO.2023.3323938.
@@ -178,7 +194,7 @@ These are results from my thesis. They are **not published**. In the review, use
 24. H. Yue, Q. Xu, F. Chen, J. Pan, and W. Chen, "LP-ICP: General localizability-aware point cloud registration for robust localization in extreme unstructured environments," arXiv:2501.02580, 2025 (look for a published version).
 25. T. Qin and S. Cao, "A-LOAM: Advanced implementation of LOAM," GitHub repository. [Online]. Available: https://github.com/HKUST-Aerial-Robotics/A-LOAM
 
-### 7.2 Found in the project but not fully verified (verify each one)
+### 6.2 Found in the project but not fully verified (verify each one)
 
 **Detection and registration:**
 - SuperLoc (Zhao et al., ICRA 2025, arXiv:2412.02901)
@@ -269,7 +285,7 @@ These are results from my thesis. They are **not published**. In the review, use
 - Shi and Tomasi, "Good features to track," CVPR 1994
 - The uniformity-tests overview (arXiv:1804.00286)
 
-### 7.3 Gaps to fill by searching
+### 6.3 Gaps to fill by searching
 
 The seed list is thin in these areas. Search for them specifically:
 - Radar-LiDAR and thermal-LiDAR fusion in degraded scenes.
@@ -284,27 +300,27 @@ The seed list is thin in these areas. Search for them specifically:
 
 ---
 
-## 8. How to work (phases and checkpoints)
+## 7. How to work (phases and checkpoints)
 
-Work in phases and save each phase's output as a file, so nothing is lost if the chat runs long. After each phase, send me a short status and wait for my "go" only if a decision is mine. Otherwise continue.
+Work in phases and save each phase's output as a file, so nothing is lost if the chat runs long. After each phase, send me a two-line status. Stop and ask me only when a decision is mine.
 
-1. **Search and screening.** Run the queries, keep the log, build the PRISMA counts, and check that no prior survey makes this one redundant. Output: `search_log.csv` and `prisma_counts.md`.
-2. **Reference database.** One row per included paper: IEEE string, DOI or arXiv ID, the source you opened to verify it, category, and the data-extraction fields from Section 3. Output: `references.xlsx` and `refs.bib`. Target 100 to 130 rows.
-3. **Outline.** The section and subsection plan with the references assigned to each section. Show it to me before drafting.
-4. **Drafting.** Write section by section in LaTeX (IEEEtran journal). Every factual sentence about a paper carries its citation.
-5. **Tables and figures.** Build them from the reference database, not from memory.
-6. **Compile and check.** Build the PDF. Check that every \cite resolves, that there are no unused bib entries, and that the reference count, page count and word count are as expected. Check the figures at print size.
-7. **Independent verification.** Use a separate agent or pass that has not seen the drafting. It re-opens a random 25% of references (and all papers with numbers quoted) and confirms each claim against the source. Fix every mismatch.
-8. **Submission package:** the manuscript PDF; the LaTeX source with .bib and figures; a cover letter to the editor; a list of 3 to 5 suggested reviewers with no conflict of interest (verify that they are real and active in the field); the AI-use disclosure; and a highlights list if the journal needs one.
+1. **Search and screening.** Run the queries and keep the log. Check that no existing survey already covers this exact scope. If one does, tell me at once and propose how to differentiate. Output: `search_log.csv` and `selection_counts.md`.
+2. **Reference database.** One row per included paper: IEEE string, DOI or arXiv ID, the source you opened to verify it, the category, and the fields listed in Section 3. Output: `references.xlsx` and `refs.bib`. Target 100 to 130 rows.
+3. **Outline.** The section and subsection plan, with the references assigned to each section. Show it to me before drafting.
+4. **Drafting.** Write section by section in LaTeX (IEEEtran journal). Every factual sentence about a paper carries its citation. Keep a consistent notation table.
+5. **Tables and figures.** Build the tables from the reference database. Draw the figures yourself.
+6. **Compile and check.** Build the PDF. Check that every \cite resolves, that no bib entry is unused, and that the reference count and word count fit. Check that figures are readable at print size.
+7. **Independent verification.** Use a separate agent or pass that has not seen the drafting. It re-opens a random 25% of the references, plus every paper whose numbers are quoted, and confirms each claim. Fix every mismatch.
+8. **Submission package:** the manuscript PDF; the LaTeX source with the .bib and figures; a cover letter; 3 to 5 suggested reviewers (verify that they are real, active in the field and free of conflicts of interest); the AI-use disclosure; and highlights, if the journal requires them.
 
 ---
 
-## 9. Deliverables I expect at the end
+## 8. Deliverables I expect at the end
 
 - `review_main.tex`, `refs.bib`, the `figures/` folder, and the compiled `review_main.pdf` (IEEEtran journal).
-- `references.xlsx`: the verification table (paper, DOI or arXiv, verified-by source, category, extracted fields).
-- `search_log.csv` and the PRISMA diagram source.
-- `cover_letter.docx` (or .tex).
-- A one-page summary of the contributions, and the list of things I must check or decide (for example author emails, the advisor's designation, whether to include the case-study numbers, and the journal choice).
+- `references.xlsx`: the verification table (paper, DOI or arXiv ID, the source used to verify it, category, and the extracted fields).
+- `search_log.csv` and the source of the PRISMA figure.
+- `cover_letter.docx` or `.tex`.
+- A short list of what I must check or decide: author emails, the advisor's designation, and the journal choice.
 
-Start now with Phase 1. Tell me in one line which journal you recommend after checking, and why.
+Start with Phase 1. In your first reply, tell me in one line which journal you recommend after checking, and why.
