@@ -106,7 +106,15 @@ Use the IEEEtran journal template, in this order. The section names are a guide;
   - (F) perturbation and re-optimisation methods (LiLi);
   - (G) frame and scale invariance of detectors (arXiv 2608.15532).
   - Also include a subsection on **how detection thresholds are set** and why their portability is a problem (eigenvalues depend on point count, weights, scene scale, noise and body frame).
-- **VII. Degeneracy Mitigation in Registration:** solution remapping, truncated SVD, Tikhonov regularisation, equality and inequality constraints, preconditioned conjugate gradient (DCReg), geometrically stable sampling, adaptive cost weighting (GenZ-ICP), point-to-line terms, and robust kernels. Include the field comparison of these strategies by Tuna et al. (T-FR 2025). Give a table of each strategy's idea, the stage of the solver where it acts, and its limitation.
+- **VII. Degeneracy Mitigation:** this section must be a **complete catalogue** of every mitigation strategy that has been proposed or used, not only the ones named here. Organise it by where the mitigation acts, and give a table with the idea, the stage, the assumptions and the limitation of each. Cover at least:
+  - (A) **Solver-level, on the update step:** solution remapping (Zhang et al. 2016); truncated SVD; Tikhonov and non-linear regularisation; damping of updates along likely-degenerate directions (Hatleskog and Alexis); equality and inequality constraints on degenerate directions (X-ICP, LP-ICP); preconditioned conjugate gradient with eigenvalue clamping in the preconditioner only (DCReg); degeneracy-aware factors with an adaptive eigenvalue cutoff (Hinduja et al. 2019); Schur-complement decoupling of rotation and translation.
+  - (B) **Residual and weighting level:** point-to-line plus point-to-plane terms (LP-ICP); adaptive point-to-point and point-to-plane weighting (GenZ-ICP); Fisher-information-based correspondence weighting (LF-GICP); robust kernels and M-estimators (Cauchy, Huber, GNC as in RELEAD); covariance-regularised GICP and the way its isotropic floor can mask translational degeneracy (a limitation as much as a mitigation).
+  - (C) **Data and sampling level:** geometrically stable and normal-space sampling (Gelfand et al. 2003; Rusinkiewicz and Levoy 2001); feature and point selection; ground segmentation and ground-plane constraints (LeGO-LOAM); point-cloud densification, voxel map design and keyframe or submap management.
+  - (D) **Prior-based:** using an external odometry prior (IMU, wheel, leg or VIO) and "prior-only" fallback in the degenerate directions; the finding of Tuna et al. that active mitigation matters most when no reliable external prior exists.
+  - (E) **Global methods:** global or correspondence-free registration (for example Quatro and FGR) and their failure in symmetric scenes, as reported in the literature.
+  - (F) **Learning-based:** learned localizability and learned priors (Nubert et al.; ALIVE-LIO's learned velocity).
+  - (G) **System, sensor and platform level:** multi-LiDAR and extended field-of-view setups; active perception and planning that avoid or anticipate degenerate places (for example attention and anticipation in visual-inertial navigation, active SLAM); structural priors such as Manhattan-world or plane constraints; and the sensor-fusion mitigations in Section VIII.
+  - Include the field comparison of the solver-level strategies by Tuna et al. (T-FR 2025). For every item, say whether it **detects** and mitigates, or only mitigates, and whether it needs a threshold. If you find a mitigation that fits none of these groups, add a group.
 - **VIII. Multi-Sensor Fusion as Mitigation:**
   - (A) IMU-aided LiDAR odometry and why the IMU alone is not enough;
   - (B) switching and failure detection (Switch-SLAM, LVI-SAM, VINS-Mono failure handling, Super Odometry, CompSLAM);
@@ -145,7 +153,7 @@ Length: about 12,000 to 15,000 words including tables. Check the chosen journal'
 2. Literature-selection counts per database.
 3. Causes and types of degeneracy, with example environments and the affected degrees of freedom.
 4. Detection methods: statistic, matrix used (full H, blocks, Schur complement, normals), pre-solve or post-solve, how the threshold is set, frame-invariant or not, and whether code is released.
-5. Mitigation methods: idea, solver stage, and limitation.
+5. Mitigation methods (the complete catalogue from Section VII, one row per method): group, idea, where it acts, whether it needs a detector and a threshold, assumptions, and limitation. Add a check column marking which methods were compared head-to-head in any published study.
 6. Fusion strategies: sensors, coupling type, decision variable, strengths and weaknesses.
 7. Datasets for degenerate environments.
 8. Qualitative comparison of the method families.
