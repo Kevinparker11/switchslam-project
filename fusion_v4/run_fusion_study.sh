@@ -167,6 +167,11 @@ declare -A CFG=(
   [F26]="FUSION_MODE=fused C_T=3e-2 KAPPA_TH=1e9 SAH=1 ROT_CHECK=1 OT_SRC=geom OT_MODE=gmax VIO_CHECK=1 VIO_CHECK_FAST=5 LIDAR_GUARD_T=2 LIDAR_GUARD_EX=4.325 VIO_CHECK_REF=0.157 VIO_CHECK_FAST_REF=0.277 VIO_CHECK_START=1 HANDOVER=anchor PREDICT_GUARD=1 GUESS_MODE=status"
   # F27 = F24 (VINS motion in the guess) but A-LOAM's own increment instead of 'no motion' whenever the VINS motion is unusable (VINS absent / starting / failed / guarded). docs/results/F26_Status_Guess.md
   [F27]="FUSION_MODE=fused C_T=3e-2 KAPPA_TH=1e9 SAH=1 ROT_CHECK=1 OT_SRC=geom OT_MODE=gmax VIO_CHECK=1 VIO_CHECK_FAST=5 LIDAR_GUARD_T=2 LIDAR_GUARD_EX=4.325 VIO_CHECK_REF=0.157 VIO_CHECK_FAST_REF=0.277 VIO_CHECK_START=1 HANDOVER=anchor PREDICT_GUARD=1 GUESS_MODE=vins_odom"
+  # F28 / F29 = F16 (the best Cave02 configuration of 19 Oct: Schur T + SAH, none of the F17 to F24 additions) with the scan-to-map guess of F26 / F27.
+  # Purpose: Cave02's error sits in the first 240 s, where VINS is absent and every version hands A-LOAM a no-motion guess (docs/results/Cave02_GEODE_Error_Diagnosis.md).
+  # Development variants, selected on Cave02 and GEODE, which are development data; any gain needs a held-out confirmation (docs/protocols/Least_Error_4h_Protocol.md).
+  [F28]="FUSION_MODE=fused C_T=3e-2 KAPPA_TH=1e9 SAH=1 GUESS_MODE=status"
+  [F29]="FUSION_MODE=fused C_T=3e-2 KAPPA_TH=1e9 SAH=1 GUESS_MODE=vins_odom"
   # Switch-SLAM as published (switch_slam_node.py: Algorithm 1 + Eqs. 11-16, no warm-up/weights/SAH/OT/guards). docs/protocols/SwitchSLAM_Exact_Replica.md
   [SW]="FUSION_MODE=switch_slam HESS_TOPIC=/laser_hessian N_BUF=5 LT_MODE=published EQ15_W=0.5"      # scan-to-scan Hessian (installed on every container), literal Eq. 15
   [SWM]="FUSION_MODE=switch_slam HESS_TOPIC=/mapping_hessian N_BUF=5 LT_MODE=published EQ15_W=0.5"  # scan-to-map Hessian as in the paper (needs fusion_v3/patch_mapping_hessian.py in A-LOAM)
