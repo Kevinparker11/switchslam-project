@@ -7,11 +7,11 @@ F26 = F24 with the scan-to-map guess chosen by Switch-SLAM's degeneracy rule; th
 |---|---|---|---|---|---|
 | Multi Floor | 0.45 / 0.92 (n=1) | 0.54 / 1.01 (n=1) | +0.09 | about 0.1 (F8, F16 sd 0.11) | slightly worse, at the edge of the spread |
 | Long Corridor | 2.12, 2.15, 1.75 (mean 2.01; max 5.31, 5.57, 3.53) | 2.10 / 3.73 (n=1) | +0.09 vs the mean | 1.75 to 2.15 | inside the spread, tie |
-| Corridor02 | 1.47 / 2.51 (n=1) | 1.93 / 3.46 (n=1) | **+0.46** | F24 family 1.47 to 1.84 (F16 x6, F20 x3, F24) | worse |
-| Cave02 | 7.55 / 12.63 (n=1) | 6.23 / 10.56 (n=1) | **-1.32** | single runs differ by up to 1.1 m | lower; hint only |
-| GEODE stairs alpha | 6.15, 9.15, 9.09 (n=3) | 6.36 / 14.07 (n=1) | -0.0 to -2.8 | 6.15 to 9.15 | inside the spread, tie |
+| Corridor02 | 1.47, 1.29 (n=2 good runs) and 104.00 (one failed run) | 1.93 / 3.46 (n=1) | **+0.46** | F24 family 1.47 to 1.84 (F16 x6, F20 x3, F24) | worse |
+| Cave02 | 7.55, 7.08, 7.11 (n=3) | 6.23 / 10.56 (n=1) | **-0.85 to -1.32** | F24 spread 7.08 to 7.55 | outside the F24 spread; one F26 run, hint only |
+| GEODE stairs alpha | 6.15, 9.15, 7.05, 6.56 (0.5x, n=4) | 6.36 / 14.07 (n=1) | -0.2 to -2.8 | 6.15 to 9.15 | inside the spread, tie |
 | Farm L route, forward RGB 60 Hz | 0.472 / 1.068 (n=1) | 0.290 / 0.562 (n=1) | -0.18 | 0.255 to 0.472 over the two forward rigs | inside the spread (VINS draw differs) |
-Count: F26 lower on Cave02 and Farm (both inside or at the edge of a spread), higher on Corridor02 (outside the F24-family spread) and Multi Floor, tie on Long Corridor and GEODE. All n = 1 for F26; no bag gives a result.
+Count: F26 lower on Cave02 (now just outside the three-run F24 spread of 7.08 to 7.55, one F26 run) and Farm (inside or at the edge of a spread), higher than the good F24 runs on Corridor02 (outside the F24-family spread of 1.29 to 1.84; F26 has not seen the failure F24 run 2 had), tie on Long Corridor and GEODE, and on Multi Floor F26 0.54 sits inside the F24 spread of 0.45 to 1.01. All n = 1 for F26; no bag gives a result.
 
 ## 2. Why: what each version puts into A-LOAM's starting guess
 | Bag | F24 guess | F26 guess (kinds used) | Paper rule fires (Hessian degenerate) |
