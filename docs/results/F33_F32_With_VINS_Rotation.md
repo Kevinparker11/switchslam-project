@@ -79,3 +79,22 @@ Long Corridor is a held-out bag for F33 (not used to set any F33 or F32 constant
 - Bands: up to 2.15 m = inside the F24 / F26 spread; above 2.15 and up to 2.42 = between that spread and the published Switch-SLAM RMSE; above 2.42 = higher than the published value; above 13 m = no better than our SW replica. A diverged or crashed run counts.
 - Report: ATE RMSE / max, share of scans with the T channel and the TT channel firing, `sw_rotv` share, VINS failed and gate closed shares, angle between output and A-LOAM rotation.
 - n = 1 supports no claim. This is the first F33 result on a bag it was not tuned on, still one run.
+
+## Result: Long Corridor run 1 (uploaded f33_lc_small.zip, 10 Nov 2026)
+ATE RMSE / max, full span: **4.29 / 10.09 m** (2769 poses, GT path 579.2 m). Published Switch-SLAM 2.42 / 5.09; our SW replica 12.58 to 13.12 (n=2), SWI 13.2 to 13.8 (n=3 incl. SWM), F24 1.75 to 2.15 (n=3), F26 2.10 / 3.73, VINS-Mono alone 4.99 to 5.61 (4.82 in this run).
+
+Precondition: tensor found for 2775 of 2775 scans. Met.
+
+Band: above 2.42 m, so "higher than the published value"; below 13 m, so about a third of the SW replica's error. The prediction (1.5 to 4 m) was slightly low. It is about twice the F24 / F26 level (1.75 to 2.15).
+
+From the log:
+- Degenerate branch **82.7 %** of scans (R 81.7 %, TT 48.1 %, T 0.0 %), so the output is mostly the Eq. 15 mix of the LiDAR step (flagged directions removed) and VINS-Mono's step: case 3 on 2293 scans, case 1 480, case 2 2. Guess kinds VO 2089, LIDAR 482, INTERP 204.
+- VINS-Mono was healthy: failed 0.5 %, gate closed 0.0 %, `sw_rotv` 99.5 %.
+- Rotation is fine: heading drift of the output -1.5 / -3.1 / 0.8 deg at 50 / 100 / 200 s, -6.2 deg at the end (VINS-Mono alone -6.2, A-LOAM -4.2); output against A-LOAM rotation median 0.8, p90 2.1, max 6.0 deg. So the error here is translation, not heading.
+- Output ATE 4.29 against VINS-Mono alone 4.82: the output is close to VINS-Mono's translation quality, because half of every degenerate scan is VINS-Mono's step (Eq. 15 equal weights) and VINS-Mono alone is 5 m on this bag. F24 and F26 reach about 2 m by weighting the two by information instead of 50 / 50.
+- The error profile against a whole-run alignment is not a clean drift curve (7.8 m in the first 40 s, 0.7 to 1.1 m at 80 to 160 s, 6.5 m in the last 40 s), so I read no onset time from it.
+
+Hypothesis, not tested: the R channel fires on 81.7 % of corridor scans, which sends most scans into the 50 / 50 mix with a VINS-Mono that is itself 5 m off. A different R threshold or an information-weighted Eq. 15 would test it; neither is run, and either would be a change after seeing this result, so it would need new rules and held-out bags.
+
+Reading: F33 does better than the paper-rule replica on this bag and worse than F24 / F26 and than the published number. n = 1, first F33 result on an untuned bag.
+Summary of F33 so far (one run each): Multi Floor 0.83 / 1.74 (inside F24 / F26 spread), GEODE 9.73 / 22.23 (above F26 range, top of F24 spread), Long Corridor 4.29 / 10.09 (above published 2.42, about twice F24 / F26). Not run: Corridor02, Cave02, Farm, repeats.
