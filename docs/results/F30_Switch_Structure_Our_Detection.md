@@ -49,3 +49,10 @@ Fix (commit after 30fd81d): the lookup takes the exact tensor if present, else t
 
 ### Run 1 result (GEODE 0.5x, R and plain T only, additional T void)
 ATE RMSE / max = **13.04 / 62.88 m** (3095 of 3104 poses in the GT span). Fire rates from the log: R 54.0 %, T 0.9 %, degenerate branch 54.3 % of scans; the pre-run prediction from the F24 Hessians was R 53.7 %, T 0.9 %, so the detector behaves as predicted. For comparison (same bag, same rate): F24 6.15 to 9.15 (n=4), F26 3.26 to 6.36 (n=3), F27 6.41 to 8.82 (n=3). Reading rule 3: higher than F26's range. n=1, additional T void; no claim beyond that this run is the worst GEODE value in the table.
+
+### Run 1 diagnostics (read from the run's own log)
+- Guess kinds: LiDAR 1680 (54 %), VINS-Mono 794 (26 %), interpolation 629 (20 %).
+- Output branch (Eq. 16 cases): full LiDAR step 1417 (46 %); degenerate and VINS failed, well-conditioned directions only 263 (8.5 %); degenerate and VINS healthy, Eq. 15 equal-weight fusion with the VINS-Mono step 1423 (46 %).
+- VINS-Mono flagged failed (paper-style test: gap above 1 s, step above 5 m or 50 degrees) on 13.0 % of scans.
+- Median step per scan: LiDAR 0.110 m, VINS-Mono 0.219 m (about twice). VINS-Mono steps above 1 m: 527 of 2885 (18 %), more than the 13 % flagged failed, so a part of the large steps passes the paper-style test and enters the Eq. 15 fusion.
+- Reading (not tested by a further run): with R firing on 54 % of GEODE scans, 46 % of the output is half VINS-Mono, and on this bag the VINS-Mono step is about twice the LiDAR step and often large. That fits the 13.04 m. F24 and F26 reject such steps with a 1 m and 0.5 rad guard and a scale consistency check; the paper-style test has neither. The paper's own rule fires on 10 % of GEODE scans, so the same weakness would be much less exposed under `SW`. The matched `SW` run on GEODE does not exist yet.
