@@ -22,3 +22,10 @@ Multi Floor F30 run 1, Multi Floor F32 run 1, GEODE F32 run 1.
 2. n = 1 per bag supports no claim; a failed run counts.
 3. Development data (Multi Floor is the calibration bag for the gates; GEODE is tuned-on data for F25 to F27). Adoption needs held-out bags and a rule written first.
 4. Report from the log: share of scans with VINS-Mono failed (sw_vo_fail), vio_gamma closed, guess kinds and output branches.
+
+## Result: Multi Floor run 1 (10 Nov 2026)
+ATE RMSE / max = **6.05 / 12.48 m** (4041 poses, GT path 272.6 m). Additional-T precondition met (tensor for 4133 scans, missing 5). Reading rule 1: higher than the F24 / F26 range (0.45 to 1.01 m). For context: F26 0.54 m, Switch-SLAM replica SW 5.03 and 5.44 m, A-LOAM alone 26.4 m, VINS-Mono alone in this run 1.30 m.
+
+From the log (`fusion_v4/offline_f32_diag.py`): R fired on 37.3 % of scans, T on 0.0 %, the additional T on 9.8 %, degenerate branch 46.4 %; output branches: full LiDAR step 2170, Eq. 15 fusion 1679, degenerate with VINS failed 199; VINS-Mono flagged failed on 5.0 % (all by the 1 m / 0.5 rad step guard; the scale gate never closed on Multi Floor, as predicted). The output equals A-LOAM's pose (both 6.05 m).
+
+Where the error comes from: heading. Start-referenced heading error against ground truth: F32 12.6 deg at 100 s, 34.8 deg at 200 s, 32.4 deg at 300 s; F26 in its first run 5.9, 1.9, 1.2 deg. The 10 s rotation error has median 1.89 deg (F26 1.05 deg), 90th percentile 7.03 deg (F26 3.10 deg). F26 takes its rotation from VINS-Mono (c_R = 0) and anchors heading to wall structure (SAH); F32 outputs A-LOAM's rotation, which on Multi Floor drifts. The VINS checks are not the cause on this bag. Reading: one run; the heading figures are a log measure (Euler yaw, start-referenced), not a separate test.
