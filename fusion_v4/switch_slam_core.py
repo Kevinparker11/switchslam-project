@@ -101,8 +101,9 @@ class SwitchSlamCore:
                'body' : H is the scan-to-scan Hessian (previous LiDAR frame), rotated into the map frame for Eq. 14."""
 
     def __init__(self, R_IL=I3, t_IL=np.zeros(3), n_buf=5, lt=LT_PUBLISHED, eq15_w=0.5,
-                 vins_jump_pos=5.0, vins_jump_rot=np.radians(50.0), hess_frame="body"):
+                 vins_jump_pos=5.0, vins_jump_rot=np.radians(50.0), hess_frame="body", detector=None):
         assert hess_frame in ("world", "body")
+        self.detector = detector                  # None = Switch-SLAM's own rule (eig_degeneracy); else detector(H, T) -> dict
         self.R_IL, self.t_IL = np.asarray(R_IL, float), np.asarray(t_IL, float)
         self.buf = deque(maxlen=int(n_buf))
         self.lt = np.asarray(lt, float)
@@ -124,7 +125,20 @@ class SwitchSlamCore:
         self.prev_t = t
 
     # ------------------------------------------------------------------ Algorithm 1, lines 1-8
-    def decide(self, odom, vins, H, gyro_dR=None, t=None):
+    def _detect(self, H, T_h):
+        if self.detector is None:
+            return eig_degeneracy(H, self.lt)
+        return self.detector(H, T_h)
+
+    def _T_in_H_frame(self, T, R_cur, dR_prev):
+        """orientation tensor of the current scan (current LiDAR frame) in the frame of the Hessian: body = previous LiDAR
+        frame (dR_prev = R_prev^T R_cur), world = the map frame (R_cur = current LiDAR rotation in the map)"""
+        if T is None:
+            return None
+        R = dR_prev if self.hess_frame == "body" else R_cur
+        return R @ np.asarray(T, float) @ R.T
+
+    def decide(self, odom, vins, H, gyro_dR=None, t=None, T=None):
         """odom = (R, p) A-LOAM scan-to-scan odometry pose of this scan; vins = (R, p) VINS-Mono IMU pose at the scan
         time or None (VINS lost / not initialised); H = Hessian used for the detection (6x6) or None.
         gyro_dR (SWI variant only) = integrated-gyro rotation increment of the LiDAR frame since the last finished scan; it replaces
@@ -140,7 +154,8 @@ class SwitchSlamCore:
             dR_I, dt_I = fc.rel_body(self.prev_v[0], self.prev_v[1], vins[0], vins[1])
             dv = fc.imu_to_lidar_increment(dR_I, dt_I, self.R_IL, self.t_IL)
             vo_fail = bool(np.linalg.norm(dv[1]) > self.jump_pos or np.linalg.norm(fc.so3_log(dv[0])) > self.jump_rot)
-        eig = eig_degeneracy(H, self.lt) if H is not None else None
+        T_h = self._T_in_H_frame(T, self.Rf @ dl[0], dl[0])
+        eig = self._detect(H, T_h) if H is not None else None
         degen = eig is not None and eig["degenerate"]
         status = status_of(self.buf)
         w = np.nan
@@ -153,7 +168,7 @@ class SwitchSlamCore:
             kind, d = "VO", dv
         guess = fc.compose(self.Rf, self.pf, d[0], d[1])
         vo_pose = None if vo_fail else fc.compose(self.Rf, self.pf, dv[0], dv[1])
-        return dict(kind=kind, guess=guess, vo=vo_pose, t=t, gyro=gyro_dR is not None, gyro_deg=gyro_deg, vo_fail=vo_fail, eig=eig, status=status, w=w, odom=odom, vins=vins,
+        return dict(kind=kind, guess=guess, vo=vo_pose, t=t, T=T, T_h=T_h, gyro=gyro_dR is not None, gyro_deg=gyro_deg, vo_fail=vo_fail, eig=eig, status=status, w=w, odom=odom, vins=vins,
                     dtl=float(np.linalg.norm(dl[1])), dtv=float(np.linalg.norm(dv[1])) if dv is not None else np.nan)
 
     def pose_to_publish(self, guess):
@@ -169,19 +184,30 @@ class SwitchSlamCore:
         the detection Hessian if none is given).  Returns (R, p, info)."""
         Ra, pa = np.asarray(aft[0], float), np.asarray(aft[1], float)
         Rg, pg = dec["guess"]
-        eig = eig_degeneracy(H, self.lt) if H is not None else dec["eig"]
+        if self.detector is None:
+            eig = eig_degeneracy(H, self.lt) if H is not None else dec["eig"]
+        elif H is None:
+            eig = dec["eig"]
+        else:                                                           # world frame: the tensor is rotated with the final pose
+            eig = self._detect(H, dec["T_h"] if self.hess_frame == "body" else self._T_in_H_frame(dec["T"], Ra, None))
         x_full = np.concatenate([fc.so3_log(Ra @ Rg.T), pa - pg])      # Gauss-Newton displacement, left/world perturbation
         degen = eig is not None and eig["degenerate"]
         if not degen:
             case, x = 1, x_full                                         # Eq. 16, line 1: -H_l^-1 J^T d
         else:
-            U = eig["U"]
+            if "remove" in eig:                                         # our detection: directions of every channel that fired
+                U = eig["remove"]
+            else:
+                U = eig["U"]
             if self.hess_frame == "body":                               # H in the previous LiDAR frame -> map frame
                 Rp = self.prev_aft[0]
                 U = np.block([[Rp, np.zeros((3, 3))], [np.zeros((3, 3)), Rp]]) @ U
-            kept = [i for i in range(6) if not (i < 3 and eig["flags"][i])]
-            Uk = U[:, kept]
-            x_l = Uk @ (Uk.T @ x_full)                                  # (U Lambda_p U^-1)^-1 J^T d : degenerate DOFs removed
+            if "remove" in eig:
+                x_l = x_full - U @ (U.T @ x_full)                       # the same projection as below, written on the removed set
+            else:
+                kept = [i for i in range(6) if not (i < 3 and eig["flags"][i])]
+                Uk = U[:, kept]
+                x_l = Uk @ (Uk.T @ x_full)                              # (U Lambda_p U^-1)^-1 J^T d : degenerate DOFs removed
             if dec["vo_fail"]:
                 case, x = 2, x_l                                        # Eq. 16, line 2 (Eq. 14 with Lambda_p)
             else:
@@ -196,5 +222,5 @@ class SwitchSlamCore:
         self.prev_o, self.prev_v = dec["odom"], dec["vins"]
         self.prev_t = dec.get("t", self.prev_t)
         lam_bar = eig["lam_bar"] if eig is not None else np.full(3, np.nan)
-        return self.Rf, self.pf, dict(case=case, kind=dec["kind"], status=dec["status"], vo_fail=dec["vo_fail"], degen=bool(degen),
+        return self.Rf, self.pf, dict(chan=eig.get("chan") if eig is not None else None, nrem=(eig["remove"].shape[1] if eig is not None and "remove" in eig else -1), case=case, kind=dec["kind"], status=dec["status"], vo_fail=dec["vo_fail"], degen=bool(degen),
                                       lam_bar=lam_bar, w=dec["w"], step=float(np.linalg.norm(x[3:])), dtl=dec["dtl"], dtv=dec["dtv"], gyro=dec["gyro"], gyro_deg=dec["gyro_deg"])
