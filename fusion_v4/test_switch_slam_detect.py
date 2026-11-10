@@ -73,6 +73,69 @@ def test_default_core_is_unchanged():
     core = sw.SwitchSlamCore()
     assert core.detector is None
 
+# ---------------------------------------------------------------- our detection only (OwnDetector): no Switch-SLAM thresholds
+def test_own_isotropic_nothing_fires():
+    d = sd.OwnDetector()(H_ISO, T_ISO)
+    assert not d["degenerate"] and d["remove"].shape[1] == 0 and abs(d["w_blend"] - 1.0) < 1e-12, d["chan"]
+
+def test_own_T_threshold_is_information_equal_to_vio():
+    # c_T = 0.03, unit VIO information: a direction is degenerate where c lambda < 1, i.e. lambda < 33.3
+    ok = sd.OwnDetector(("T",))(H_from_rad(np.diag([400.0, 400, 400, 40.0, 400, 400])), None)
+    assert not ok["degenerate"]
+    bad = sd.OwnDetector(("T",))(H_from_rad(np.diag([400.0, 400, 400, 30.0, 400, 400])), None)
+    assert bad["chan"]["T"] and bad["degenerate"]
+    assert abs(abs(bad["remove"][3, 0]) - 1.0) < 1e-6
+
+def test_own_R_is_judged_alone_with_kappa():
+    # kappa(S_RR) > 15.7: weak rotation z
+    d = sd.OwnDetector(("R",))(H_from_rad(np.diag([400.0, 400, 20.0, 400, 400, 400])), None)
+    assert d["chan"]["R"] and not d["chan"]["T"] and d["remove"].shape[1] == 1
+    assert abs(abs(d["remove"][2, 0]) - 1.0) < 1e-6
+    ok = sd.OwnDetector(("R",))(H_from_rad(np.diag([400.0, 400, 30.0, 400, 400, 400])), None)       # kappa 13.3
+    assert not ok["degenerate"]
+
+def test_own_R_and_T_are_independent():
+    Hrt = H_from_rad(np.diag([400.0, 400, 400, 1.0, 400, 400]))
+    d = sd.OwnDetector(("R", "T"))(Hrt, None)
+    assert d["chan"]["T"] and not d["chan"]["R"]
+    d = sd.OwnDetector(("R", "T"))(H_DEG_RZ, None)
+    assert d["chan"]["R"] and not d["chan"]["T"]
+
+def test_own_does_not_use_the_paper_rule():
+    # a Hessian the paper's normalised rule calls degenerate (one weak direction) but whose weak direction is still above our T bar
+    H = H_from_rad(np.diag([400.0, 400, 400, 400, 400, 60.0]))
+    assert sw.eig_degeneracy(H)["degenerate"]
+    assert not sd.OwnDetector()(H, T_ISO)["degenerate"]
+
+def test_own_additional_T():
+    off = sd.OwnDetector(("T",))(H_ISO, T_NOX)
+    assert not off["degenerate"]
+    on = sd.OwnDetector(("TT",))(H_ISO, T_NOX)
+    assert on["chan"]["TT"] and on["degenerate"]
+    assert np.allclose(np.abs(on["remove"][:, 0]), np.eye(6)[3], atol=1e-6)
+    miss = sd.OwnDetector(("TT",))(H_DEG_X, None)
+    assert miss["chan"]["T_missing"] and miss["degenerate"]
+
+def test_own_blend_weight_falls_with_information():
+    a = sd.OwnDetector()(H_from_rad(np.diag([400.0, 400, 400, 40.0, 400, 400])), T_ISO)["w_blend"]
+    b = sd.OwnDetector()(H_from_rad(np.diag([400.0, 400, 400, 10.0, 400, 400])), T_ISO)["w_blend"]
+    c = sd.OwnDetector()(H_DEG_X, T_ISO)["w_blend"]
+    assert 1.0 >= a > b > c >= 0.0, (a, b, c)
+
+def test_own_core_uses_the_blend_and_the_remap():
+    det = sd.OwnDetector()
+    core = sw.SwitchSlamCore(np.eye(3), np.zeros(3), n_buf=5, hess_frame="body", detector=det)
+    I = np.eye(3)
+    core.init((I, np.zeros(3)), (I, np.zeros(3)), (I, np.zeros(3)), (I, np.zeros(3)), t=0.0)
+    core.buf.extend([False, True])                                   # Start/End
+    o1 = (I, np.array([0.1, 0, 0])); v1 = (I, np.array([0.3, 0, 0]))
+    dec = core.decide(o1, v1, H_DEG_X, t=0.1, T=T_ISO)
+    assert dec["kind"] == "INTERP" and 0.0 < dec["w"] < 1.0 and abs(dec["w"] - det(H_DEG_X, T_ISO)["w_blend"]) < 1e-12
+    g = dec["guess"]
+    aft = (I, g[1] + np.array([0.30, 0.20, 0.10]))
+    R, p, info = core.finish(aft, H_DEG_X, dec, g)
+    assert info["case"] == 3 and info["nrem"] >= 1                   # Eq. 15 fusion of the LiDAR step (flagged direction removed) and the VINS step
+
 if __name__ == "__main__":
     n = 0
     for k, f in list(globals().items()):
