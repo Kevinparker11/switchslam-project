@@ -71,3 +71,11 @@ What the log shows:
 
 Reading: on GEODE F33 is a mostly-LiDAR run because VINS-Mono is unusable there, and it lands at the upper end of what F24 does on this bag, above F26's range. The structure of F33 gives no way to reach F26's GEODE values here; F26's lower numbers come from parts F33 does not have (weighted translation fusion, SAH heading anchor). n = 1, development data, no claim.
 Summary of F33 so far: Multi Floor 0.83 / 1.74 (close to F26, inside the F24 / F26 spread), GEODE 9.73 / 22.23 (higher than F26). Not run: Corridor02, Cave02, Long Corridor, Farm, repeats.
+
+## Long Corridor run 1, rules written before the run (batches/f33_lc.sh)
+Long Corridor is a held-out bag for F33 (not used to set any F33 or F32 constant; F24's gates were calibrated on Multi Floor). Published Switch-SLAM 2.42 / 5.09 m; our paper-rule replica SW 13 m (two runs, not a reproduction); F24 1.75 to 2.15 (n=3); F26 2.10 / 3.73 (n=1).
+- Prediction: 1.5 to 4 m, because VINS-Mono is consistent in corridors (F24 works there) and the rotation then comes from it. Not a result.
+- Precondition: tensor found for at least 95 % of scans.
+- Bands: up to 2.15 m = inside the F24 / F26 spread; above 2.15 and up to 2.42 = between that spread and the published Switch-SLAM RMSE; above 2.42 = higher than the published value; above 13 m = no better than our SW replica. A diverged or crashed run counts.
+- Report: ATE RMSE / max, share of scans with the T channel and the TT channel firing, `sw_rotv` share, VINS failed and gate closed shares, angle between output and A-LOAM rotation.
+- n = 1 supports no claim. This is the first F33 result on a bag it was not tuned on, still one run.
