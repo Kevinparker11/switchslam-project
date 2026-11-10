@@ -23,6 +23,7 @@ Environment (all optional):
   VINS_JUMP_POS, VINS_JUMP_ROT_DEG   VINS-Mono failure limits per scan (default 5 m, 50 deg = VINS-Mono's own, as in the paper)
   VIO_CHECK    1: VINS-Mono also counts as failed while F24's scale-consistency gate is closed (fusion_core.VioConsistency, slow
                ref VIO_CHECK_REF over the segment, fast ref VIO_CHECK_FAST_REF over VIO_CHECK_FAST s, VIO_CHECK_START trusted at start)
+  ROT_SRC      lidar (default) | vins (F33: rotation of the output = VINS-Mono's on every scan where it is trusted, translation unchanged)
   T_KNN, T_SUB the orientation-tensor recipe (12, 400), same as fusion_node_v2
   RUN_TAG      log name suffix
   EXTRINSIC_YAML  same format as fusion_node_v2 (default SubT-MRS Multi Floor laser_to_imu)
@@ -62,6 +63,8 @@ VIO_CHECK_REF, VIO_CHECK_NMIN = float(E("VIO_CHECK_REF", "0.157")), int(E("VIO_C
 VIO_CHECK_FAST, VIO_CHECK_FAST_REF = float(E("VIO_CHECK_FAST", "5")), float(E("VIO_CHECK_FAST_REF", "0.277"))
 VIO_CHECK_FAST_NMIN = int(E("VIO_CHECK_FAST_NMIN", "25"))
 VIO_CHECK_START = E("VIO_CHECK_START", "1") == "1"
+ROT_SRC = E("ROT_SRC", "lidar")           # F33: vins = rotation of the output from VINS-Mono whenever trusted
+assert ROT_SRC in ("lidar", "vins"), ROT_SRC
 VINS_GAP = 1.0                      # s without a VINS-Mono pose -> S_vo = fail
 
 T_LI = np.array([[0.999945562, 0.009074807, 0.005149763, 0.080],
@@ -77,7 +80,7 @@ R_IL, t_IL = U_ @ Vt_, T_LI[:3, 3].copy()
 
 lt = sw.LT_PUBLISHED if LT_MODE == "published" else sw.thresholds_from_formula()
 core = sw.SwitchSlamCore(R_IL, t_IL, n_buf=N_BUF, lt=lt, eq15_w=EQ15_W, hess_frame=HESS_FRAME,
-                         vins_jump_pos=VINS_JUMP_POS, vins_jump_rot=np.radians(VINS_JUMP_ROT_DEG),
+                         vins_jump_pos=VINS_JUMP_POS, vins_jump_rot=np.radians(VINS_JUMP_ROT_DEG), rot_src=ROT_SRC,
                          detector=(sd.OurDetector(DET_CH, lt) if DETECT == "ours" else
                                    sd.OwnDetector(DET_CH, DET_CT, 1.0, DET_KR, DET_TT_RULE) if DETECT == "ours_only" else None))
 vio_check = None
@@ -110,7 +113,7 @@ w.writerow(["time", "mode", "fused_x", "fused_y", "fused_z", "fused_qx", "fused_
             "hess_src", "cost", "m_res"] + HCOLS + ["sah_corr_deg", "sah_total_deg", "sah_acc"] +
            ["sw_case", "sw_status", "sw_vo_fail", "sw_lam1", "sw_lam2", "sw_lam3", "sw_w", "sw_degen", "sw_race", "sw_gyro", "sw_gyro_deg"] +
            (["det_sw", "det_R", "det_T", "det_TT", "det_T_missing", "det_nrem"] if DETECT != "sw" else []) +
-           (["vio_gamma"] if VIO_CHECK else []))
+           (["vio_gamma"] if VIO_CHECK else []) + (["sw_rotv"] if ROT_SRC == "vins" else []))
 
 
 def odom_to_pose(msg):
@@ -280,7 +283,7 @@ def aft_cb(msg):
                [info["case"], info["status"], int(info["vo_fail"]), lb[0], lb[1], lb[2], info["w"], int(info["degen"]), int(race), int(info["gyro"]), info["gyro_deg"]] +
                ([int(ch["SW"]), int(ch["R"]), int(ch["T"]), int(ch["TT"]), int(ch["T_missing"]), info["nrem"]] if DETECT != "sw" and (ch := info.get("chan")) is not None else
                 ([0, 0, 0, 0, 0, -1] if DETECT != "sw" else [])) +
-               ([vio_check.gamma()] if vio_check is not None else []))
+               ([vio_check.gamma()] if vio_check is not None else []) + ([int(info.get("rot_vins", False))] if ROT_SRC == "vins" else []))
     stats["rows"] += 1
     stats["race"] += int(race)
     if stats["rows"] % 50 == 0:
@@ -306,6 +309,7 @@ def main():
     print("FUSION_MODE=switch_slam HESS_TOPIC=%s HESS_FRAME=%s N_BUF=%d LT_MODE=%s LT=%s EQ15_W=%g GYRO=%d RUN_TAG=%s"
           % (HESS_TOPIC, HESS_FRAME, N_BUF, LT_MODE, np.round(lt, 3).tolist(), EQ15_W, int(GYRO), RUN_TAG))
     print("DETECT=%s DET_CH=%s T_KNN=%d T_SUB=%d" % (DETECT, ",".join(DET_CH), T_KNN, T_SUB))
+    print("ROT_SRC=%s" % ROT_SRC)
     print("VINS_JUMP_POS=%g VINS_JUMP_ROT_DEG=%g VIO_CHECK=%d VIO_CHECK_REF=%g VIO_CHECK_FAST=%g VIO_CHECK_FAST_REF=%g VIO_CHECK_START=%d"
           % (VINS_JUMP_POS, VINS_JUMP_ROT_DEG, int(VIO_CHECK), VIO_CHECK_REF, VIO_CHECK_FAST, VIO_CHECK_FAST_REF, int(VIO_CHECK_START)))
     print("switch_slam_node listening...")

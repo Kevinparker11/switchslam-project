@@ -97,12 +97,18 @@ class SwitchSlamCore:
     eq15_w    weight of the LiDAR term in Eq. 15.  The printed Eq. 15 has two plain squared norms, whose minimiser is
               the mean of the two steps, so 0.5 is the literal reading                                   [A4]
     vins_jump_pos / vins_jump_rot   VINS-Mono's own failure thresholds (5 m, 50 deg between consecutive states)
+    rot_src   'lidar' (default, Switch-SLAM): the rotation of the output is A-LOAM's scan-to-map rotation.  'vins' (F33): on every scan
+              where VINS-Mono is trusted (a pose is there, the step guard and the outside check pass, i.e. not vo_fail) the rotation
+              increment of the guess is VINS-Mono's and the output keeps it (no rotation correction from the scan-to-map solve, as F26
+              with c_R = 0); the translation follows the Switch-SLAM rule unchanged.  Without a trusted VINS-Mono: unchanged.
     hess_frame 'world': H is the scan-to-map Hessian (left perturbation of q_w_curr, t_w_curr, A-LOAM map frame);
                'body' : H is the scan-to-scan Hessian (previous LiDAR frame), rotated into the map frame for Eq. 14."""
 
     def __init__(self, R_IL=I3, t_IL=np.zeros(3), n_buf=5, lt=LT_PUBLISHED, eq15_w=0.5,
-                 vins_jump_pos=5.0, vins_jump_rot=np.radians(50.0), hess_frame="body", detector=None):
+                 vins_jump_pos=5.0, vins_jump_rot=np.radians(50.0), hess_frame="body", detector=None, rot_src="lidar"):
         assert hess_frame in ("world", "body")
+        assert rot_src in ("lidar", "vins")
+        self.rot_src = rot_src                    # F33: "vins" = the rotation of the output comes from VINS-Mono whenever it is trusted
         self.detector = detector                  # None = Switch-SLAM's own rule (eig_degeneracy); else detector(H, T) -> dict
         self.R_IL, self.t_IL = np.asarray(R_IL, float), np.asarray(t_IL, float)
         self.buf = deque(maxlen=int(n_buf))
@@ -156,6 +162,9 @@ class SwitchSlamCore:
             vo_fail = bool(np.linalg.norm(dv[1]) > self.jump_pos or np.linalg.norm(fc.so3_log(dv[0])) > self.jump_rot)
             if not vo_trusted:                                    # an outside check (F32: F24's VINS consistency gate) distrusts VINS
                 vo_fail = True
+        rot_vins = bool(self.rot_src == "vins" and dv is not None and not vo_fail)
+        if rot_vins:                                              # F33: the rotation of the LiDAR increment is VINS-Mono's
+            dl = (dv[0], dl[1])
         T_h = self._T_in_H_frame(T, self.Rf @ dl[0], dl[0])
         eig = self._detect(H, T_h) if H is not None else None
         degen = eig is not None and eig["degenerate"]
@@ -170,7 +179,7 @@ class SwitchSlamCore:
             kind, d = "VO", dv
         guess = fc.compose(self.Rf, self.pf, d[0], d[1])
         vo_pose = None if vo_fail else fc.compose(self.Rf, self.pf, dv[0], dv[1])
-        return dict(kind=kind, guess=guess, vo=vo_pose, t=t, T=T, T_h=T_h, gyro=gyro_dR is not None, gyro_deg=gyro_deg, vo_fail=vo_fail, eig=eig, status=status, w=w, odom=odom, vins=vins,
+        return dict(rot_vins=rot_vins, kind=kind, guess=guess, vo=vo_pose, t=t, T=T, T_h=T_h, gyro=gyro_dR is not None, gyro_deg=gyro_deg, vo_fail=vo_fail, eig=eig, status=status, w=w, odom=odom, vins=vins,
                     dtl=float(np.linalg.norm(dl[1])), dtv=float(np.linalg.norm(dv[1])) if dv is not None else np.nan)
 
     def pose_to_publish(self, guess):
@@ -216,6 +225,8 @@ class SwitchSlamCore:
                 Rv, pv = dec["vo"]
                 x_v = np.concatenate([fc.so3_log(Rv @ Rg.T), pv - pg])  # VO step relative to the same initial guess
                 case, x = 3, self.eq15_w * x_l + (1.0 - self.eq15_w) * x_v   # Eq. 15 / Eq. 16, line 3
+        if dec.get("rot_vins"):                                         # F33: rotation stays VINS-Mono's
+            x = np.concatenate([np.zeros(3), x[3:]])
         Rf = fc.so3_exp(x[:3]) @ Rg
         U_, _, Vt = np.linalg.svd(Rf)
         self.Rf, self.pf = U_ @ Vt, pg + x[3:]
@@ -225,4 +236,4 @@ class SwitchSlamCore:
         self.prev_t = dec.get("t", self.prev_t)
         lam_bar = eig["lam_bar"] if eig is not None else np.full(3, np.nan)
         return self.Rf, self.pf, dict(chan=eig.get("chan") if eig is not None else None, nrem=(eig["remove"].shape[1] if eig is not None and "remove" in eig else -1), case=case, kind=dec["kind"], status=dec["status"], vo_fail=dec["vo_fail"], degen=bool(degen),
-                                      lam_bar=lam_bar, w=dec["w"], step=float(np.linalg.norm(x[3:])), dtl=dec["dtl"], dtv=dec["dtv"], gyro=dec["gyro"], gyro_deg=dec["gyro_deg"])
+                                      lam_bar=lam_bar, w=dec["w"], step=float(np.linalg.norm(x[3:])), dtl=dec["dtl"], dtv=dec["dtv"], gyro=dec["gyro"], gyro_deg=dec["gyro_deg"], rot_vins=bool(dec.get("rot_vins")))
