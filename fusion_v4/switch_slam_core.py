@@ -101,13 +101,18 @@ class SwitchSlamCore:
               where VINS-Mono is trusted (a pose is there, the step guard and the outside check pass, i.e. not vo_fail) the rotation
               increment of the guess is VINS-Mono's and the output keeps it (no rotation correction from the scan-to-map solve, as F26
               with c_R = 0); the translation follows the Switch-SLAM rule unchanged.  Without a trusted VINS-Mono: unchanged.
+    eq15_mode 'mean' (default, the printed Eq. 15): x = eq15_w x_l + (1 - eq15_w) x_v.  'split' (F34, needs our detector): x = x_l + P x_v, with P
+              the projector on the flagged directions: the LiDAR step along the well-conditioned directions, VINS-Mono's step along the
+              flagged ones, nothing halved (a 0 / 1 information weight per direction).
     hess_frame 'world': H is the scan-to-map Hessian (left perturbation of q_w_curr, t_w_curr, A-LOAM map frame);
                'body' : H is the scan-to-scan Hessian (previous LiDAR frame), rotated into the map frame for Eq. 14."""
 
     def __init__(self, R_IL=I3, t_IL=np.zeros(3), n_buf=5, lt=LT_PUBLISHED, eq15_w=0.5,
-                 vins_jump_pos=5.0, vins_jump_rot=np.radians(50.0), hess_frame="body", detector=None, rot_src="lidar"):
+                 vins_jump_pos=5.0, vins_jump_rot=np.radians(50.0), hess_frame="body", detector=None, rot_src="lidar", eq15_mode="mean"):
         assert hess_frame in ("world", "body")
         assert rot_src in ("lidar", "vins")
+        assert eq15_mode in ("mean", "split")
+        self.eq15_mode = eq15_mode                # F34: "split" = the flagged directions from VINS-Mono, the others from the LiDAR (no halving)
         self.rot_src = rot_src                    # F33: "vins" = the rotation of the output comes from VINS-Mono whenever it is trusted
         self.detector = detector                  # None = Switch-SLAM's own rule (eig_degeneracy); else detector(H, T) -> dict
         self.R_IL, self.t_IL = np.asarray(R_IL, float), np.asarray(t_IL, float)
@@ -224,7 +229,10 @@ class SwitchSlamCore:
             else:
                 Rv, pv = dec["vo"]
                 x_v = np.concatenate([fc.so3_log(Rv @ Rg.T), pv - pg])  # VO step relative to the same initial guess
-                case, x = 3, self.eq15_w * x_l + (1.0 - self.eq15_w) * x_v   # Eq. 15 / Eq. 16, line 3
+                if self.eq15_mode == "split" and "remove" in eig:
+                    case, x = 3, x_l + U @ (U.T @ x_v)                  # F34: flagged directions from VINS-Mono, the rest from the LiDAR
+                else:
+                    case, x = 3, self.eq15_w * x_l + (1.0 - self.eq15_w) * x_v   # Eq. 15 / Eq. 16, line 3
         if dec.get("rot_vins"):                                         # F33: rotation stays VINS-Mono's
             x = np.concatenate([np.zeros(3), x[3:]])
         Rf = fc.so3_exp(x[:3]) @ Rg

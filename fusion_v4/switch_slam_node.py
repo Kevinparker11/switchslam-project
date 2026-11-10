@@ -23,6 +23,8 @@ Environment (all optional):
   VINS_JUMP_POS, VINS_JUMP_ROT_DEG   VINS-Mono failure limits per scan (default 5 m, 50 deg = VINS-Mono's own, as in the paper)
   VIO_CHECK    1: VINS-Mono also counts as failed while F24's scale-consistency gate is closed (fusion_core.VioConsistency, slow
                ref VIO_CHECK_REF over the segment, fast ref VIO_CHECK_FAST_REF over VIO_CHECK_FAST s, VIO_CHECK_START trusted at start)
+  EQ15_MODE    mean (default, printed Eq. 15) | split (F34: flagged directions from VINS-Mono, the others from the LiDAR; our detector only)
+  SAH          1 (F34): structure-anchored heading, F24's module and settings (KF_DIST, KF_ROT, SAH_RMIN/RMAX/VOXEL/MAXPTS/MAX_STEP)
   ROT_SRC      lidar (default) | vins (F33: rotation of the output = VINS-Mono's on every scan where it is trusted, translation unchanged)
   T_KNN, T_SUB the orientation-tensor recipe (12, 400), same as fusion_node_v2
   RUN_TAG      log name suffix
@@ -30,6 +32,7 @@ Environment (all optional):
 """
 import csv
 import os
+import queue
 import threading
 from collections import OrderedDict, deque
 
@@ -63,6 +66,14 @@ VIO_CHECK_REF, VIO_CHECK_NMIN = float(E("VIO_CHECK_REF", "0.157")), int(E("VIO_C
 VIO_CHECK_FAST, VIO_CHECK_FAST_REF = float(E("VIO_CHECK_FAST", "5")), float(E("VIO_CHECK_FAST_REF", "0.277"))
 VIO_CHECK_FAST_NMIN = int(E("VIO_CHECK_FAST_NMIN", "25"))
 VIO_CHECK_START = E("VIO_CHECK_START", "1") == "1"
+EQ15_MODE = E("EQ15_MODE", "mean")        # F34: split = flagged directions from VINS-Mono, the others from the LiDAR
+assert EQ15_MODE in ("mean", "split"), EQ15_MODE
+SAH = E("SAH", "0") == "1"                # F34: structure-anchored heading, the same module and settings as F24 (structure_heading.py)
+KF_DIST, KF_ROT = float(E("KF_DIST", "1.0")), float(E("KF_ROT", "0.2"))
+SAH_RMIN, SAH_RMAX = float(E("SAH_RMIN", "1.0")), float(E("SAH_RMAX", "60.0"))
+SAH_VOXEL, SAH_MAXPTS = float(E("SAH_VOXEL", "0.25")), int(E("SAH_MAXPTS", "6000"))
+SAH_MAX_STEP = np.radians(float(E("SAH_MAX_STEP", "0.25")))
+SAH_SYNC = E("SAH_SYNC", "0") == "1"
 ROT_SRC = E("ROT_SRC", "lidar")           # F33: vins = rotation of the output from VINS-Mono whenever trusted
 assert ROT_SRC in ("lidar", "vins"), ROT_SRC
 VINS_GAP = 1.0                      # s without a VINS-Mono pose -> S_vo = fail
@@ -80,7 +91,7 @@ R_IL, t_IL = U_ @ Vt_, T_LI[:3, 3].copy()
 
 lt = sw.LT_PUBLISHED if LT_MODE == "published" else sw.thresholds_from_formula()
 core = sw.SwitchSlamCore(R_IL, t_IL, n_buf=N_BUF, lt=lt, eq15_w=EQ15_W, hess_frame=HESS_FRAME,
-                         vins_jump_pos=VINS_JUMP_POS, vins_jump_rot=np.radians(VINS_JUMP_ROT_DEG), rot_src=ROT_SRC,
+                         vins_jump_pos=VINS_JUMP_POS, vins_jump_rot=np.radians(VINS_JUMP_ROT_DEG), rot_src=ROT_SRC, eq15_mode=EQ15_MODE,
                          detector=(sd.OurDetector(DET_CH, lt) if DETECT == "ours" else
                                    sd.OwnDetector(DET_CH, DET_CT, 1.0, DET_KR, DET_TT_RULE) if DETECT == "ours_only" else None))
 vio_check = None
@@ -91,6 +102,12 @@ if VIO_CHECK:
                                     start_trusted=VIO_CHECK_START))
     vio_check = fc.VioChecks(_c)
 USE_TT = DETECT in ("ours", "ours_only") and "TT" in DET_CH
+E3 = np.array([0.0, 0.0, 1.0])
+if SAH:
+    import structure_heading as shd
+    sah = shd.make_sah()
+sah_state = dict(last_kf=None, pending={}, clouds=deque(maxlen=30), todo=0.0, applied=0.0, decided=0.0, n_kf=0, Rprev=None, dropped=0)
+sah_q = queue.Queue(maxsize=2)
 t_buf = deque(maxlen=40)                   # (scan stamp, T 3x3) from /laser_cloud_surf_last, additional-T channel
 t_rng = np.random.default_rng(0)
 t_stats = dict(have=0, miss=0)
@@ -206,6 +223,120 @@ def publish(stamp, R, p):
     pub[0].publish(om)
 
 
+def voxel_down(P, v):
+    k = np.floor(P / v).astype(np.int64) + (1 << 20)
+    key = (k[:, 0] << 42) | (k[:, 1] << 21) | k[:, 2]
+    _, inv, cnt = np.unique(key, return_inverse=True, return_counts=True)
+    out = np.zeros((len(cnt), 3))
+    np.add.at(out, inv.ravel(), P)
+    return out / cnt[:, None]
+
+
+def sah_process(job):
+    """as fusion_node_v2.sah_process: the registered cloud of a keyframe scan in the LiDAR frame -> planar normals -> heading measurement
+    about the VINS-Mono vertical; the correction is queued and applied gradually (SAH_MAX_STEP per scan)"""
+    t, Ra, pa, Rf, u, applied_snap, msg = job
+    try:
+        Pb = (cloud_xyz(msg) - pa) @ Ra
+        r = np.linalg.norm(Pb, axis=1)
+        Pb = Pb[(r > SAH_RMIN) & (r < SAH_RMAX)]
+        nb = plan = None
+        if len(Pb) >= 50:
+            Pb = voxel_down(Pb, SAH_VOXEL)
+            if len(Pb) > SAH_MAXPTS:
+                Pb = Pb[np.random.default_rng(int(t * 1e3) % (2 ** 31)).choice(len(Pb), SAH_MAXPTS, replace=False)]
+            nb, plan = shd.planar_normals(Pb)
+    except Exception as ex:                                     # never let SAH break the estimator
+        rospy.logwarn("SAH preprocessing failed at %.2f: %s", t, ex)
+        return
+    with lock:
+        sah_state["n_kf"] += 1
+        if nb is None:
+            return
+        try:
+            outstanding = sah_state["decided"] - applied_snap
+            Rf_eff = fc.so3_exp(-outstanding * u) @ Rf
+            L = shd.level_rotation(u)
+            h, npts = shd.direction_hist(nb @ (L @ Rf_eff).T, plan)
+            c = float(sah.update(t, h, npts))
+        except Exception as ex:
+            rospy.logwarn("SAH update failed at %.2f: %s", t, ex)
+            c = 0.0
+        if np.isfinite(c) and c != 0.0:
+            sah_state["todo"] += c
+            sah_state["decided"] += c
+
+
+def sah_worker():
+    while not rospy.is_shutdown():
+        try:
+            job = sah_q.get(timeout=0.5)
+        except queue.Empty:
+            continue
+        sah_process(job)
+
+
+def sah_submit(job):
+    if SAH_SYNC:
+        sah_process(job)
+        return
+    try:
+        sah_q.put_nowait(job)
+    except queue.Full:
+        sah_state["dropped"] += 1                               # worker busy: skip this keyframe
+
+
+def sah_cloud_cb(msg):
+    st = msg.header.stamp.to_sec()
+    job = None
+    with lock:
+        if st in sah_state["pending"]:
+            job = (st,) + sah_state["pending"].pop(st) + (msg,)
+        else:
+            sah_state["clouds"].append((st, msg))
+    if job is not None:
+        sah_submit(job)
+
+
+def sah_on_step(t, Ra, pa, v, fused, R):
+    """called under the lock after core.finish (F24's sah_on_step with 'mode == FUSED' = VINS-Mono trusted on this scan): turn bookkeeping,
+    gradual application of the decided corrections to the final rotation chain, keyframe selection.  Returns (R, corr_now, job)."""
+    corr_now, job = 0.0, None
+    u = None
+    if v is not None:
+        u = core.Rf @ (R_IL.T @ (v[0].T @ E3))
+        u = u / np.linalg.norm(u)
+    if v is not None:
+        if sah_state["Rprev"] is not None:
+            sah.add_turn(float(fc.so3_log(core.Rf @ sah_state["Rprev"].T) @ u))
+        if fused and sah_state["todo"] != 0.0:
+            corr_now = float(np.clip(sah_state["todo"], -SAH_MAX_STEP, SAH_MAX_STEP))
+            core.Rf = fc.so3_exp(-corr_now * u) @ core.Rf
+            sah_state["todo"] -= corr_now
+            sah_state["applied"] += corr_now
+            R = core.Rf
+    if not fused and sah_state["todo"] != 0.0:
+        sah_state["decided"] -= sah_state["todo"]               # VINS-Mono distrusted: drop stale corrections
+        sah_state["todo"] = 0.0
+    sah_state["Rprev"] = core.Rf.copy()
+    lk = sah_state["last_kf"]
+    is_kf = lk is None or np.linalg.norm(pa - lk[1]) >= KF_DIST or \
+        np.arccos(np.clip((np.trace(lk[0].T @ Ra) - 1) / 2, -1, 1)) >= KF_ROT
+    if is_kf:
+        sah_state["last_kf"] = (Ra, pa)
+        if fused and u is not None:
+            snap = (Ra.copy(), pa.copy(), core.Rf.copy(), u.copy(), sah_state["applied"])
+            for st_, m_ in sah_state["clouds"]:
+                if st_ == t:
+                    job = (t,) + snap + (m_,)
+                    break
+            else:
+                sah_state["pending"][t] = snap
+        for s_ in [s_ for s_ in sah_state["pending"] if s_ < t - 2.0]:
+            sah_state["pending"].pop(s_)
+    return R, corr_now, job
+
+
 def prune(d, t, keep=8.0):
     for k in [k for k in d if k < t - keep]:
         d.pop(k)
@@ -246,6 +377,7 @@ def aft_cb(msg):
     """A-LOAM's scan-to-map solution: Eqs. 14-16 (remap), then Algorithm 1 line 10"""
     t = msg.header.stamp.to_sec()
     Ra, pa = odom_to_pose(msg)
+    job, corr_now = None, 0.0
     with lock:
         v = vins_at(t)
         if vio_check is not None:                            # F24's scale-consistency gate, fed with A-LOAM's pose and the VINS pose
@@ -272,7 +404,14 @@ def aft_cb(msg):
             Hfin = dec["H"] if HESS_FRAME == "body" else Hfull
             race = dec["race"]
             R, p, info = core.finish((Ra, pa), Hfin, dec, P)
+            if SAH:
+                try:
+                    R, corr_now, job = sah_on_step(t, Ra, pa, v, not info["vo_fail"], R)
+                except Exception as ex:                         # never let SAH break the estimator
+                    rospy.logwarn("SAH step failed at %.2f: %s", t, ex)
         cost, mres = latest_H[1], latest_H[2]
+    if job is not None:
+        sah_submit(job)
     vq = fc.R_to_quat(v[0]) if v is not None else [np.nan] * 4
     vp = v[1] if v is not None else [np.nan] * 3
     Hrow = list(Hfull.ravel()) if Hfull is not None else [np.nan] * 36
@@ -302,6 +441,13 @@ def main():
     if USE_TT:
         from sensor_msgs.msg import PointCloud2
         rospy.Subscriber("/laser_cloud_surf_last", PointCloud2, surf_cb, queue_size=20, buff_size=2 ** 24)
+    if SAH:
+        from sensor_msgs.msg import PointCloud2
+        rospy.Subscriber("/velodyne_cloud_registered", PointCloud2, sah_cloud_cb, queue_size=20, buff_size=2 ** 24)
+        if not SAH_SYNC:
+            threading.Thread(target=sah_worker, daemon=True).start()
+        print("SAH=1 KF_DIST=%g KF_ROT=%g SAH_RMIN=%g SAH_RMAX=%g SAH_VOXEL=%g SAH_MAXPTS=%d SAH_MAX_STEP=%.2f deg"
+              % (KF_DIST, KF_ROT, SAH_RMIN, SAH_RMAX, SAH_VOXEL, SAH_MAXPTS, np.degrees(SAH_MAX_STEP)))
     if GYRO:
         from sensor_msgs.msg import Imu
         for tp in IMU_TOPICS:
@@ -309,7 +455,7 @@ def main():
     print("FUSION_MODE=switch_slam HESS_TOPIC=%s HESS_FRAME=%s N_BUF=%d LT_MODE=%s LT=%s EQ15_W=%g GYRO=%d RUN_TAG=%s"
           % (HESS_TOPIC, HESS_FRAME, N_BUF, LT_MODE, np.round(lt, 3).tolist(), EQ15_W, int(GYRO), RUN_TAG))
     print("DETECT=%s DET_CH=%s T_KNN=%d T_SUB=%d" % (DETECT, ",".join(DET_CH), T_KNN, T_SUB))
-    print("ROT_SRC=%s" % ROT_SRC)
+    print("ROT_SRC=%s EQ15_MODE=%s SAH=%d" % (ROT_SRC, EQ15_MODE, int(SAH)))
     print("VINS_JUMP_POS=%g VINS_JUMP_ROT_DEG=%g VIO_CHECK=%d VIO_CHECK_REF=%g VIO_CHECK_FAST=%g VIO_CHECK_FAST_REF=%g VIO_CHECK_START=%d"
           % (VINS_JUMP_POS, VINS_JUMP_ROT_DEG, int(VIO_CHECK), VIO_CHECK_REF, VIO_CHECK_FAST, VIO_CHECK_FAST_REF, int(VIO_CHECK_START)))
     print("switch_slam_node listening...")
@@ -323,4 +469,6 @@ if __name__ == "__main__":
         log.close()
         if USE_TT:
             print("additional T: tensor found for %d scans (%d of them the previous scan's, up to %.2f s old), missing for %d (plain Schur T used there)" % (t_stats["have"], t_stats.get("lag", 0), T_LAG_MAX, t_stats["miss"]))
+        if SAH:
+            print("SAH keyframes %d dropped %d applied %.2f deg stats %s" % (sah_state["n_kf"], sah_state["dropped"], np.degrees(sah_state["applied"]), sah.stats))
         print("Saved", log_path, "rows", stats["rows"], "race (earlier scan unfinished at publish)", stats["race"], "no decision", stats["no_dec"])
