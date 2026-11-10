@@ -162,7 +162,7 @@ class SwitchSlamCore:
         if vo_fail or not degen:                                  # line 2 -> line 3
             kind, d = "LIDAR", dl
         elif status == "Start/End":                               # line 4 -> line 5 (Eq. 13)
-            w = float(min(1.0, SQRT3 * eig["lam_bar"][0]))
+            w = float(eig["w_blend"]) if "w_blend" in eig else float(min(1.0, SQRT3 * eig["lam_bar"][0]))
             kind, d = "INTERP", blend(w, dl, dv)
         else:                                                     # line 6 -> line 7
             kind, d = "VO", dv

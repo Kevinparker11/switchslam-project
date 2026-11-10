@@ -15,7 +15,9 @@ Environment (all optional):
   EQ15_W       weight of the LiDAR step in Eq. 15 (default 0.5 = the literal reading, mean of the two steps)
   GYRO         1 = SWI variant: rotation of the LiDAR increment from the integrated gyro (IMU_TOPICS, default /imu/data,/cmu_sp1/imu/data)
   DETECT       sw (default: Switch-SLAM's own rule, the replica) | ours: Switch-SLAM's rule plus our R, T and additional-T channels
-               (switch_slam_detect.py; the switching structure is unchanged)
+               | ours_only: our channels only, with our own thresholds (kappa 15.7 for R, c_T 0.03 information weight for T), no
+               Switch-SLAM thresholds at all (switch_slam_detect.py; the switching structure is unchanged)
+  DET_CT, DET_KR, DET_TT_RULE   ours_only: c_T (0.03), kappa threshold of R (15.7), tensor rule (min)
   DET_CH       with DETECT=ours: R,T,TT (default; R rotation Schur, T translation Schur, TT additional T = T combined with the
                orientation tensor of /laser_cloud_surf_last).  Subsets for ablations, e.g. R,T
   T_KNN, T_SUB the orientation-tensor recipe (12, 400), same as fusion_node_v2
@@ -48,7 +50,8 @@ GYRO = E("GYRO", "0") == "1"                  # SWI: rotation of the LiDAR incre
 IMU_TOPICS = E("IMU_TOPICS", "/imu/data,/cmu_sp1/imu/data").split(",")
 DETECT = E("DETECT", "sw")
 DET_CH = sd.parse_channels(E("DET_CH", "R,T,TT"))
-assert DETECT in ("sw", "ours"), DETECT
+assert DETECT in ("sw", "ours", "ours_only"), DETECT
+DET_CT, DET_KR, DET_TT_RULE = float(E("DET_CT", "0.03")), float(E("DET_KR", "15.7")), E("DET_TT_RULE", "min")
 T_KNN, T_SUB = int(E("T_KNN", "12")), int(E("T_SUB", "400"))
 VINS_GAP = 1.0                      # s without a VINS-Mono pose -> S_vo = fail
 
@@ -65,8 +68,9 @@ R_IL, t_IL = U_ @ Vt_, T_LI[:3, 3].copy()
 
 lt = sw.LT_PUBLISHED if LT_MODE == "published" else sw.thresholds_from_formula()
 core = sw.SwitchSlamCore(R_IL, t_IL, n_buf=N_BUF, lt=lt, eq15_w=EQ15_W, hess_frame=HESS_FRAME,
-                         detector=sd.OurDetector(DET_CH, lt) if DETECT == "ours" else None)
-USE_TT = DETECT == "ours" and "TT" in DET_CH
+                         detector=(sd.OurDetector(DET_CH, lt) if DETECT == "ours" else
+                                   sd.OwnDetector(DET_CH, DET_CT, 1.0, DET_KR, DET_TT_RULE) if DETECT == "ours_only" else None))
+USE_TT = DETECT in ("ours", "ours_only") and "TT" in DET_CH
 t_buf = deque(maxlen=40)                   # (scan stamp, T 3x3) from /laser_cloud_surf_last, additional-T channel
 t_rng = np.random.default_rng(0)
 t_stats = dict(have=0, miss=0)
@@ -88,7 +92,7 @@ w.writerow(["time", "mode", "fused_x", "fused_y", "fused_z", "fused_qx", "fused_
             "gate", "kappa_R", "kappa_t", "kth", "wt0", "wt1", "wt2", "wR0", "wR1", "wR2", "dta", "dtv",
             "hess_src", "cost", "m_res"] + HCOLS + ["sah_corr_deg", "sah_total_deg", "sah_acc"] +
            ["sw_case", "sw_status", "sw_vo_fail", "sw_lam1", "sw_lam2", "sw_lam3", "sw_w", "sw_degen", "sw_race", "sw_gyro", "sw_gyro_deg"] +
-           (["det_sw", "det_R", "det_T", "det_TT", "det_T_missing", "det_nrem"] if DETECT == "ours" else []))
+           (["det_sw", "det_R", "det_T", "det_TT", "det_T_missing", "det_nrem"] if DETECT != "sw" else []))
 
 
 def odom_to_pose(msg):
@@ -241,8 +245,8 @@ def aft_cb(msg):
                 info["case"], np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, info["dtl"], info["dtv"],
                 HESS_TOPIC, cost, mres] + Hrow + [0.0, 0.0, 0] +
                [info["case"], info["status"], int(info["vo_fail"]), lb[0], lb[1], lb[2], info["w"], int(info["degen"]), int(race), int(info["gyro"]), info["gyro_deg"]] +
-               ([int(ch["SW"]), int(ch["R"]), int(ch["T"]), int(ch["TT"]), int(ch["T_missing"]), info["nrem"]] if DETECT == "ours" and (ch := info.get("chan")) is not None else
-                ([0, 0, 0, 0, 0, -1] if DETECT == "ours" else [])))
+               ([int(ch["SW"]), int(ch["R"]), int(ch["T"]), int(ch["TT"]), int(ch["T_missing"]), info["nrem"]] if DETECT != "sw" and (ch := info.get("chan")) is not None else
+                ([0, 0, 0, 0, 0, -1] if DETECT != "sw" else [])))
     stats["rows"] += 1
     stats["race"] += int(race)
     if stats["rows"] % 50 == 0:

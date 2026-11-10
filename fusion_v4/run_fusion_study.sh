@@ -172,9 +172,12 @@ declare -A CFG=(
   # Development variants, selected on Cave02 and GEODE, which are development data; any gain needs a held-out confirmation (docs/protocols/Least_Error_4h_Protocol.md).
   [F28]="FUSION_MODE=fused C_T=3e-2 KAPPA_TH=1e9 SAH=1 GUESS_MODE=status"
   [F29]="FUSION_MODE=fused C_T=3e-2 KAPPA_TH=1e9 SAH=1 GUESS_MODE=vins_odom"
-  # F30: F26's scan-to-map guess (Switch-SLAM's status rule: A-LOAM's own increment unless degenerate, then VINS-Mono) with LiDAR as the primary pose: the output is
-  # A-LOAM's scan-to-map pose, no VINS fusion, no remap. FUSION_MODE=lidar makes every step LiDAR-only (core.t_warm = inf). docs/results/F30_LiDAR_Primary_Status_Guess.md
-  [F30]="FUSION_MODE=lidar GUESS_MODE=status"
+  # F30: Switch-SLAM's structure for the output (A-LOAM scan-to-map pose, status buffer, VINS-Mono guess when degenerate, Eq. 15/16 remap of the degenerate directions)
+  # with OUR detection only: R (kappa(S_RR) > 15.7), T (information weight c_T 0.03 < 0.5 per direction) and the additional T (orientation tensor, min rule); none of the
+  # paper's thresholds. docs/results/F30_Switch_Structure_Our_Detection.md
+  [F30]="FUSION_MODE=switch_slam HESS_TOPIC=/laser_hessian N_BUF=5 LT_MODE=published EQ15_W=0.5 DETECT=ours_only DET_CH=R,T,TT DET_CT=0.03 DET_KR=15.7 DET_TT_RULE=min"
+  # F31 (was F30 until 10 Nov, never run): F26's guess with A-LOAM's pose as the output and no remap. docs/results/F30_LiDAR_Primary_Status_Guess.md
+  [F31]="FUSION_MODE=lidar GUESS_MODE=status"
   # Switch-SLAM as published (switch_slam_node.py: Algorithm 1 + Eqs. 11-16, no warm-up/weights/SAH/OT/guards). docs/protocols/SwitchSLAM_Exact_Replica.md
   [SW]="FUSION_MODE=switch_slam HESS_TOPIC=/laser_hessian N_BUF=5 LT_MODE=published EQ15_W=0.5"      # scan-to-scan Hessian (installed on every container), literal Eq. 15
   [SWM]="FUSION_MODE=switch_slam HESS_TOPIC=/mapping_hessian N_BUF=5 LT_MODE=published EQ15_W=0.5"  # scan-to-map Hessian as in the paper (needs fusion_v3/patch_mapping_hessian.py in A-LOAM)
@@ -254,7 +257,7 @@ run_one() {
     exit 1
   fi
 
-  local NODE_PY=fusion_node_v2.py; case "$id" in SW*) NODE_PY=switch_slam_node.py;; V7*) NODE_PY=switching_node_v7.py;; esac
+  local NODE_PY=fusion_node_v2.py; case "$id" in SW*|F30*) NODE_PY=switch_slam_node.py;; V7*) NODE_PY=switching_node_v7.py;; esac
   $RESTART > $OUT/restart_$tag.out 2>&1
   GPU=$(docker inspect -f '{{.NetworkSettings.Networks.vins_bridge.IPAddress}}' $GPU_C)
   VINS=$(docker inspect -f '{{.NetworkSettings.Networks.vins_bridge.IPAddress}}' $VINS_C)
