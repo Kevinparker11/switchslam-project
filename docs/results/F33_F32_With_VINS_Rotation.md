@@ -28,3 +28,21 @@ Multi Floor F33 run 1.
 2. Bands on Multi Floor: up to 1.5 m = "close to F26" (F24 / F26 spread 0.45 to 1.01 m); above 1.5 and up to 3 m = "improved on F32, not close"; above 3 m = "rotation source is not the main cause".
 3. Report: ATE RMSE / max, heading error at 100 / 200 / 300 s and end, 10 s rotation error, `sw_rotv` share, VINS failed share, gate closed share, maximum angle between output and A-LOAM rotation.
 4. n = 1 supports no claim; a failed run counts. Multi Floor is the calibration bag for the gates, so this is development data. Adoption needs held-out bags and a rule written first.
+
+## Result: Multi Floor run 1 (uploaded for_claude_f33_mf.zip, 10 Nov 2026)
+ATE RMSE / max, full span: **0.83 / 1.74 m** (4004 poses, GT path 272.4 m; common window 0.81 / 1.70). F32 6.05 / 12.49, F26 0.54 / 1.01, F24 0.45 to 1.01 (n=3), VINS-Mono alone 1.31 / 4.75.
+
+Preconditions (rule 1): tensor found for 4132 of 4138 scans (99.9 %), `sw_rotv` = 1 on 95.0 % of scans. Both met.
+
+Band (rule 2): 0.83 m is inside "up to 1.5 m = close to F26" and inside the F24 / F26 spread (0.45 to 1.01). The prediction written before the run was 1 to 3 m; the result is below it.
+
+| | F33 | F32 | F26 |
+|---|---|---|---|
+| Heading drift 100 / 200 / 300 s / end (deg) | 4.1 / 2.5 / 2.7 / 5.8 | 12.6 / 34.8 / 32.4 / 12.9 | 5.9 / 1.9 / 1.2 / 5.6 |
+| 10 s rotation error median / p90 (deg) | 1.10 / 4.84 | 1.89 / 7.03 | 1.05 / 3.10 |
+
+Same switching as F32: degenerate branch 46.1 % (R 37.2 %, T 0.0 %, TT 9.6 %), VINS-Mono failed 5.0 % (step guard), gate closed 0.0 %. Output branches: Eq. 16 case 1 2161, case 2 198, case 3 1652 scans.
+
+Map consistency (the caveat): angle between the output rotation and A-LOAM's scan-to-map rotation median 1.5, p90 6.2, max 16.9 deg (3.3 / 0.5 / 7.4 deg at 100 / 200 / 300 s). The matching absorbed it, no mapping failure in the run.
+
+Reading: the change of rotation source alone moves Multi Floor from 6.05 to 0.83 m, so the F32 error was the A-LOAM heading drift, as diagnosed. The remaining gap to F26 (0.83 against 0.54, max 1.74 against 1.01) is without the heading anchor and without F26's weighted translation fusion. n = 1 on the calibration bag: development data, no claim; the test of this result is held-out bags and repeats. Not run: GEODE and the other bags for F33.
