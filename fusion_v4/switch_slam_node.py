@@ -122,13 +122,19 @@ def surf_cb(msg):
         t_buf.append((msg.header.stamp.to_sec(), res[0]))
 
 
+T_LAG_MAX = float(E("T_LAG_MAX", "0.25"))      # s: the tensor of the newest scan not later than t is used when the exact one has not arrived yet
+
+
 def t_at(t):
-    """T of the scan with time stamp t, or None (the cloud may arrive after the odometry: that scan then uses the plain Schur T)"""
+    """T of the scan with time stamp t if it is already there, else the tensor of the newest earlier scan within T_LAG_MAX seconds
+    (A-LOAM publishes /laser_cloud_surf_last just after the odometry message of the same scan, so at the odometry callback the exact
+    tensor is never there yet: the first F30 run found 0 of 3455).  The scene's orientation tensor changes little in one scan.
+    Returns (T, lag in s) or None."""
     for st, T in reversed(t_buf):
         if abs(st - t) < 1e-3:
-            return T
+            return T, 0.0
         if st < t - 1e-3:
-            break
+            return (T, t - st) if t - st <= T_LAG_MAX else None
     return None
 
 
@@ -198,9 +204,12 @@ def laser_odom_cb(msg):
             if GYRO and core.prev_t is not None:
                 dR_I = gyro_buf.rotation(core.prev_t, t)
                 dR_L = None if dR_I is None else gp.to_lidar(dR_I, R_IL)
-            T_scan = t_at(t) if USE_TT else None
+            T_hit = t_at(t) if USE_TT else None
+            T_scan = T_hit[0] if T_hit is not None else None
             if USE_TT:
                 t_stats["have" if T_scan is not None else "miss"] += 1
+                if T_hit is not None and T_hit[1] > 0.0:
+                    t_stats["lag"] = t_stats.get("lag", 0) + 1
             dec = core.decide(O, vins_at(t), H, gyro_dR=dR_L, t=t, T=T_scan)
             dec["H"] = H
             dec["race"] = len(decs) > 0                      # an earlier scan is still being mapped: its T_w_odom is not in yet
@@ -282,5 +291,5 @@ if __name__ == "__main__":
     finally:
         log.close()
         if USE_TT:
-            print("additional T: tensor found for %d scans, missing for %d (plain Schur T used there)" % (t_stats["have"], t_stats["miss"]))
+            print("additional T: tensor found for %d scans (%d of them the previous scan's, up to %.2f s old), missing for %d (plain Schur T used there)" % (t_stats["have"], t_stats.get("lag", 0), T_LAG_MAX, t_stats["miss"]))
         print("Saved", log_path, "rows", stats["rows"], "race (earlier scan unfinished at publish)", stats["race"], "no decision", stats["no_dec"])
