@@ -160,6 +160,34 @@ def test_jump_limits_are_configurable():
     core5.init((I, np.zeros(3)), (I, np.zeros(3)), (I, np.zeros(3)), (I, np.zeros(3)), t=0.0)
     assert not core5.decide((I, np.array([0.1, 0, 0])), (I, np.array([1.5, 0, 0])), H_DEG_X)["vo_fail"]
 
+def _rz(deg):
+    a = np.radians(deg); c, s_ = np.cos(a), np.sin(a)
+    return np.array([[c, -s_, 0], [s_, c, 0], [0, 0, 1.0]])
+
+def test_rot_src_vins_keeps_vins_rotation():
+    """F33: with a trusted VINS-Mono the output rotation is VINS-Mono's, whatever the scan-to-map solve says; the translation is the Switch rule's"""
+    I = np.eye(3)
+    for src, expect_deg in (("lidar", 3.0), ("vins", 1.0)):
+        core = sw.SwitchSlamCore(I, np.zeros(3), hess_frame="body", detector=sd.OwnDetector(("T",)), rot_src=src)
+        core.init((I, np.zeros(3)), (I, np.zeros(3)), (I, np.zeros(3)), (I, np.zeros(3)), t=0.0)
+        o1 = (_rz(0.0), np.array([0.1, 0, 0])); v1 = (_rz(1.0), np.array([0.1, 0, 0]))   # LiDAR odometry sees no turn, VINS sees 1 deg
+        dec = core.decide(o1, v1, H_ISO, t=0.1)
+        assert dec["rot_vins"] == (src == "vins")
+        g = dec["guess"]
+        aft = (_rz(3.0), g[1] + np.array([0.01, 0, 0]))     # the scan-to-map solve turns by 3 deg
+        R, p, info = core.finish(aft, H_ISO, dec, g)
+        yaw = np.degrees(np.arctan2(R[1, 0], R[0, 0]))
+        assert abs(yaw - expect_deg) < 1e-6, (src, yaw)
+        assert abs(p[0] - 0.11) < 1e-9                                                   # translation: the solve's, unchanged by the rotation source
+
+def test_rot_src_vins_falls_back_when_vins_fails():
+    I = np.eye(3)
+    core = sw.SwitchSlamCore(I, np.zeros(3), hess_frame="body", detector=sd.OwnDetector(("T",)), rot_src="vins")
+    core.init((I, np.zeros(3)), (I, np.zeros(3)), (I, np.zeros(3)), (I, np.zeros(3)), t=0.0)
+    o1 = (_rz(0.0), np.array([0.1, 0, 0])); v1 = (_rz(1.0), np.array([0.1, 0, 0]))
+    assert not core.decide(o1, v1, H_ISO, t=0.1, vo_trusted=False)["rot_vins"]           # outside check distrusts VINS
+    assert not core.decide(o1, None, H_ISO, t=0.1)["rot_vins"]                           # no VINS pose
+
 if __name__ == "__main__":
     n = 0
     for k, f in list(globals().items()):
