@@ -54,3 +54,20 @@ GEODE is the bag where VINS-Mono is poor in stretches (F30 diverged there: 13.04
 - Bands: 3.26 to 6.36 m (F26 range) = "close to F26"; below = "lower"; above 6.36 m = "higher"; above 13 m = "no better than F30 run 1". A diverged or crashed run counts.
 - Report: ATE RMSE / max, `sw_rotv` share, VINS failed share, gate closed share, heading error against ground truth if available, angle between output and A-LOAM rotation.
 - n = 1 supports no claim; GEODE is tuned-on data for F25 to F27.
+
+## Result: GEODE run 1 (uploaded for_claude_f33_geode.zip, 10 Nov 2026)
+ATE RMSE / max, full span: **9.73 / 22.23 m** (3162 poses, GT path 301.1 m). F26 3.26 to 6.36 (n=3, mean 5.04 / 12.38), F24 6.15 to 9.15 (n=4, mean 7.23 / 18.25), F30 13.04 and 195.58.
+
+Precondition: tensor found for 3453 of 3455 scans. Met.
+
+Band: above 6.36 m, so "higher" than F26; below 13 m, so better than F30 run 1. Prediction (3 to 7 m) was too low. The result is 0.6 m above the top of F24's four-run spread (9.15 m), and one run does not separate it from that spread.
+
+What the log shows:
+- VINS-Mono was treated as failed on **76.3 %** of scans (step guard or no pose; the scale gate was closed on 65.2 %, no pose on 8.4 %). VINS-Mono alone scores 695 m ATE on this bag (diverged), so the checks were right to distrust it.
+- Hence the VINS rotation was used on only **23.7 %** of scans (`sw_rotv`), and the run is mostly A-LOAM's rotation and guess with the Switch remap: output branches case 1 1469, case 2 1397, case 3 305 scans, guess kinds LIDAR 2866, VO 200, INTERP 105.
+- Degenerate branch 53.7 % (R 53.4 %, T 0.0 %, TT 1.2 %), the same detector profile as the F30 runs on this bag (R about 54 %).
+- Angle between the output and A-LOAM's rotation: median 0.5, p90 2.4, max 8.4 deg. Output ATE equals A-LOAM's own (9.72 m).
+- The error over time against a whole-run alignment is not a clean drift curve (16 m in the first 40 s, 3 to 5 m at 80 to 160 s, 20 m at the end), so I do not read an onset time from it.
+
+Reading: on GEODE F33 is a mostly-LiDAR run because VINS-Mono is unusable there, and it lands at the upper end of what F24 does on this bag, above F26's range. The structure of F33 gives no way to reach F26's GEODE values here; F26's lower numbers come from parts F33 does not have (weighted translation fusion, SAH heading anchor). n = 1, development data, no claim.
+Summary of F33 so far: Multi Floor 0.83 / 1.74 (close to F26, inside the F24 / F26 spread), GEODE 9.73 / 22.23 (higher than F26). Not run: Corridor02, Cave02, Long Corridor, Farm, repeats.
