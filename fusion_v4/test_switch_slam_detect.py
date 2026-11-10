@@ -188,6 +188,27 @@ def test_rot_src_vins_falls_back_when_vins_fails():
     assert not core.decide(o1, v1, H_ISO, t=0.1, vo_trusted=False)["rot_vins"]           # outside check distrusts VINS
     assert not core.decide(o1, None, H_ISO, t=0.1)["rot_vins"]                           # no VINS pose
 
+def test_eq15_split_takes_flagged_from_vins_and_rest_from_lidar():
+    """F34: Eq. 15 'split': along the flagged direction (translation x) the step is VINS-Mono's, along the others the LiDAR's, nothing halved;
+    'mean' (the printed Eq. 15) gives the average of the two."""
+    I = np.eye(3)
+    got = {}
+    for mode in ("mean", "split"):
+        core = sw.SwitchSlamCore(I, np.zeros(3), hess_frame="body", detector=sd.OwnDetector(("T",)), eq15_mode=mode)
+        core.init((I, np.zeros(3)), (I, np.zeros(3)), (I, np.zeros(3)), (I, np.zeros(3)), t=0.0)
+        core.buf.extend([True, False, True, False, True])              # mixed status: the guess is the blend of the two steps, the remap still runs
+        o1 = (I, np.array([0.10, 0.0, 0.0])); v1 = (I, np.array([0.30, 0.0, 0.0]))
+        dec = core.decide(o1, v1, H_DEG_X, t=0.1)
+        g = dec["guess"]
+        aft = (I, g[1] + np.array([0.02, 0.05, 0.0]))                  # scan-to-map solve: +0.02 along x (poorly constrained), +0.05 along y
+        R, p, info = core.finish(aft, H_DEG_X, dec, g)
+        assert info["case"] == 3, (mode, info["case"])
+        got[mode] = p - g[1]
+        vx = dec["vo"][1][0] - g[1][0]                                 # VINS step relative to the guess along x
+    assert abs(vx) > 0.01, vx
+    assert abs(got["split"][0] - vx) < 1e-9 and abs(got["split"][1] - 0.05) < 1e-9, got["split"]
+    assert abs(got["mean"][0] - 0.5 * vx) < 1e-9 and abs(got["mean"][1] - 0.025) < 1e-9, got["mean"]
+
 if __name__ == "__main__":
     n = 0
     for k, f in list(globals().items()):
