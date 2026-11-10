@@ -11,7 +11,7 @@
 |---|---|---|---|
 | F26 | F24 fusion (VINS-Mono base, LiDAR corrects) | status rule | F24's Schur fusion |
 | **F30** | **A-LOAM scan-to-map (LiDAR)** | **status rule** | **none** |
-| SW (replica) | A-LOAM + Switch-SLAM remap (Eqs. 14 to 16) | status rule | VINS-Mono fills the degenerate directions |
+| SW (replica) | A-LOAM + Switch-SLAM remap (Eqs. 15, 16) | status rule | VINS healthy: equal-weight fusion of the LiDAR step (degenerate directions removed) and the VINS step; VINS failed: LiDAR step along the well-conditioned directions only, the rest from the initial guess |
 | F4 (old) | A-LOAM | VINS-Mono always | none |
 | F5 (old) | A-LOAM | none (own) | none |
 
@@ -24,3 +24,6 @@
 2. n=1 to 3 supports no significance claim; failed runs count as runs.
 3. Cave02 and GEODE are tuned-on data. Nothing is adopted without a held-out bag and a rule written first.
 4. F30 is not Switch-SLAM and not our fusion: it isolates what the VINS-Mono guess alone gives A-LOAM.
+
+## Check against the paper (10 Nov 2026, Section III-E, Eqs. 14 to 16, read from SwitchSLAM.pdf)
+The remap is not a plain "VINS fills the degenerate directions". Degenerate and VINS healthy (Eq. 15): the LiDAR step with the degenerate directions removed and the whole VINS step are fused with equal weights, so VINS contributes in all six directions and the LiDAR in the well-conditioned ones. Degenerate and VINS failed (Eq. 16 line 2): optimisation along the well-conditioned directions only; the undetermined directions come from the initial guess (the paper's IMU-propagated LiDAR odometry; in our replica A-LOAM's scan-to-scan increment, difference D1). Eq. 14 as printed says "well-conditioned or VO fails" use the full inverse, Eq. 16 uses the degenerate-removed inverse when VO fails; we follow Eq. 16. Our replica applies the remap to A-LOAM's converged displacement (D2), the paper inside its optimiser.
