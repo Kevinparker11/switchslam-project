@@ -172,6 +172,9 @@ declare -A CFG=(
   # Development variants, selected on Cave02 and GEODE, which are development data; any gain needs a held-out confirmation (docs/protocols/Least_Error_4h_Protocol.md).
   [F28]="FUSION_MODE=fused C_T=3e-2 KAPPA_TH=1e9 SAH=1 GUESS_MODE=status"
   [F29]="FUSION_MODE=fused C_T=3e-2 KAPPA_TH=1e9 SAH=1 GUESS_MODE=vins_odom"
+  # F30: F26's scan-to-map guess (Switch-SLAM's status rule: A-LOAM's own increment unless degenerate, then VINS-Mono) with LiDAR as the primary pose: the output is
+  # A-LOAM's scan-to-map pose, no VINS fusion, no remap. FUSION_MODE=lidar makes every step LiDAR-only (core.t_warm = inf). docs/results/F30_LiDAR_Primary_Status_Guess.md
+  [F30]="FUSION_MODE=lidar GUESS_MODE=status"
   # Switch-SLAM as published (switch_slam_node.py: Algorithm 1 + Eqs. 11-16, no warm-up/weights/SAH/OT/guards). docs/protocols/SwitchSLAM_Exact_Replica.md
   [SW]="FUSION_MODE=switch_slam HESS_TOPIC=/laser_hessian N_BUF=5 LT_MODE=published EQ15_W=0.5"      # scan-to-scan Hessian (installed on every container), literal Eq. 15
   [SWM]="FUSION_MODE=switch_slam HESS_TOPIC=/mapping_hessian N_BUF=5 LT_MODE=published EQ15_W=0.5"  # scan-to-map Hessian as in the paper (needs fusion_v3/patch_mapping_hessian.py in A-LOAM)
