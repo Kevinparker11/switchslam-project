@@ -47,3 +47,18 @@ The two runs differ in the VINS-Mono behaviour as well as in the guess rule; one
 | F24 | 12.0 | 12.1 | 5.8 | 5.1 | 5.0 | 4.9 | 5.3 | 5.1 |
 | F26 | 9.7 | 10.1 | 5.0 | 4.2 | 4.2 | 4.1 | 4.3 | 4.3 |
 F26 is lower in every block (2.0 to 2.3 m early, 0.6 to 0.9 m later); one run each.
+
+## Update 10 Nov 2026: F24-family 4 h queue (read from for_claude_f24_family_4h.zip)
+RMSE / max in m, same method. GEODE at 0.5x. No reading rule was written for this queue beforehand, so this is descriptive.
+
+| Bag | F24 | F26 | F27 |
+|---|---|---|---|
+| GEODE | 6.15/14.00, 9.15/25.44, 7.05/17.09, 6.56/16.46 (n=4, mean 7.23, median 6.80) | 6.36/14.07, 3.26/7.81, 5.51/15.25 (n=3, mean 5.04, median 5.51) | 6.97/16.40, 8.82/20.02, 6.41/13.30 (n=3, mean 7.40, median 6.97) |
+| Corridor02 | 1.47/2.51, 104.00/149.20 (failed), 1.29/2.68 (n=3) | 1.93/3.46, 2.04/3.46 (n=2) | not run |
+| Cave02 | 7.55, 7.08, 7.11 (n=3) | 6.23/10.56 (n=1, 6 Nov) | 6.62/11.21 (n=1, 6 Nov) |
+
+- Cave02 runs 2 and 3 of F26 and F27 are not in the zip (no log, no ATE file, no index row). The first stage of the queue produced nothing; cause not yet known.
+- GEODE F26 is lower than F24 by 2.2 m on the mean. Exact Mann-Whitney on 3 against 4 runs: U = 1, one-sided p = 0.057, two-sided 0.114. The ranges touch (F26 max 6.36, F24 min 6.15). Suggestive, not shown. F24 and F26 runs were not interleaved.
+- GEODE F27 is no different from F24 (mean 7.40 against 7.23).
+- Corridor02 F26 2.04 and 1.93: no failure in two runs. F24 failed once in three. Two runs cannot give a failure rate.
+- Nothing reaches 1 to 2 m on GEODE (best single run 3.26).
