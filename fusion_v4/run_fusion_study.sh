@@ -165,6 +165,9 @@ declare -A CFG=(
   [F25A]="FUSION_MODE=fused C_T=3e-2 KAPPA_TH=1e9 SAH=1 ROT_CHECK=1 OT_SRC=geom OT_MODE=gmax VIO_CHECK=1 VIO_CHECK_FAST=5 LIDAR_GUARD_T=2 LIDAR_GUARD_EX=4.325 VIO_CHECK_REF=0.157 VIO_CHECK_FAST_REF=0.277 VIO_CHECK_START=1 HANDOVER=anchor PREDICT_GUARD=1 HANDOVER_TRUST=1"  # F24 + anchor skipped while VINS is distrusted (GEODE)
   # F26 = F24 with the scan-to-map guess chosen by Switch-SLAM's degeneracy status (guess_status.py); the fusion is F24's. docs/results/F26_Status_Guess.md
   [F26]="FUSION_MODE=fused C_T=3e-2 KAPPA_TH=1e9 SAH=1 ROT_CHECK=1 OT_SRC=geom OT_MODE=gmax VIO_CHECK=1 VIO_CHECK_FAST=5 LIDAR_GUARD_T=2 LIDAR_GUARD_EX=4.325 VIO_CHECK_REF=0.157 VIO_CHECK_FAST_REF=0.277 VIO_CHECK_START=1 HANDOVER=anchor PREDICT_GUARD=1 GUESS_MODE=status"
+  # F35 = F26 with the guess decided by our own channels (R kappa 15.7, T c_T 0.03, additional T min rule) instead of the published three thresholds; the fusion is F26's.
+  # docs/results/F35_Guess_With_Own_Channels.md
+  [F35]="FUSION_MODE=fused C_T=3e-2 KAPPA_TH=1e9 SAH=1 ROT_CHECK=1 OT_SRC=geom OT_MODE=gmax VIO_CHECK=1 VIO_CHECK_FAST=5 LIDAR_GUARD_T=2 LIDAR_GUARD_EX=4.325 VIO_CHECK_REF=0.157 VIO_CHECK_FAST_REF=0.277 VIO_CHECK_START=1 HANDOVER=anchor PREDICT_GUARD=1 GUESS_MODE=ours DET_CH=R,T,TT DET_CT=0.03 DET_KR=15.7 DET_TT_RULE=min"
   # F27 = F24 (VINS motion in the guess) but A-LOAM's own increment instead of 'no motion' whenever the VINS motion is unusable (VINS absent / starting / failed / guarded). docs/results/F26_Status_Guess.md
   [F27]="FUSION_MODE=fused C_T=3e-2 KAPPA_TH=1e9 SAH=1 ROT_CHECK=1 OT_SRC=geom OT_MODE=gmax VIO_CHECK=1 VIO_CHECK_FAST=5 LIDAR_GUARD_T=2 LIDAR_GUARD_EX=4.325 VIO_CHECK_REF=0.157 VIO_CHECK_FAST_REF=0.277 VIO_CHECK_START=1 HANDOVER=anchor PREDICT_GUARD=1 GUESS_MODE=vins_odom"
   # F28 / F29 = F16 (the best Cave02 configuration of 19 Oct: Schur T + SAH, none of the F17 to F24 additions) with the scan-to-map guess of F26 / F27.

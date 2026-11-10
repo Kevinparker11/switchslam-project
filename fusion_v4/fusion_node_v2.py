@@ -147,7 +147,9 @@ ZUPT_T = float(E("ZUPT_T", "5.0"))                 # s, LiDAR wander window
 ZUPT_RATIO = float(E("ZUPT_RATIO", "0.5"))         # net displacement / path length below this = wander
 IMU_TOPICS = E("IMU_TOPICS", "/imu/data,/cmu_sp1/imu/data").split(",")
 GUESS_MODE = E("GUESS_MODE", "vins")               # vins (F24: VINS motion in the scan-to-map guess whenever VINS is healthy) | status (F26: Switch-SLAM's degeneracy rule picks LiDAR / interpolation / VIO) | vins_odom (F27: F24, but A-LOAM's own increment instead of 'no motion' while the VINS motion is unusable)
-assert GUESS_MODE in ("vins", "status", "vins_odom"), GUESS_MODE
+assert GUESS_MODE in ("vins", "status", "vins_odom", "ours"), GUESS_MODE   # ours (F35): the status rule of F26 with our R / T / additional-T channels instead of the published thresholds
+GUESS_DET_CH = E("DET_CH", "R,T,TT")
+DET_CT, DET_KR, DET_TT_RULE = float(E("DET_CT", "0.03")), float(E("DET_KR", "15.7")), E("DET_TT_RULE", "min")
 if OT and TCAP:
     raise SystemExit("TCAP (per-scan T from /laser_cloud_surf_last) and OT_MODE (keyframe T) are alternatives; set one")
 KF_CLOUDS = SAH or OT                      # keyframe scans are needed by SAH and/or the OT channel
@@ -182,9 +184,14 @@ core = fc.FusionCore(R_IL, t_IL, c_t=C_T, c_R=C_R, gate=gate, t_warm=T_WARM, hes
                      rot_c_fail=ROT_C_FAIL, rot_gamma_min=ROT_GAMMA_MIN, t_cap=TCAP or OT,
                      t_mode=OT_MODE if OT else "min", handover=HANDOVER, predict_guard=PREDICT_GUARD,
                      handover_trust=HANDOVER_TRUST, zupt=ZUPT, zupt_T=ZUPT_T, zupt_ratio=ZUPT_RATIO)
-if GUESS_MODE == "status":
+if GUESS_MODE in ("status", "ours"):
     import guess_status as gs
-    status_guess = gs.StatusGuess(R_IL, t_IL, hess_frame=HESS_FRAME, jump_max=JUMP_MAX)
+    _det = None
+    if GUESS_MODE == "ours":
+        import switch_slam_detect as sd
+        _det = sd.OwnDetector(sd.parse_channels(GUESS_DET_CH), DET_CT, 1.0, DET_KR, DET_TT_RULE)
+    status_guess = gs.StatusGuess(R_IL, t_IL, hess_frame=HESS_FRAME, jump_max=JUMP_MAX, detector=_det)
+last_aft = [None]                         # (Ra, pa) of the last mapped scan: the keyframe tensor is rotated with it for the guess detector
 if GUESS_MODE == "vins_odom":
     import guess_status as gs
     odom_fallback = gs.OdomFallback(jump_max=JUMP_MAX)
@@ -407,8 +414,13 @@ def laser_odom_cb(msg):
     with lock:
         if not core.initialised():
             R, p = odom_to_pose(msg)            # before the first mapped scan: pass A-LOAM odometry through
-        elif GUESS_MODE == "status":
-            R, p = status_guess.guess(core, odom_to_pose(msg), vins_at(t) if PREDICT_WITH_VINS else None, latest_H[0])
+        elif GUESS_MODE in ("status", "ours"):
+            T_g = None
+            if GUESS_MODE == "ours" and OT and ot_state["T"] is not None and last_aft[0] is not None:
+                Rk, Tk, _tk = ot_state["T"]
+                Rr = last_aft[0][0].T @ Rk                      # keyframe LiDAR frame -> the last mapped scan's frame (one scan old)
+                T_g = Rr @ Tk @ Rr.T
+            R, p = status_guess.guess(core, odom_to_pose(msg), vins_at(t) if PREDICT_WITH_VINS else None, latest_H[0], T=T_g)
             guess_kind[t] = status_guess.kind
             for k_ in [k_ for k_ in guess_kind if k_ < t - 5.0]:
                 guess_kind.pop(k_)
@@ -469,6 +481,7 @@ def aft_cb(msg):
     job = None
     corr_now = 0.0
     with lock:
+        last_aft[0] = (Ra, pa)
         v = vins_at(t)
         H = latest_H[0]
         Tm = t_at(t) if TCAP else None

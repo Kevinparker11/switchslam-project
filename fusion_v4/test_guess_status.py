@@ -65,3 +65,37 @@ assert fb.kind == "ODOM" and abs(p[0] - 0.2) < 1e-9
 R, p = fb.guess(core, core.predict(None), (np.eye(3), np.array([10.0, 0, 0])))
 assert fb.kind == "HOLD" and np.allclose(p, core.pf), "odometry blow-up: no motion"
 print("ALL GUESS_STATUS TESTS PASSED")
+
+
+# F35: the same status rule with our R / T / additional-T channels instead of the published thresholds
+import switch_slam_detect as sd
+def H_from_rad(Hr):
+    D = np.diag([2.0, 2, 2, 1, 1, 1]); return D @ Hr @ D
+H_ISO = H_from_rad(np.diag([400.0] * 6))
+H_DEG_X = H_from_rad(np.diag([400.0, 400, 400, 1.0, 400, 400]))       # translation x has almost no information
+
+def run_ours(H, vins_step, odom_step, T=None, n=8):
+    core = fc.FusionCore(R_IL, t_IL, c_t=0.03, gate=fc.KappaGate(kth=1e9), t_warm=1e12)
+    core.Rf, core.pf = np.eye(3), np.zeros(3)
+    sg = gs.StatusGuess(R_IL, t_IL, detector=sd.OwnDetector(("R", "T", "TT")))
+    odom = (np.eye(3), np.zeros(3)); vins = (np.eye(3), np.zeros(3))
+    for k in range(n):
+        odom = (np.eye(3), odom[1] + np.array([odom_step, 0, 0]))
+        vins = (np.eye(3), vins[1] + np.array([vins_step, 0, 0]))
+        R, p = sg.guess(core, odom, vins, H, T=T)
+        core.Rf, core.pf = R, p
+    return p, sg.kind
+p, kind = run_ours(H_ISO, 0.30, 0.10)
+print("ours, well conditioned:", kind, round(float(p[0]), 3))
+assert kind == "LIDAR" and abs(p[0] - 7 * 0.10) < 1e-9
+p, kind = run_ours(H_DEG_X, 0.30, 0.10)
+print("ours, translation x weak, x8:", kind, round(float(p[0]), 3))
+assert kind == "VO" and p[0] > 7 * 0.10 + 0.5, "our T channel flags it: after a full queue the VINS increment is the guess"
+# additional T: the solver says well conditioned, the scene's orientation tensor has nothing along x -> our TT channel flags it
+T_NOX = np.diag([1e-4, 0.5, 0.5 - 1e-4])
+p, kind = run_ours(H_ISO, 0.30, 0.10, T=T_NOX)
+print("ours, additional T flags x:", kind, round(float(p[0]), 3))
+assert kind == "VO", "additional-T channel: the geometry supports no translation along x"
+p, kind = run_ours(H_DEG_X, 1.5, 0.10)
+assert kind == "LIDAR", "a VINS step above jump_max is treated as absent, as with the published rule"
+print("F35 guess tests passed")

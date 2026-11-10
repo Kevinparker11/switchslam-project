@@ -15,12 +15,13 @@ import switch_slam_core as ssc
 
 
 class StatusGuess:
-    def __init__(self, R_IL, t_IL, hess_frame="body", n_buf=5, jump_max=1.0, rot_jump_max=0.5):
-        self.g = ssc.SwitchSlamCore(R_IL, t_IL, n_buf=n_buf, hess_frame=hess_frame)
+    def __init__(self, R_IL, t_IL, hess_frame="body", n_buf=5, jump_max=1.0, rot_jump_max=0.5, detector=None):
+        # detector None: the published rule (three eigenvalue thresholds, F26); else a detector(H, T) -> dict (F35: our R / T / additional-T channels)
+        self.g = ssc.SwitchSlamCore(R_IL, t_IL, n_buf=n_buf, hess_frame=hess_frame, detector=detector)
         self.jump_max, self.rot_jump_max = float(jump_max), float(rot_jump_max)
         self.kind = "INIT"
 
-    def guess(self, core, odom, vins, H):
+    def guess(self, core, odom, vins, H, T=None):
         """core = the F24 FusionCore (its last fused pose is the base); odom = (R, p) A-LOAM scan-to-scan pose of this scan;
         vins = (R, p) VINS IMU pose at the scan time or None; H = 6x6 scan Hessian or None.  Returns the pose to publish."""
         g = self.g
@@ -35,7 +36,7 @@ class StatusGuess:
             dR, dt = fc.imu_to_lidar_increment(dR_I, dt_I, g.R_IL, g.t_IL)
             if core.prev_mode == "VO_FAIL" or np.linalg.norm(dt) > self.jump_max or np.linalg.norm(fc.so3_log(dR)) > self.rot_jump_max:
                 v = None
-        dec = g.decide(odom, v, H)
+        dec = g.decide(odom, v, H, T=T)
         if dec["eig"] is not None and not dec["vo_fail"]:
             g.buf.append(dec["eig"]["degenerate"])                  # Algorithm 1, line 10
         g.prev_o, g.prev_v = odom, vins
