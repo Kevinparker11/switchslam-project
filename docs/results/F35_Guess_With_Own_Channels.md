@@ -22,3 +22,11 @@ Our channels flag the scan far more often than the published rule: degenerate sh
 
 ## Run (batches/f35_test.sh)
 Default one Long Corridor run (about 20 min). `ONLY="MF"` or `ONLY="LC MF"` for others.
+
+## Result: Long Corridor run 1 (10 Nov 2026)
+Fused ATE 1.99 m RMSE, 3.54 m max (n = 2769 poses, GT path 579.2 m). Scorer: Umeyama SE(3), no scale, full span.
+- Rule 1: 1.99 is up to 2.15, inside the 1.75 to 2.15 spread of the always-VINS-guess design. It is also below F26's 2.10 / 3.73 and below the published Switch-SLAM 2.42 / 5.09 (published numbers are from another setup; not a like-for-like claim).
+- Rule 2, guess kinds used (2776 rows): VINS-Mono step ("VO") 2025 (72.9 %), LiDAR step 506 (18.2 %), blend ("INTERP") 243 (8.8 %), 2 rows without one (init). So our channels put VINS-Mono's step into the guess on about three quarters of scans, against F26's published rule which used it on 0 to 10 %.
+- Scan-to-map ATE of A-LOAM's own pose (aft columns): 1.13 / 2.84 m, lower than the fused 1.99 / 3.54. VINS-Mono alone from the same log: 4.99 / 10.85 m.
+- Rule 4 reading: the result is inside F26's spread, so the thresholds could be dropped for simplicity without a measured loss on this bag. Not shown to be better. n = 1, Long Corridor is development data (used to build F33 / F34). Multi Floor not run.
+- Observation, not a finding: A-LOAM's own pose beats the fused output here. The fusion output on Long Corridor is therefore costing accuracy relative to the scan-to-map pose in this run; one run, cause not tested.
