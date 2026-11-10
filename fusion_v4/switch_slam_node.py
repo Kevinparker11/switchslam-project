@@ -418,7 +418,7 @@ def aft_cb(msg):
     lb = info["lam_bar"]
     w.writerow([t, "SW_" + info["kind"], *p, *fc.R_to_quat(R), *pa, *fc.R_to_quat(Ra), *vp, *vq,
                 info["case"], np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, info["dtl"], info["dtv"],
-                HESS_TOPIC, cost, mres] + Hrow + [0.0, 0.0, 0] +
+                HESS_TOPIC, cost, mres] + Hrow + [np.degrees(corr_now), np.degrees(sah_state["applied"]), (sah.stats["acc"] if SAH else 0)] +
                [info["case"], info["status"], int(info["vo_fail"]), lb[0], lb[1], lb[2], info["w"], int(info["degen"]), int(race), int(info["gyro"]), info["gyro_deg"]] +
                ([int(ch["SW"]), int(ch["R"]), int(ch["T"]), int(ch["TT"]), int(ch["T_missing"]), info["nrem"]] if DETECT != "sw" and (ch := info.get("chan")) is not None else
                 ([0, 0, 0, 0, 0, -1] if DETECT != "sw" else [])) +
