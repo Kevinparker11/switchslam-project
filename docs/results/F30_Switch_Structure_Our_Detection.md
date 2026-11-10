@@ -61,3 +61,20 @@ ATE RMSE / max = **13.04 / 62.88 m** (3095 of 3104 poses in the GT span). Fire r
 ATE RMSE / max = **195.58 / 330.60 m** (3435 poses; GT path 301.1 m, so the trajectory diverged). It counts as a run. Fire rates: R 54.3 %, T 0.0 %, additional T 1.2 %, degenerate branch 54.7 %. Guess kinds: LiDAR 1888, VINS-Mono 931, interpolation 623. Output branches: full LiDAR 1558, degenerate and VINS failed 330, Eq. 15 fusion 1554. VINS-Mono flagged failed on 13.4 % of scans. 717 of 3443 scans were "earlier scan unfinished at publish" (run 1: 1561 of 3104).
 
 Reading: run 1 (additional T void) 13.04 m and run 2 (additional T on) 195.58 m with the same fire rates to within one point (R 54.0 against 54.3 %, degenerate 54.3 against 54.7 %); the additional T added only 0.4 % of the scans. So the additional T does not explain the difference, and the rate of firing is not the difference either. What does is not known: replay timing (race share 50 % against 21 %) and the sensitivity of a run in which half of the output is a fusion with a poorly checked VINS-Mono are both candidates. Two runs, 13.04 and 195.58, are a spread of 15 times on one bag with one configuration; no claim about F30 beyond "unstable on GEODE as specified". Not tuned, not repeated yet.
+
+### Where run 2 diverged (read from the run logs, 10 Nov 2026; `fusion_v4/offline_f30_windows.py`)
+Mean position error per 20 s window against ground truth after a rigid fit on the first 40 s (a drift measure, not the ATE), with the branch shares and the median step per scan:
+
+| window (s) | run 1 error (m) | run 2 error (m) | run 1 median VINS step (m) | run 2 median VINS step (m) | LiDAR step, run 2 (m) | VINS flagged failed, run 2 |
+|---|---|---|---|---|---|---|
+| 0 to 20 | 0.05 | 4.2 | 0.100 | 0.084 | 0.012 | 60 % |
+| 20 to 40 | 0.08 | 9.2 | 0.113 | **1.182** | 0.127 | 0 % |
+| 40 to 60 | 0.38 | **135.1** | 0.102 | 0.281 | 0.123 | 14 % |
+| 100 to 120 | 3.3 | 74.6 | 0.225 | 2.144 | 0.080 | 1 % |
+| 340 to 360 | 53.7 | 601.9 | 8.766 | 0.510 | 0.007 | 0 to 94 % |
+
+- In both runs the output equals A-LOAM's own scan-to-map pose within 1 to 2 m at every window (fused 135.12 against A-LOAM 135.04 at 40 to 60 s in run 2): the failure is in A-LOAM's mapping, which is seeded by the guess this node publishes.
+- Run 2 went wrong between 20 and 60 s, in the window where VINS-Mono's median step was 1.18 m (about 9 times the LiDAR step of 0.127 m) and was flagged failed on 0 % of scans, because the paper-style test only fires above 5 m or 50 degrees. In the same window of run 1 the VINS-Mono step was 0.113 m. During 20 to 60 s about 30 % of scans used the VINS-Mono guess or the interpolation and 28 to 80 % took the Eq. 15 fusion branch.
+- Run 1 also drifted (0.05 m at the start, 12 m at 200 to 220 s, 54 m at the end), with VINS-Mono steps of 1.2 to 8.8 m in several late windows, again mostly not flagged.
+- The VINS-Mono output of run 2 contains 28 failure or restart messages against 4 in run 1.
+- Reading: on GEODE the VINS-Mono started with a very different quality in the two runs, and the paper-style failure test does not catch a VINS-Mono whose steps are about 10 times too large but below 5 m. F24 and F26 reject exactly this with the 1 m and 0.5 rad guard. Two runs; log evidence only, no further run was made to test it.
