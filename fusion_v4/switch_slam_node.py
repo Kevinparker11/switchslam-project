@@ -20,6 +20,9 @@ Environment (all optional):
   DET_CT, DET_KR, DET_TT_RULE   ours_only: c_T (0.03), kappa threshold of R (15.7), tensor rule (min)
   DET_CH       with DETECT=ours: R,T,TT (default; R rotation Schur, T translation Schur, TT additional T = T combined with the
                orientation tensor of /laser_cloud_surf_last).  Subsets for ablations, e.g. R,T
+  VINS_JUMP_POS, VINS_JUMP_ROT_DEG   VINS-Mono failure limits per scan (default 5 m, 50 deg = VINS-Mono's own, as in the paper)
+  VIO_CHECK    1: VINS-Mono also counts as failed while F24's scale-consistency gate is closed (fusion_core.VioConsistency, slow
+               ref VIO_CHECK_REF over the segment, fast ref VIO_CHECK_FAST_REF over VIO_CHECK_FAST s, VIO_CHECK_START trusted at start)
   T_KNN, T_SUB the orientation-tensor recipe (12, 400), same as fusion_node_v2
   RUN_TAG      log name suffix
   EXTRINSIC_YAML  same format as fusion_node_v2 (default SubT-MRS Multi Floor laser_to_imu)
@@ -53,6 +56,12 @@ DET_CH = sd.parse_channels(E("DET_CH", "R,T,TT"))
 assert DETECT in ("sw", "ours", "ours_only"), DETECT
 DET_CT, DET_KR, DET_TT_RULE = float(E("DET_CT", "0.03")), float(E("DET_KR", "15.7")), E("DET_TT_RULE", "min")
 T_KNN, T_SUB = int(E("T_KNN", "12")), int(E("T_SUB", "400"))
+VINS_JUMP_POS, VINS_JUMP_ROT_DEG = float(E("VINS_JUMP_POS", "5.0")), float(E("VINS_JUMP_ROT_DEG", "50.0"))
+VIO_CHECK = E("VIO_CHECK", "0") == "1"
+VIO_CHECK_REF, VIO_CHECK_NMIN = float(E("VIO_CHECK_REF", "0.157")), int(E("VIO_CHECK_NMIN", "200"))
+VIO_CHECK_FAST, VIO_CHECK_FAST_REF = float(E("VIO_CHECK_FAST", "5")), float(E("VIO_CHECK_FAST_REF", "0.277"))
+VIO_CHECK_FAST_NMIN = int(E("VIO_CHECK_FAST_NMIN", "25"))
+VIO_CHECK_START = E("VIO_CHECK_START", "1") == "1"
 VINS_GAP = 1.0                      # s without a VINS-Mono pose -> S_vo = fail
 
 T_LI = np.array([[0.999945562, 0.009074807, 0.005149763, 0.080],
@@ -68,8 +77,16 @@ R_IL, t_IL = U_ @ Vt_, T_LI[:3, 3].copy()
 
 lt = sw.LT_PUBLISHED if LT_MODE == "published" else sw.thresholds_from_formula()
 core = sw.SwitchSlamCore(R_IL, t_IL, n_buf=N_BUF, lt=lt, eq15_w=EQ15_W, hess_frame=HESS_FRAME,
+                         vins_jump_pos=VINS_JUMP_POS, vins_jump_rot=np.radians(VINS_JUMP_ROT_DEG),
                          detector=(sd.OurDetector(DET_CH, lt) if DETECT == "ours" else
                                    sd.OwnDetector(DET_CH, DET_CT, 1.0, DET_KR, DET_TT_RULE) if DETECT == "ours_only" else None))
+vio_check = None
+if VIO_CHECK:
+    _c = [fc.VioConsistency(ref=VIO_CHECK_REF, stat="scale", rule="gate", avg=None, n_min=VIO_CHECK_NMIN, start_trusted=VIO_CHECK_START)]
+    if VIO_CHECK_FAST > 0:
+        _c.append(fc.VioConsistency(ref=VIO_CHECK_FAST_REF, stat="scale", rule="gate", avg=VIO_CHECK_FAST, n_min=VIO_CHECK_FAST_NMIN,
+                                    start_trusted=VIO_CHECK_START))
+    vio_check = fc.VioChecks(_c)
 USE_TT = DETECT in ("ours", "ours_only") and "TT" in DET_CH
 t_buf = deque(maxlen=40)                   # (scan stamp, T 3x3) from /laser_cloud_surf_last, additional-T channel
 t_rng = np.random.default_rng(0)
@@ -92,7 +109,8 @@ w.writerow(["time", "mode", "fused_x", "fused_y", "fused_z", "fused_qx", "fused_
             "gate", "kappa_R", "kappa_t", "kth", "wt0", "wt1", "wt2", "wR0", "wR1", "wR2", "dta", "dtv",
             "hess_src", "cost", "m_res"] + HCOLS + ["sah_corr_deg", "sah_total_deg", "sah_acc"] +
            ["sw_case", "sw_status", "sw_vo_fail", "sw_lam1", "sw_lam2", "sw_lam3", "sw_w", "sw_degen", "sw_race", "sw_gyro", "sw_gyro_deg"] +
-           (["det_sw", "det_R", "det_T", "det_TT", "det_T_missing", "det_nrem"] if DETECT != "sw" else []))
+           (["det_sw", "det_R", "det_T", "det_TT", "det_T_missing", "det_nrem"] if DETECT != "sw" else []) +
+           (["vio_gamma"] if VIO_CHECK else []))
 
 
 def odom_to_pose(msg):
@@ -210,7 +228,8 @@ def laser_odom_cb(msg):
                 t_stats["have" if T_scan is not None else "miss"] += 1
                 if T_hit is not None and T_hit[1] > 0.0:
                     t_stats["lag"] = t_stats.get("lag", 0) + 1
-            dec = core.decide(O, vins_at(t), H, gyro_dR=dR_L, t=t, T=T_scan)
+            trusted = vio_check is None or vio_check.gamma() > 0.5
+            dec = core.decide(O, vins_at(t), H, gyro_dR=dR_L, t=t, T=T_scan, vo_trusted=trusted)
             dec["H"] = H
             dec["race"] = len(decs) > 0                      # an earlier scan is still being mapped: its T_w_odom is not in yet
             P = core.pose_to_publish(dec["guess"])
@@ -226,6 +245,11 @@ def aft_cb(msg):
     Ra, pa = odom_to_pose(msg)
     with lock:
         v = vins_at(t)
+        if vio_check is not None:                            # F24's scale-consistency gate, fed with A-LOAM's pose and the VINS pose
+            if v is not None:
+                vio_check.update(t, (Ra, pa), (np.asarray(v[0], float), np.asarray(v[1], float)), R_IL, t_IL)
+            else:
+                vio_check.reset()
         Hfull = latest_H[0]
         if not core.initialised():
             O = odoms.get(t, (Ra, pa))
@@ -255,7 +279,8 @@ def aft_cb(msg):
                 HESS_TOPIC, cost, mres] + Hrow + [0.0, 0.0, 0] +
                [info["case"], info["status"], int(info["vo_fail"]), lb[0], lb[1], lb[2], info["w"], int(info["degen"]), int(race), int(info["gyro"]), info["gyro_deg"]] +
                ([int(ch["SW"]), int(ch["R"]), int(ch["T"]), int(ch["TT"]), int(ch["T_missing"]), info["nrem"]] if DETECT != "sw" and (ch := info.get("chan")) is not None else
-                ([0, 0, 0, 0, 0, -1] if DETECT != "sw" else [])))
+                ([0, 0, 0, 0, 0, -1] if DETECT != "sw" else [])) +
+               ([vio_check.gamma()] if vio_check is not None else []))
     stats["rows"] += 1
     stats["race"] += int(race)
     if stats["rows"] % 50 == 0:
@@ -281,6 +306,8 @@ def main():
     print("FUSION_MODE=switch_slam HESS_TOPIC=%s HESS_FRAME=%s N_BUF=%d LT_MODE=%s LT=%s EQ15_W=%g GYRO=%d RUN_TAG=%s"
           % (HESS_TOPIC, HESS_FRAME, N_BUF, LT_MODE, np.round(lt, 3).tolist(), EQ15_W, int(GYRO), RUN_TAG))
     print("DETECT=%s DET_CH=%s T_KNN=%d T_SUB=%d" % (DETECT, ",".join(DET_CH), T_KNN, T_SUB))
+    print("VINS_JUMP_POS=%g VINS_JUMP_ROT_DEG=%g VIO_CHECK=%d VIO_CHECK_REF=%g VIO_CHECK_FAST=%g VIO_CHECK_FAST_REF=%g VIO_CHECK_START=%d"
+          % (VINS_JUMP_POS, VINS_JUMP_ROT_DEG, int(VIO_CHECK), VIO_CHECK_REF, VIO_CHECK_FAST, VIO_CHECK_FAST_REF, int(VIO_CHECK_START)))
     print("switch_slam_node listening...")
     rospy.spin()
 

@@ -136,6 +136,30 @@ def test_own_core_uses_the_blend_and_the_remap():
     R, p, info = core.finish(aft, H_DEG_X, dec, g)
     assert info["case"] == 3 and info["nrem"] >= 1                   # Eq. 15 fusion of the LiDAR step (flagged direction removed) and the VINS step
 
+def test_vo_untrusted_counts_as_failure():
+    """F32: an outside check that distrusts VINS makes Algorithm 1 take the LiDAR guess and Eq. 16 line 2"""
+    core = sw.SwitchSlamCore(np.eye(3), np.zeros(3), n_buf=5, hess_frame="body", detector=sd.OwnDetector(("T",)))
+    I = np.eye(3)
+    core.init((I, np.zeros(3)), (I, np.zeros(3)), (I, np.zeros(3)), (I, np.zeros(3)), t=0.0)
+    core.buf.extend([True] * 5)
+    o1 = (I, np.array([0.1, 0, 0])); v1 = (I, np.array([0.3, 0, 0]))
+    d_ok = core.decide(o1, v1, H_DEG_X, t=0.1)
+    assert d_ok["kind"] == "VO" and not d_ok["vo_fail"]
+    d_no = core.decide(o1, v1, H_DEG_X, t=0.1, vo_trusted=False)
+    assert d_no["kind"] == "LIDAR" and d_no["vo_fail"]
+    g = d_no["guess"]
+    _, _, info = core.finish((I, g[1] + np.array([0.3, 0.2, 0.1])), H_DEG_X, d_no, g)
+    assert info["case"] == 2
+
+def test_jump_limits_are_configurable():
+    core = sw.SwitchSlamCore(np.eye(3), np.zeros(3), vins_jump_pos=1.0)
+    I = np.eye(3)
+    core.init((I, np.zeros(3)), (I, np.zeros(3)), (I, np.zeros(3)), (I, np.zeros(3)), t=0.0)
+    assert core.decide((I, np.array([0.1, 0, 0])), (I, np.array([1.5, 0, 0])), H_DEG_X)["vo_fail"]
+    core5 = sw.SwitchSlamCore(np.eye(3), np.zeros(3))
+    core5.init((I, np.zeros(3)), (I, np.zeros(3)), (I, np.zeros(3)), (I, np.zeros(3)), t=0.0)
+    assert not core5.decide((I, np.array([0.1, 0, 0])), (I, np.array([1.5, 0, 0])), H_DEG_X)["vo_fail"]
+
 if __name__ == "__main__":
     n = 0
     for k, f in list(globals().items()):
