@@ -81,3 +81,12 @@ print("final x error %.3f m (VINS scale error alone would give %.3f)" % (L["fuse
 assert abs(L["fused_x"].values[-1] - T(n)) < 0.2
 assert (L["sw_race"] == 0).all()
 print("node plumbing test passed")
+
+# additional-T lookup: exact stamp, else the newest earlier scan within the lag limit, else none
+node.t_buf.clear()
+Ta, Tb = np.eye(3) / 3, np.diag([0.1, 0.45, 0.45])
+node.t_buf.append((10.0, Ta)); node.t_buf.append((10.1, Tb))
+assert node.t_at(10.1)[1] == 0.0 and np.allclose(node.t_at(10.1)[0], Tb)
+r = node.t_at(10.2); assert r is not None and abs(r[1] - 0.1) < 1e-9 and np.allclose(r[0], Tb), "newest earlier tensor, 0.1 s old"
+assert node.t_at(10.1 + node.T_LAG_MAX + 0.01) is None, "too old: none"
+print("additional-T lag lookup test passed")

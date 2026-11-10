@@ -39,3 +39,10 @@ So with R at 15.7 the scans are called degenerate on a large share of every bag 
 
 ## Related configs
 `SW` replica of the paper; `SWD` = paper's rule OR our channels with the paper's thresholds (pre-registered, queued); `F31` = F26's guess with A-LOAM as the output and no remap (never run).
+
+## First run (10 Nov 2026, GEODE, run 1): additional T void, fixed afterwards
+The log line read "additional T: tensor found for 0 scans, missing for 3455 (plain Schur T used there)". Reading rule 1 applies: run 1 is a run of R and plain T only, void as a test of the additional T, and stays in the record as such (tag `F30_kf_run1`). The run wrote 3104 rows; 1561 of them were scans where an earlier scan was still being mapped when the guess was published (`sw_race`).
+
+Cause (a plumbing error, not a threshold): A-LOAM publishes `/laser_cloud_surf_last` just after the odometry message of the same scan. The switch node looks the tensor up in the odometry callback, where the exact one is never there yet. The fusion node never had this problem because it looks the tensor up in the mapping callback.
+
+Fix (commit after 30fd81d): the lookup takes the exact tensor if present, else the tensor of the newest earlier scan within 0.25 s (`T_LAG_MAX`), and the log line now says how many were the previous scan's. D5: the previous scan's tensor is treated as being in the current frame; the error is the rotation between two scans. Unit test added. The same fix applies to `SWD` (it uses the same node). The fixed run is `F30_kf_run2`; run 1 is not deleted and not replaced.
