@@ -95,3 +95,18 @@ For runs 2 and 3 change the tag (`F35_farm_live2`, `gt_f35farm2.txt`, folder `fa
 
 ## What is not verified
 The install of the forward-camera files (steps 0 and 1: pointing `HUSKY_URDF_EXTRAS` at the copied `husky_velodyne_extra_fwd.urdf.xacro` and writing `farm_fwd_config.yaml` into the VINS config folder) is reconstructed from Farm_Forward_Camera_Test.md, which does not list the commands of the 7 Nov runs; the sensor-rate printout of those runs was not recorded. If step 5b does not show the rates above, the run is void.
+
+## Run 1 (10 Nov 2026, farm_f35.zip): void, not scored
+The drive worked: the Husky left the reset at sim t = 121 s, drove the L and stopped at (-38.56, -39.98) after 81.9 m of ground-truth path; VINS-Mono followed it (end (-33.7, -35.3)). The F35 node started at sim t = 102 s with the printout `GUESS_MODE=ours HANDOVER=anchor PREDICT_GUARD=1` as required. The fusion log is not usable:
+- 76,481 rows over 2,316 s (about 3.3 times the expected 10 Hz), up to 6 rows per timestamp, 4,821 backward steps in time; 245 non-text bytes in the file (the standard scorer stops on them).
+- Rows with the same timestamp carry A-LOAM poses from different places (for example at t = 400.02 the `aft` position alternates between (-1021, 2403, -1309) and (-783, 687, 3979)), and A-LOAM's pose is already in the hundreds to thousands of metres at t = 103 to 110 s, before the robot moved (it moved from t = 121 s). The fused pose jumped to (515, 987, 3492) at t = 130 s and stayed there to the end of the log (t = 2418 s).
+- Guess kinds (VO 90 %) are computed from that garbage and say nothing about F35.
+So more than one A-LOAM or fusion pipeline was feeding or writing the log. The F35 settings are not the cause of that. The most likely source is processes left alive in `switchslam_gpu_v2` by the earlier replay batch (f35_all.sh runs A-LOAM and the node in the same container); the step-0 `pkill` list does not kill A-LOAM's own node processes. Not confirmed (the process list was not captured). Precondition FC-P0' was not documented for this run either (the step 5b printout and the scorer printout were not sent). Rule 5 applies: failed start, reported, not scored, whole sequence restarted from step 0 with the same settings.
+
+## Revised start for the rerun (replaces the `pkill` line of step 0; nothing else changes)
+Restart both containers instead of killing by name, copy the files after the restart, and check for a single A-LOAM and a single node before the drive:
+```
+docker restart switchslam_gpu_v2 vinsmono_test && sleep 15
+docker exec switchslam_gpu_v2 bash -c "ps -eo pid,etime,args | grep -E 'ros|gz|alaser|ascan|fusion|logger|driver' | grep -v grep"      # expect nothing
+```
+After step 3 (A-LOAM): `docker exec -e ROS_IP=172.17.0.10 switchslam_gpu_v2 bash -c "source /opt/ros/noetic/setup.bash && rosnode list | sort && rostopic info /aft_mapped_to_init | grep -A2 Publishers"` shows one `/alaserMapping` publisher. Before step 8: `docker exec switchslam_gpu_v2 bash -c "pgrep -fc fusion_node_v2.py"` prints 1 (the tee shell may add one more line to ps; count only python3 processes). The first rows of the new log must have one row per 0.1 s.
