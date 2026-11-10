@@ -176,6 +176,9 @@ declare -A CFG=(
   # with OUR detection only: R (kappa(S_RR) > 15.7), T (information weight c_T 0.03 < 0.5 per direction) and the additional T (orientation tensor, min rule); none of the
   # paper's thresholds. docs/results/F30_Switch_Structure_Our_Detection.md
   [F30]="FUSION_MODE=switch_slam HESS_TOPIC=/laser_hessian N_BUF=5 LT_MODE=published EQ15_W=0.5 DETECT=ours_only DET_CH=R,T,TT DET_CT=0.03 DET_KR=15.7 DET_TT_RULE=min"
+  # F32: F30 plus F24's VINS-Mono failure checks (step guard 1 m / 0.5 rad, scale-consistency gate 0.157 slow / 0.277 fast over 5 s, trusted at start):
+  # a VINS-Mono that fails them counts as failed in Algorithm 1 (LiDAR guess, Eq. 16 line 2). docs/results/F32_F30_With_F24_VINS_Checks.md
+  [F32]="FUSION_MODE=switch_slam HESS_TOPIC=/laser_hessian N_BUF=5 LT_MODE=published EQ15_W=0.5 DETECT=ours_only DET_CH=R,T,TT DET_CT=0.03 DET_KR=15.7 DET_TT_RULE=min VINS_JUMP_POS=1.0 VINS_JUMP_ROT_DEG=28.6479 VIO_CHECK=1 VIO_CHECK_REF=0.157 VIO_CHECK_FAST=5 VIO_CHECK_FAST_REF=0.277 VIO_CHECK_START=1"
   # F31 (was F30 until 10 Nov, never run): F26's guess with A-LOAM's pose as the output and no remap. docs/results/F30_LiDAR_Primary_Status_Guess.md
   [F31]="FUSION_MODE=lidar GUESS_MODE=status"
   # Switch-SLAM as published (switch_slam_node.py: Algorithm 1 + Eqs. 11-16, no warm-up/weights/SAH/OT/guards). docs/protocols/SwitchSLAM_Exact_Replica.md
@@ -257,7 +260,7 @@ run_one() {
     exit 1
   fi
 
-  local NODE_PY=fusion_node_v2.py; case "$id" in SW*|F30*) NODE_PY=switch_slam_node.py;; V7*) NODE_PY=switching_node_v7.py;; esac
+  local NODE_PY=fusion_node_v2.py; case "$id" in SW*|F30*|F32*) NODE_PY=switch_slam_node.py;; V7*) NODE_PY=switching_node_v7.py;; esac
   $RESTART > $OUT/restart_$tag.out 2>&1
   GPU=$(docker inspect -f '{{.NetworkSettings.Networks.vins_bridge.IPAddress}}' $GPU_C)
   VINS=$(docker inspect -f '{{.NetworkSettings.Networks.vins_bridge.IPAddress}}' $VINS_C)

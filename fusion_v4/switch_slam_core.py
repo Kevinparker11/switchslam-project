@@ -138,7 +138,7 @@ class SwitchSlamCore:
         R = dR_prev if self.hess_frame == "body" else R_cur
         return R @ np.asarray(T, float) @ R.T
 
-    def decide(self, odom, vins, H, gyro_dR=None, t=None, T=None):
+    def decide(self, odom, vins, H, gyro_dR=None, t=None, T=None, vo_trusted=True):
         """odom = (R, p) A-LOAM scan-to-scan odometry pose of this scan; vins = (R, p) VINS-Mono IMU pose at the scan
         time or None (VINS lost / not initialised); H = Hessian used for the detection (6x6) or None.
         gyro_dR (SWI variant only) = integrated-gyro rotation increment of the LiDAR frame since the last finished scan; it replaces
@@ -154,6 +154,8 @@ class SwitchSlamCore:
             dR_I, dt_I = fc.rel_body(self.prev_v[0], self.prev_v[1], vins[0], vins[1])
             dv = fc.imu_to_lidar_increment(dR_I, dt_I, self.R_IL, self.t_IL)
             vo_fail = bool(np.linalg.norm(dv[1]) > self.jump_pos or np.linalg.norm(fc.so3_log(dv[0])) > self.jump_rot)
+            if not vo_trusted:                                    # an outside check (F32: F24's VINS consistency gate) distrusts VINS
+                vo_fail = True
         T_h = self._T_in_H_frame(T, self.Rf @ dl[0], dl[0])
         eig = self._detect(H, T_h) if H is not None else None
         degen = eig is not None and eig["degenerate"]
