@@ -46,3 +46,11 @@ Same switching as F32: degenerate branch 46.1 % (R 37.2 %, T 0.0 %, TT 9.6 %), V
 Map consistency (the caveat): angle between the output rotation and A-LOAM's scan-to-map rotation median 1.5, p90 6.2, max 16.9 deg (3.3 / 0.5 / 7.4 deg at 100 / 200 / 300 s). The matching absorbed it, no mapping failure in the run.
 
 Reading: the change of rotation source alone moves Multi Floor from 6.05 to 0.83 m, so the F32 error was the A-LOAM heading drift, as diagnosed. The remaining gap to F26 (0.83 against 0.54, max 1.74 against 1.01) is without the heading anchor and without F26's weighted translation fusion. n = 1 on the calibration bag: development data, no claim; the test of this result is held-out bags and repeats. Not run: GEODE and the other bags for F33.
+
+## GEODE run 1, rules written before the run (batches/f33_geode.sh, 0.5x replay as the earlier GEODE runs)
+GEODE is the bag where VINS-Mono is poor in stretches (F30 diverged there: 13.04 and 195.58 m; F32 not run there). F33 uses VINS-Mono rotation only while it passes the checks, so GEODE is the test of the fallback.
+- Prediction: the failed VINS-Mono stretches fall back to A-LOAM rotation and guess, so the result should land near A-LOAM and F26, 3 to 7 m. Not a result.
+- Precondition: tensor found for at least 95 % of scans. `sw_rotv` share is reported, not thresholded (a low share is a finding here).
+- Bands: 3.26 to 6.36 m (F26 range) = "close to F26"; below = "lower"; above 6.36 m = "higher"; above 13 m = "no better than F30 run 1". A diverged or crashed run counts.
+- Report: ATE RMSE / max, `sw_rotv` share, VINS failed share, gate closed share, heading error against ground truth if available, angle between output and A-LOAM rotation.
+- n = 1 supports no claim; GEODE is tuned-on data for F25 to F27.
