@@ -72,7 +72,7 @@ L = pd.read_csv("switching_log_v2_TEST.csv")
 q = L[["fused_qx", "fused_qy", "fused_qz", "fused_qw"]].values[-1]
 R = fc.quat_to_R(q); yaw = float(np.degrees(np.arctan2(R[1, 0], R[0, 0])))
 import json
-print("RESULT " + json.dumps(dict(yaw=yaw, n_kf=node.sah_state["n_kf"], applied=float(np.degrees(node.sah_state["applied"])), acc=(node.sah.stats["acc"] if node.SAH else 0), stats=(node.sah.stats if node.SAH else {}))))
+print("RESULT " + json.dumps(dict(logsah=float(L["sah_total_deg"].iloc[-1]), yaw=yaw, n_kf=node.sah_state["n_kf"], applied=float(np.degrees(node.sah_state["applied"])), acc=(node.sah.stats["acc"] if node.SAH else 0), stats=(node.sah.stats if node.SAH else {}))))
 '''
 
 def run(sah, drift):
@@ -93,6 +93,7 @@ if __name__ == "__main__":
     print("no drift, SAH on: final yaw %.3f deg" % none["yaw"])
     assert not warns and not warns0, (warns, warns0)
     assert sah["n_kf"] >= 80 and sah["acc"] >= 40
+    assert abs(sah["logsah"] - sah["applied"]) < 1e-6 and abs(sah["applied"]) > 1.0, sah     # the log column carries the applied correction (it was left at 0 in the first F34 run)
     assert abs(base["yaw"]) > 4.0, base
     assert abs(sah["yaw"]) < 0.6 * abs(base["yaw"]), (base, sah)       # corrects most of the drift
     assert abs(none["yaw"]) < 0.5, none                                 # no drift: no harm
