@@ -1,4 +1,4 @@
-"""Figures for the F26 version of the thesis report (same style as figs.py)."""
+"""Figures for the F35 version of the thesis report (same style as figs.py)."""
 import sys
 sys.argv = [sys.argv[0]] + sys.argv[1:]
 _args = sys.argv[1:]
@@ -27,7 +27,7 @@ def fig_flow3():
              "First-generation switching node and a study\nof 15 detection rules on Multi Floor",
              "Design the channels: Schur R, Schur T and the\norientation-tensor channel (additional T)",
              "Diagnose live failures and add safeguards\n(F20 to F24), each with a rule written first",
-             "Choose A-LOAM's scan-to-map guess from the\ndegeneracy status of the scan (F26, final)",
+             "Choose A-LOAM's scan-to-map guess from the\ndegeneracy status of the scan (F35, final)",
              "Live runs on six sequences with frozen settings;\nreplays only for diagnosis",
              "Compare with VINS-Mono, A-LOAM, earlier versions and published Switch-SLAM"]
     ys = np.linspace(0.94, 0.06, len(steps))
@@ -51,7 +51,7 @@ def fig_arch3():
     box(ax, 0.62, 0.30, 0.25, 0.11, "Additional T (orientation tensor G):\ngmax rule on $S_{tt}$\n+ heading read-out (SAH)", "#e7f5ec", fs=9.2)
     box(ax, 0.90, 0.58, 0.16, 0.36, "Fusion\n\n$W_R$, $W_t$\n\n$\\Delta t = W_t\\Delta t_L$\n$+(I-W_t)\\Delta t_V$", "#ffffff", fs=9.5)
     box(ax, 0.90, 0.12, 0.16, 0.07, "Fused pose", "#ffffff", fs=10)
-    box(ax, 0.335, 0.135, 0.25, 0.10, "Scan-to-map guess (F26):\nstatus of the scan Hessian, queue 5\nLiDAR step / blend / VINS step", "#eaf4ee", ec="#1b7f4c", fs=8.8)
+    box(ax, 0.335, 0.135, 0.25, 0.10, "Scan-to-map guess (F35):\nstatus of the scan Hessian, queue 5\nLiDAR step / blend / VINS step", "#eaf4ee", ec="#1b7f4c", fs=8.8)
     arrow(ax, 0.18, 0.84, 0.23, 0.84); arrow(ax, 0.18, 0.56, 0.23, 0.56)
     seg(ax, [(0.10, 0.80), (0.10, 0.30), (0.23, 0.30)])
     arrow(ax, 0.44, 0.86, 0.495, 0.90); arrow(ax, 0.44, 0.82, 0.495, 0.775)
@@ -86,11 +86,11 @@ def fig_weights3():
     ax[1].set_ylabel("OT ratio\n$\\lambda'/\\lambda$")
     ax[2].plot(t, d.sah_total_deg, color=C_F20, lw=1.0)
     ax[2].set_ylabel("SAH heading\ncorrection (deg)"); ax[2].set_xlabel("time (s)")
-    ax[0].set_title("Long Corridor, F26 live run 1 (shaded: yellow warm-up, blue fused)", loc="left")
+    ax[0].set_title("Long Corridor, F35 live run 1 (shaded: yellow warm-up, blue fused)", loc="left")
     fig.align_ylabels(ax)
     fig.savefig(O + "f5_weights.png", bbox_inches="tight"); plt.close(fig)
     fu_w0 = d.wt0[fu]
-    print("LC F26 wt0 median", np.nanmedian(fu_w0), "wt2 median", np.nanmedian(d.wt2[fu]), "ot ratio p50/p95", np.nanpercentile(d.ot_ratio[fu], [50, 95]), "sah min", d.sah_total_deg.min(), d.sah_total_deg.max())
+    print("LC F35 wt0 median", np.nanmedian(fu_w0), "wt2 median", np.nanmedian(d.wt2[fu]), "ot ratio p50/p95", np.nanpercentile(d.ot_ratio[fu], [50, 95]), "sah min", d.sah_total_deg.min(), d.sah_total_deg.max())
 
 
 def _panel(ax, ttl, d, gt, paths, loc="best"):
@@ -106,23 +106,23 @@ def _panel(ax, ttl, d, gt, paths, loc="best"):
 
 def fig_traj3():
     fig, axs = plt.subplots(2, 2, figsize=(7.0, 6.6))
-    pv = [("F26", C_F26, "fused_"), ("VINS-Mono alone", C_VINS, "v_p")]
-    _panel(axs[0, 0], "(a) Multi Floor, F26 live", pd.read_csv(F + "MF_switching_log_v2_F26_kf_run1.csv"), _gt("MF"), pv)
-    _panel(axs[0, 1], "(b) Long Corridor, F26 live", pd.read_csv(F + "LC_switching_log_v2_F26_kf_run1.csv"), _gt("LC"), pv)
-    _panel(axs[1, 0], "(c) Corridor02, F26 live run 1", pd.read_csv(F + "C02_switching_log_v2_F26_kf_run1.csv"), _gt("C02"), pv, loc="center")
+    pv = [("F35", C_F26, "fused_"), ("VINS-Mono alone", C_VINS, "v_p")]
+    _panel(axs[0, 0], "(a) Multi Floor, F35 live", pd.read_csv(F + "MF_switching_log_v2_F26_kf_run1.csv"), _gt("MF"), pv)
+    _panel(axs[0, 1], "(b) Long Corridor, F35 live", pd.read_csv(F + "LC_switching_log_v2_F26_kf_run1.csv"), _gt("LC"), pv)
+    _panel(axs[1, 0], "(c) Corridor02, F35 live run 1", pd.read_csv(F + "C02_switching_log_v2_F26_kf_run1.csv"), _gt("C02"), pv, loc="center")
     f = pd.read_csv(S + "/f26z/farm_f26/switching_log_v2_F26_fwdrgb_live1.csv"); g = np.loadtxt(S + "/f26z/farm_f26/gt_f26.txt", comments="#")
     j = np.linalg.norm(np.diff(g[:, 1:3], axis=0), axis=1); k = int(np.argmax(j))
     tr = g[k + 1, 0] if j[k] > 0.5 else g[0, 0]; g = g[g[:, 0] >= tr]
     f = f[f.time >= max(tr, g[0, 0])].reset_index(drop=True)
-    _panel(axs[1, 1], "(d) Farm L route, F26 live", f, (g[:, 0], g[:, 1:4]), pv)
+    _panel(axs[1, 1], "(d) Farm L route, F35 live", f, (g[:, 0], g[:, 1:4]), pv)
     fig.tight_layout(); fig.savefig(O + "f5_traj.png"); plt.close(fig)
 
 
 def fig_heldout3():
     fig, axs = plt.subplots(1, 2, figsize=(7.0, 3.4))
-    pv = [("F26", C_F26, "fused_"), ("A-LOAM output", C_ALOAM, "aft_")]
-    _panel(axs[0], "(a) Cave02, F26 live", pd.read_csv(F + "CAVE_switching_log_v2_F26_kf_run1.csv"), _gt("CAVE"), pv)
-    _panel(axs[1], "(b) GEODE stairs, F26 live run 2", pd.read_csv(F + "GEODE_switching_log_v2_F26_kf_run2.csv"), _gt("GEODE"), pv)
+    pv = [("F35", C_F26, "fused_"), ("A-LOAM output", C_ALOAM, "aft_")]
+    _panel(axs[0], "(a) Cave02, F35 live", pd.read_csv(F + "CAVE_switching_log_v2_F26_kf_run1.csv"), _gt("CAVE"), pv)
+    _panel(axs[1], "(b) GEODE stairs, F35 live run 2", pd.read_csv(F + "GEODE_switching_log_v2_F26_kf_run2.csv"), _gt("GEODE"), pv)
     fig.tight_layout(); fig.savefig(O + "f5_heldout.png"); plt.close(fig)
 
 
@@ -135,8 +135,8 @@ def fig_switch3():
     x = np.arange(3); w = 0.26
     for a, k, ttl in [(axs[0], 0, "ATE RMSE (m)"), (axs[1], 1, "Maximum error (m)")]:
         a.bar(x - w, [v[k] for v in vins], w, color="#e8a39b", edgecolor="#333", lw=0.5, label="VINS-Mono alone (same run)")
-        a.bar(x, [v[k] for v in sw], w, color="#9db8de", edgecolor="#333", lw=0.5, label="Switch-SLAM (published)")
-        a.bar(x + w, [v[k] for v in ours], w, color="#7cc49b", edgecolor="#333", lw=0.5, label="F26 (live, one run each)")
+        a.bar(x, [v[k] for v in sw], w, color="#9db8de", edgecolor="#333", lw=0.5, label="Switch-SLAM (published, LiDAR-inertial)")
+        a.bar(x + w, [v[k] for v in ours], w, color="#7cc49b", edgecolor="#333", lw=0.5, label="F35 (live, one run each)")
         a.set_xticks(x); a.set_xticklabels(seqs); a.set_title(ttl)
         a.set_ylim(0, 1.45 * max(max(v[k] for v in vins), max(v[k] for v in sw)))
     axs[0].legend(frameon=False, fontsize=8, loc="upper left")
