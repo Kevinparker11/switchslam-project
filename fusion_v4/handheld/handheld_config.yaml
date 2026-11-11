@@ -37,7 +37,7 @@ freq: 10
 F_threshold: 1.0
 show_track: 1
 equalize: 1
-fisheye: 1
+fisheye: 0
 max_solver_time: 0.04
 max_num_iterations: 8
 keyframe_parallax: 10.0
