@@ -336,6 +336,8 @@ PY
   fi
   if [ "$SCORER" = multifloor ]; then
     (cd $OUT && python3 "$ATE" --gt "$GT" --fmt switch switching_log_v2_$tag.csv) > $OUT/ate_$tag.txt 2>&1
+  elif [ "$SCORER" = xy ]; then      # Handheld: GPS reference, horizontal error only (handheld/score_run_xy.py)
+    (cd $FUSION_DIR && python3 handheld/score_run_xy.py --gt "$GT" --log $OUT/switching_log_v2_$tag.csv) > $OUT/ate_$tag.txt 2>&1
   else
     (cd $FUSION_DIR && python3 score_run.py --gt "$GT" --log $OUT/switching_log_v2_$tag.csv) > $OUT/ate_$tag.txt 2>&1
   fi
