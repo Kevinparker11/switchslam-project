@@ -24,3 +24,16 @@ The F24 coverage list says Handheld "not run", and on 11 Nov I told the owner th
 - Camera: a raw bag would be about 19.2 GB, so the images are republished live. VINS-Mono's `freq: 10` in the config drops the 30 Hz stream to 10 Hz.
 - The F20 log of 30 Oct spans 1,642.4 s, i.e. the whole bag.
 - Reference script: `make_gps_reference.py`, cleaning rule fixed before any score: drop fixes with status < 0 or horizontal variance above 1.0 m^2; counts printed; no smoothing. `score_run_xy.py` now takes `--src fused|aft|vins`.
+
+## F20 on Handheld, scored for the first time (11 Nov 2026; log of 30 Oct 2026, GPS reference from `make_gps_reference.py`, scorer `score_run_xy.py`)
+Reference file: 7,961 of the bag's 8,215 fixes kept (the printout of the script was not sent), 25 gaps above 1 s (longest 3.2 s), path 2,273 m, extent 410 x 319 m. Log: 6,883 rows over 1,642.4 s (FUSED 5,605, WARMUP 1,198, VO_FAIL 80). Horizontal ATE only, 2-D rigid fit without scale, 204 log poses inside reference gaps left out (3 %), 6,678 scored. F20 is not the final version; one run, replay.
+
+| Output | RMSE / max (m) |
+|---|---|
+| F20 fused | 19.30 / 70.55 |
+| A-LOAM output (fed by the fused pose) | 12.06 / 51.06 |
+| VINS-Mono alone | 24.33 / 36.05 |
+
+Published (the paper prints max / RMSE): Switch-SLAM 1.25 RMSE / 3.07 max; LVI-SAM 1.23 / 3.27; VINS-Mono 10.3 / 21.4.
+Diagnosis from the same log: a similarity fit gives scale 1.04 (fused) and 1.04 (A-LOAM), so the error is not a scale error; the fused error is already about 20 m in the first 200 s and is 9 to 45 m in every later 200 s block (largest in the last block, 45 m mean, 70 m max). Fused is worse than the A-LOAM output of its own log. VINS-Mono alone is worse than the published VINS-Mono (24.3 against 10.3 RMSE). F20 is far from the published Switch-SLAM level on this bag. The published number may not be on the same footing: the paper does not say which part of the bag, which reference or whether the error is 2-D or 3-D, and about 1.25 m RMSE over 2.3 km without loop closure would be a drift of about 0.05 %.
+Not run on Handheld: F24, F26, F35, SW.
