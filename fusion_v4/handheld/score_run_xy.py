@@ -40,13 +40,14 @@ if __name__ == "__main__":
     ap.add_argument("--gt", required=True)
     ap.add_argument("--log", required=True)
     ap.add_argument("--max-gap", type=float, default=1.0)
+    ap.add_argument("--src", default="fused", choices=["fused", "aft", "vins"], help="which column pair of the log: fused output, A-LOAM output, VINS-Mono alone")
     a = ap.parse_args()
     g = np.loadtxt(a.gt)
     gt_t, gt_xy = g[:, 0], g[:, 1:3]
     L = pd.read_csv(a.log)
     L = L[L["mode"] != "INIT"]
     t = L["time"].values.astype(float)
-    cand = [("fused_x", "fused_y"), ("x", "y"), ("fx", "fy")]
+    cand = {"fused": [("fused_x", "fused_y"), ("x", "y"), ("fx", "fy")], "aft": [("aft_x", "aft_y")], "vins": [("v_px", "v_py")]}[a.src]
     cols = next((c for c in cand if c[0] in L.columns and c[1] in L.columns), None)
     if cols is None:
         raise SystemExit("no x/y columns found; log columns are: %s" % list(L.columns))
