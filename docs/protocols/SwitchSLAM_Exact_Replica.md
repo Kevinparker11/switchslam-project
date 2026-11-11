@@ -230,3 +230,22 @@ Window ATE is over the window only: compare variants with each other on the same
 
 **Also fixed on 11 Nov.** The run script copies a fixed list of files into the container and `imu_prop.py` was missing from it, so a first `SWF` bag run would have stopped at the import; added (found while writing these tests, before any run).
 Gravity initialisation now also needs the LiDAR poses of the last second to show a mean speed below 0.1 m/s, because a slow steady push passes the IMU-only tests and would tilt the gravity estimate.
+
+## 20. Filter start changed after the offline check (11 Nov 2026, before any SWF bag run)
+
+The first offline IMU check (section 19, test 1) ran on Corridor02 (893 s) and Cave02 (first 299 s of 955 s). The filter, as then written, needed a quiet one-second IMU window with the LiDAR poses almost still,
+and it first started at +854 s on Corridor02 and +283 s on Cave02. Neither bag has a quiet start, so `SWF` would have used A-LOAM's own increment for nearly the whole run and behaved as plain `SW`.
+That is a fault in the variant, found before any bag run, so no result is involved. Two other things in the same output were also wrong in the check itself: the time-offset sweep chose the best offset by
+translation error, which is flat (Corridor02: 0.0030 m at every offset), so "best offset -0.06 s" meant nothing; and the "IMU starts after the first pose" warning fired on a difference under 0.05 s.
+
+Change (named `SWF`, same name, since no SWF result existed): the start is now pose-aided and works while moving. Over the last 2 s of finished scans, the gyro bias is the median of (mean gyro minus the pose rotation rate)
+per scan; gravity is the mean acceleration seen in the poses (from the velocity at both ends of the window, each over at least 0.4 s) minus the mean of R f over the same interval, with R from the poses; the
+start is accepted only if the norm of that gravity is within 0.6 m/s^2 of 9.81007 and the IMU covers the window. The velocity starts from the pose velocity at the end of the window. This supersedes the quiet-window rule and the
+0.1 m/s speed condition written in section 19. No other setting changed; noise values are still the ones of the project's VINS configuration.
+
+Offline check changes: the best offset is the one with the lowest median one-scan rotation error and is flagged only if it is at least 10 % better than zero offset and at least 0.04 s away; the IMU-start
+warning needs a difference above 0.5 s. The go rules of section 19 stand: the filter starts, the IMU / repeat-last ratio is below 1, the best offset is within 0.04 s of zero. The earlier output is kept as the reason for the change:
+Corridor02 one-scan translation ratio 0.68 and Cave02 0.83, both over a few hundred scans just after a late start, so neither is evidence about the filter over the whole bag.
+
+Tests: `test_imu_prop.py` now covers a static start, a moving start with and without 5 mm pose noise, rejection of a pose chain with the wrong scale, and an IMU shorter than the window.
+Next: re-run the offline check on both bags with the new start (Corridor02 full IMU file; Cave02 with a longer extraction), then the window screen, then section 18.

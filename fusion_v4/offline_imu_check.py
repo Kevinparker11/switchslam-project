@@ -7,7 +7,7 @@ asks, scan by scan, how well the filter would have predicted the next increment 
   next to two trivial predictors (zero motion, repeat the last logged increment);
   error split into along the direction of travel and across it (the corridor axis is where a scan-to-scan odometer slides);
   a sweep of the IMU-to-LiDAR time offset (a wrong offset is the most likely hidden fault);
-  when the filter started (first quiet window), gravity tilt, bias estimates.
+  when the filter started (pose-aided start over the first 2 s window), gravity tilt, bias estimates.
 Open loop: it cannot say whether A-LOAM stops sliding with this guess, because the guess changes what A-LOAM solves.  It says whether the guess is
 good before a bag is played.  A guess whose one-scan error is not clearly below 'repeat the last increment' is not worth a closed-loop run.
 
@@ -113,7 +113,7 @@ def main():
     print("IMU: %d samples, %.1f s, %.0f Hz;  poses (%s): %d scans, %.1f s, median step %.3f m"
           % (len(imu), imu[-1, 0] - imu[0, 0], len(imu) / (imu[-1, 0] - imu[0, 0]), a.pose, len(t), t[-1] - t[0],
              np.median([np.linalg.norm(P[i] - P[i - 1]) for i in range(1, len(P))])))
-    if imu[0, 0] > t[0] + 0.05:
+    if imu[0, 0] > t[0] + 0.5:
         print("WARNING: the IMU starts at %.1f, after the first pose %.1f (different clocks, or the IMU file is from another bag?)" % (imu[0, 0], t[0]))
     if imu[-1, 0] < t[-1] - 0.05:
         keep = t <= imu[-1, 0] - 0.05
@@ -124,7 +124,7 @@ def main():
             t, Rs, P = t[keep], [r for r, k in zip(Rs, keep) if k], P[keep]
     f, started, rec = run(imu, t, Rs, P, R_IL, t_IL)
     if started is None:
-        print("The filter never started: no quiet IMU window (1 s, |mean f| within 0.6 of 9.81, gyro mean < 0.15 rad/s) at any scan.")
+        print("The filter never started: no 2 s window where the IMU and the poses give a gravity norm within 0.6 of 9.81 at any scan.")
         print("  SWF would use A-LOAM's increment for the whole run; check the first seconds of the IMU csv.")
         sys.exit(2)
     gdir = f.g / np.linalg.norm(f.g)
@@ -150,17 +150,21 @@ def main():
     for s, g in df.groupby("seg"):
         print("  %4d-%4d s  %.4f   step %.3f   along-signed %.4f" % (s * 60, s * 60 + 60, g["e_t"].median(), g["step"].median(), g["e_along"].median()))
     if not a.no_sweep:
-        print("\nIMU time offset sweep (IMU stamps shifted by the offset; the best one is the offset to look at):")
-        best = None
+        print("\nIMU time offset sweep (IMU stamps shifted by the offset; best = lowest median one-scan rotation error, which a time offset changes much more than the translation):")
+        best, zero = None, None
         for off in np.arange(-0.1, 0.1001, 0.02):
             _, st, rr = run(imu, t, Rs, P, R_IL, t_IL, offset=off)
             d = pd.DataFrame([r for r in rr if "e_t" in r])
             if len(d):
                 m_t, m_r = d["e_t"].median(), d["e_r"].median()
                 print("  %+5.2f s   translation %.4f m   rotation %.3f deg" % (off, m_t, m_r))
-                best = (m_t, off) if best is None or m_t < best[0] else best
+                best = (m_r, off) if best is None or m_r < best[0] else best
+                if abs(off) < 1e-9:
+                    zero = m_r
         if best:
-            print("  best offset %+.2f s%s" % (best[1], "  (not 0: check the IMU / LiDAR stamps)" if abs(best[1]) >= 0.04 else "  (stamps look aligned)"))
+            off_bad = abs(best[1]) >= 0.04 and zero is not None and best[0] < 0.9 * zero          # at least 10 % better than no shift
+            print("  best offset %+.2f s%s" % (best[1], "  (more than 10 %% better than 0 and %.2f s away: check the IMU / LiDAR stamps)" % abs(best[1]) if off_bad
+                                               else "  (stamps look aligned)"))
     if a.csv:
         df.to_csv(a.csv, index=False); print("per-scan errors:", a.csv)
 

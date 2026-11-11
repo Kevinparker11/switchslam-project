@@ -43,10 +43,10 @@ def lidar_pose(t, noise=0.0):
     return RL, pL
 
 
-def init_at(f, t_end, t_start=0.4):
-    """offer scans at 10 Hz from t_start to t_end (true LiDAR poses) until the filter starts; returns the stamp or None"""
+def init_at(f, t_end, t_start=0.4, noise=0.0):
+    """offer scans at 10 Hz from t_start to t_end (LiDAR poses, optional noise) until the filter starts; returns the stamp or None"""
     for t in np.arange(t_start, t_end + 1e-9, 0.1):
-        if f.try_init(round(t, 4), *lidar_pose(t)):
+        if f.try_init(round(t, 4), *lidar_pose(t, noise=noise)):
             return round(t, 4)
     return None
 
@@ -56,18 +56,33 @@ def feed(f, t0, t1):
         g, a = imu_sample(t); f.add(t, g, a)
 
 
-# ---- 1 gravity and gyro bias from the quiet start
+# ---- 1 gravity, gyro bias and velocity from the first 2 s of IMU and poses: static start, then a window with acceleration and a turn
 f = ip.ImuPropagator(R_IL, t_IL)
-feed(f, 0.0, 1.6)
-assert not f.try_init(0.5, *lidar_pose(0.5)), "window shorter than init_win must not initialise"
-t_init = init_at(f, 1.9); assert t_init is not None and 1.3 <= t_init <= 1.5, t_init
+feed(f, 0.0, 2.1)
+assert not ip.ImuPropagator(R_IL, t_IL).try_init(0.5, *lidar_pose(0.5)), "no history yet"
+t_init = init_at(f, 2.0); assert t_init is not None and 1.9 <= t_init <= 2.0, t_init
 assert np.linalg.norm(f.g - G_TRUE) < 0.12, (f.g, G_TRUE)                    # accelerometer bias of norm 0.07 m/s^2 tilts the gravity direction by up to 0.4 deg
 assert np.linalg.norm(f.bg - BG) < 0.004, f.bg
+for noise in (0.0, 0.005):                                                  # moving start: constant 0.9 m/s^2 and 14 deg/s turn through the whole window, 5 mm pose noise
+    f = ip.ImuPropagator(R_IL, t_IL); feed(f, 0.0, 8.0)
+    t_init = init_at(f, 7.0, t_start=3.0, noise=noise)
+    assert t_init is not None and t_init <= 5.4, t_init
+    assert np.linalg.norm(f.g - G_TRUE) < (0.12 if noise == 0 else 0.5), (noise, f.g, G_TRUE)
+    assert abs(np.linalg.norm(f.g) - 9.81007) < 1e-9
+    assert np.linalg.norm(f.bg - BG) < (0.004 if noise == 0 else 0.02), (noise, f.bg)
+    R_t, _, v_t, _, _ = truth(t_init); assert np.linalg.norm(f.v - v_t) < (0.1 if noise == 0 else 0.3), (noise, f.v, v_t)
+# a pose chain whose scale disagrees with the IMU (5 times too long a displacement: 4 m/s^2 against the 0.9 m/s^2 the IMU feels) fails the gravity norm test
+f = ip.ImuPropagator(R_IL, t_IL); feed(f, 0.0, 8.0)
+for t in np.arange(3.0, 7.0 + 1e-9, 0.1):
+    Rl, pl = lidar_pose(t); pl = (pl - lidar_pose(3.0)[1]) * 5.0
+    assert not f.try_init(round(t, 4), Rl, pl)
+assert not f.ready
 
 # ---- 2 moving: after a few updates the increment is accurate (rotation and translation, LiDAR frame), also over dropped scans
 f = ip.ImuPropagator(R_IL, t_IL)
 feed(f, 0.0, 8.0)
-t_init = init_at(f, 1.9)
+t_init = init_at(f, 3.0, noise=0.02)
+assert t_init is not None, 'no start'
 t = t_init; errs_p, errs_r, errs_p3 = [], [], []
 while t < 7.0:
     tn = round(t + 0.1, 4)
@@ -81,7 +96,7 @@ while t < 7.0:
     d = f.update(tn, *lidar_pose(tn, noise=0.02))
     assert d["covered"]
     t = tn
-assert max(errs_p) < 0.008 and np.mean(errs_p) < 0.004, (max(errs_p), np.mean(errs_p))      # 100 ms step 0.08 m per 0.1 s: under 10 %
+assert max(errs_p) < 0.008 and np.mean(errs_p) < 0.005, (max(errs_p), np.mean(errs_p))      # 100 ms step 0.08 m per 0.1 s: mean under 6.5 % (filter now starts from noisy poses while moving)
 assert max(errs_r) < 0.4, max(errs_r)
 assert max(errs_p3) < 0.03, max(errs_p3)                                       # three scans without update
 assert np.linalg.norm(f.bg - BG) < 0.006 and np.linalg.norm(f.ba - BA) < 0.1, (f.bg, f.ba)
@@ -89,23 +104,23 @@ R_t, _, v_t, _, _ = truth(7.0); assert np.linalg.norm(f.v - v_t) < 0.1, (f.v, v_
 
 # ---- 3 the IMU keeps the translation where a scan-to-scan odometer slides: a pose update that does NOT move (LiDAR stuck along x) still
 #      gives an IMU increment of the true size at the next scan
-f = ip.ImuPropagator(R_IL, t_IL); feed(f, 0.0, 8.0); t = init_at(f, 1.9)
+f = ip.ImuPropagator(R_IL, t_IL); feed(f, 0.0, 8.0); t = init_at(f, 3.0, noise=0.02)
 while t < 5.0:
     tn = round(t + 0.1, 4); f.update(tn, *lidar_pose(tn, noise=0.02)); t = tn
 inc = f.increment(round(t + 0.1, 4)); R0, p0 = lidar_pose(t); R1, p1 = lidar_pose(round(t + 0.1, 4)); _, dp_true = fc.rel_body(R0, p0, R1, p1)
 assert np.linalg.norm(inc[1]) > 0.5 * np.linalg.norm(dp_true) and np.linalg.norm(inc[1] - dp_true) < 0.01
 
 # ---- 4 coverage: no IMU for a scan -> None, update re-seeds the pose and keeps v
-f = ip.ImuPropagator(R_IL, t_IL); feed(f, 0.0, 3.0); t_init = init_at(f, 1.9)
+f = ip.ImuPropagator(R_IL, t_IL); feed(f, 0.0, 3.0); t_init = init_at(f, 2.9)
 assert f.increment(round(t_init + 0.1, 4)) is not None
 assert f.increment(3.4) is None, "IMU ends at 3.0: a scan at 3.4 is not covered"
 v_before = f.v.copy(); d = f.update(5.0, *lidar_pose(5.0)); assert d["covered"] is False and np.allclose(f.v, v_before) and f.t == 5.0
 assert f.increment(5.0) is None and f.increment(4.0) is None                 # not later than the state
 assert not ip.ImuPropagator(R_IL, t_IL).try_init(1.0, np.eye(3), np.zeros(3)), "no samples"
-# moving start: not quiet -> not initialised
+# IMU shorter than the window: not initialised
 f = ip.ImuPropagator(R_IL, t_IL)
-for t in np.arange(0.0, 6.0, 1 / FS): g, a = imu_sample(t); f.add(t, g, a)
-assert init_at(f, 5.0, t_start=3.0) is None, "a window with 0.8 m/s^2 acceleration and a turn is not quiet"
+for t in np.arange(0.0, 3.0, 1 / FS): g, a = imu_sample(t); f.add(t, g, a)
+assert init_at(f, 5.0, t_start=3.0) is None, "poses at 3 to 5 s, IMU ends at 3.0 s"
 
 # ---- 5 core: imu_dT replaces the whole LiDAR increment, differences logged, no imu = unchanged
 core = sw.SwitchSlamCore(n_buf=5, lt=sw.LT_PUBLISHED, hess_frame="body")

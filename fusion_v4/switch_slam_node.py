@@ -16,7 +16,7 @@ Environment (all optional):
   GYRO         1 = SWI variant: rotation of the LiDAR increment from the integrated gyro (IMU_TOPICS, default /imu/data,/cmu_sp1/imu/data)
   IMU_PROP     1 = SWF variant: the whole LiDAR increment (the guess of Algorithm 1) from a LiDAR-IMU propagation, imu_prop.ImuPropagator
                (gyro + accelerometer + biases + velocity, corrected after every scan with the final pose; docs section 18).  Falls back to
-               A-LOAM's increment while the filter is not initialised (no quiet IMU window yet) or the IMU does not cover a scan.
+               A-LOAM's increment while the filter is not initialised (not started yet: needs 2 s of poses and IMU) or the IMU does not cover a scan.
                Takes precedence over GYRO.
   DETECT       sw (default: Switch-SLAM's own rule, the replica) | ours: Switch-SLAM's rule plus our R, T and additional-T channels
                | ours_only: our channels only, with our own thresholds (kappa 15.7 for R, c_T 0.03 information weight for T), no
