@@ -40,14 +40,26 @@ def load_poses(path, which):
     return t, Rs, P
 
 
+class Feeder:
+    """hands the IMU samples to the filter in time order, as the node receives them (the filter keeps only its last 40 s, so the whole file must
+    not be added at once: the first version of this check did that and saw a filter that started 40 s before the end of the bag)"""
+    def __init__(self, f, imu, offset=0.0):
+        self.f, self.imu, self.off, self.i = f, imu, offset, 0
+
+    def until(self, T):
+        imu, f = self.imu, self.f
+        while self.i < len(imu) and imu[self.i, 0] + self.off <= T:
+            r = imu[self.i]; f.add(r[0] + self.off, r[1:4], r[4:7]); self.i += 1
+
+
 def run(imu, t, Rs, P, R_IL, t_IL, offset=0.0):
     """returns per-scan dict arrays for scans after the filter started"""
     f = ip.ImuPropagator(R_IL, t_IL)
-    for r in imu:
-        f.add(r[0] + offset, r[1:4], r[4:7])
+    feed = Feeder(f, imu, offset)
     out = []
     started = None
     for k in range(len(t)):
+        feed.until(t[k])
         if not f.ready:
             if f.try_init(t[k], Rs[k], P[k]) and started is None:
                 started = k
@@ -75,10 +87,10 @@ def run(imu, t, Rs, P, R_IL, t_IL, offset=0.0):
 def ahead_errors(imu, t, Rs, P, R_IL, t_IL, ahead=3):
     """three scans ahead without update: state at scan k, prediction to scan k+ahead"""
     f = ip.ImuPropagator(R_IL, t_IL)
-    for r in imu:
-        f.add(r[0], r[1:4], r[4:7])
+    feed = Feeder(f, imu)
     errs = []
     for k in range(len(t)):
+        feed.until(t[min(k + ahead, len(t) - 1)])
         if not f.ready:
             f.try_init(t[k], Rs[k], P[k]); continue
         if k + ahead < len(t):

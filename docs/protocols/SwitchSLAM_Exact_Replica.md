@@ -231,21 +231,23 @@ Window ATE is over the window only: compare variants with each other on the same
 **Also fixed on 11 Nov.** The run script copies a fixed list of files into the container and `imu_prop.py` was missing from it, so a first `SWF` bag run would have stopped at the import; added (found while writing these tests, before any run).
 Gravity initialisation now also needs the LiDAR poses of the last second to show a mean speed below 0.1 m/s, because a slow steady push passes the IMU-only tests and would tilt the gravity estimate.
 
-## 20. Filter start changed after the offline check (11 Nov 2026, before any SWF bag run)
+## 20. Filter start changed, and a fault in the offline check found (11 Nov 2026, before any SWF bag run)
 
-The first offline IMU check (section 19, test 1) ran on Corridor02 (893 s) and Cave02 (first 299 s of 955 s). The filter, as then written, needed a quiet one-second IMU window with the LiDAR poses almost still,
-and it first started at +854 s on Corridor02 and +283 s on Cave02. Neither bag has a quiet start, so `SWF` would have used A-LOAM's own increment for nearly the whole run and behaved as plain `SW`.
-That is a fault in the variant, found before any bag run, so no result is involved. Two other things in the same output were also wrong in the check itself: the time-offset sweep chose the best offset by
-translation error, which is flat (Corridor02: 0.0030 m at every offset), so "best offset -0.06 s" meant nothing; and the "IMU starts after the first pose" warning fired on a difference under 0.05 s.
+First offline IMU check (section 19, test 1): on Corridor02 (893 s) and Cave02 (first 299 s of 955 s) the filter, with its quiet-window start, started at +854 s and +283 s. I read that as "neither bag has a quiet
+start, SWF would run as plain SW" and replaced the start with a pose-aided one that works while moving (below). That reading was wrong. The second run, with the new start, again started 38 to 40 s before the end of the IMU
+file (Corridor02 +855.1 s of 893.3 s, Cave02 +560.9 s of 599 s), which showed the cause: `offline_imu_check.py` handed the whole IMU file to the filter before the first scan, and the filter keeps only its last
+40 s (8000 samples). So the check could only start the filter at the end of the file. The node feeds the IMU live and does not have this limit. The quiet-window start was therefore never shown to fail on these bags, and
+no statement in this protocol about "no quiet start" on Corridor02 or Cave02 stands. No SWF bag run existed at any point, so no result depends on either version.
 
-Change (named `SWF`, same name, since no SWF result existed): the start is now pose-aided and works while moving. Over the last 2 s of finished scans, the gyro bias is the median of (mean gyro minus the pose rotation rate)
-per scan; gravity is the mean acceleration seen in the poses (from the velocity at both ends of the window, each over at least 0.4 s) minus the mean of R f over the same interval, with R from the poses; the
-start is accepted only if the norm of that gravity is within 0.6 m/s^2 of 9.81007 and the IMU covers the window. The velocity starts from the pose velocity at the end of the window. This supersedes the quiet-window rule and the
-0.1 m/s speed condition written in section 19. No other setting changed; noise values are still the ones of the project's VINS configuration.
+What stands from that run: the new start did start on real moving data (Cave02, step 0.06 m per scan, started 1.9 s after the buffer began, gravity norm 9.810), the one-scan translation error of the IMU filter was
+0.70 (Corridor02) and 0.74 (Cave02) of repeating the last step over the last 40 s of each bag, and the time-offset sweep was aligned (Cave02: rotation error 0.227 deg at 0.00 s, 0.38 to 1.4 deg at the other offsets).
+These cover 375 and 377 scans only. They do not replace a check over the whole bag.
 
-Offline check changes: the best offset is the one with the lowest median one-scan rotation error and is flagged only if it is at least 10 % better than zero offset and at least 0.04 s away; the IMU-start
-warning needs a difference above 0.5 s. The go rules of section 19 stand: the filter starts, the IMU / repeat-last ratio is below 1, the best offset is within 0.04 s of zero. The earlier output is kept as the reason for the change:
-Corridor02 one-scan translation ratio 0.68 and Cave02 0.83, both over a few hundred scans just after a late start, so neither is evidence about the filter over the whole bag.
+Changes (SWF keeps its name, since no SWF result exists):
+1. Filter start is pose-aided over the last 2 s of finished scans: gyro bias is the median of (mean gyro minus the pose rotation rate); gravity is the mean acceleration seen in the poses (velocity at both ends of the window, each over
+at least 0.4 s) minus the mean of R f over the same interval; accepted only if the norm of that gravity is within 0.6 m/s^2 of 9.81007 and the IMU covers the window; velocity starts from the pose velocity at the end of the window.
+This supersedes the quiet-window rule and the 0.1 m/s speed condition of section 19. It was made on a wrong premise, so it is kept for being more general, not because the old one was shown to fail; it has not been compared with the old one on a bag.
+2. `offline_imu_check.py` now hands the IMU to the filter in time order, as the node receives it. A test with a 120 s file asserts that the start is within the first 20 scans.
+3. The best time offset is the one with the lowest median one-scan rotation error (translation error is flat in the offset), flagged only if at least 10 % better than zero and at least 0.04 s away. The IMU-start warning needs a gap above 0.5 s.
 
-Tests: `test_imu_prop.py` now covers a static start, a moving start with and without 5 mm pose noise, rejection of a pose chain with the wrong scale, and an IMU shorter than the window.
-Next: re-run the offline check on both bags with the new start (Corridor02 full IMU file; Cave02 with a longer extraction), then the window screen, then section 18.
+The go rules of section 19 stand. Next: re-run the offline check on both bags (Corridor02 full IMU file; Cave02 600 s file) and read the numbers over the whole bag, then the window screen, then section 18.
