@@ -16,3 +16,11 @@ The F24 coverage list says Handheld "not run", and on 11 Nov I told the owner th
 3. Compressed camera to raw: republish live in the VINS container, or write a raw bag (size printed by the checker).
 4. A-LOAM launch with the LiDAR topic remapped from /velodyne_points to /points_raw, scan_line 16, and the IMU topic /imu_raw passed to the node (IMU_TOPICS).
 5. Rules before the runs: arms (F5 unfed A-LOAM, F26, F35, SW), number of runs (the paper reports a mean of 3), replay rate, scoring window, what counts as failure, and that the score is horizontal only against a GPS reference, so it is not like for like with the published 3.07 / 1.25 (the reference behind the paper's number is not stated).
+
+## Bag check, owner's printout of 11 Nov 2026 (`handheld.bag`, 10.3 GB, in laptop_bags/handheld on the external drive)
+- 1,642.9 s, 1,716,700 messages. Topics: /points_raw 16,289 scans at 9.91 Hz (VLP-16, 16,309 points per scan, fields x y z intensity ring time); /imu_raw and /imu_correct 500 Hz; /camera/image_raw/compressed 49,283 frames at 30 Hz (mono8, 720 x 540); /gps/fix 8,215 fixes at 5 Hz.
+- The first /imu_raw sample has gravity on -z (accel -2.46, 0.05, -9.39): the IMU is mounted upside down, consistent with the extrinsic R = diag(-1, 1, -1) in handheld_Extrinsics.yaml.
+- GPS: status values 0 and 2, horizontal variance median 0.01 m^2 (90th percentile 0.06, maximum 146.3), vertical variance median 368.6 m^2 (z not usable), no gap above 1 s (maximum 0.3 s), path 2,286 m, extent 410 x 319 m, no jump above 5 m between fixes. Horizontal reference quality looks good apart from a few high-variance fixes.
+- Camera: a raw bag would be about 19.2 GB, so the images are republished live. VINS-Mono's `freq: 10` in the config drops the 30 Hz stream to 10 Hz.
+- The F20 log of 30 Oct spans 1,642.4 s, i.e. the whole bag.
+- Reference script: `make_gps_reference.py`, cleaning rule fixed before any score: drop fixes with status < 0 or horizontal variance above 1.0 m^2; counts printed; no smoothing. `score_run_xy.py` now takes `--src fused|aft|vins`.
