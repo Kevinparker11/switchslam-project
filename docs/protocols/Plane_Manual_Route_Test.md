@@ -1,7 +1,7 @@
 # Plane, second recreation: spawn at the end of the L, manual route, two replays (11 Nov 2026, rules written before any run)
 
 ## What changes against FastRotate_Plane_Test_Protocol.md (announced here, before the run)
-1. **Start.** The robot is placed at the end of the L route, (-38.5, -40.0, z 0.2), facing +y (yaw +90 degrees: the L ends heading -x, a right turn points along +y), not at (0, 0). Everything the robot sees from there is open ground, so the whole run is the paper's "ground only" Plane. The two-part score of the first protocol (L plus open leg) is dropped; the primary score is the whole log from the reset.
+1. **Start (changed again 11 Nov 2026, before any run: the teleport to the L end made the robot vanish from view and is dropped).** No teleport. After a clean restart the robot stays at the origin. The L approach (`0,-20;0,-40;-20,-40;-40,-40`, no spins, 0.25 m/s) is driven with `waypoint_driver_route.py`; A-LOAM, VINS-Mono, the loggers and the node are started only when it has stopped at the L end (about (-38.5, -40), heading -x). The ground truth therefore starts at the L end; there is no reset jump, so both scorers use the first sample. The test run begins with a right turn on the spot to +y (by hand in run 1, by the driver's own turn in runs 2 to 4) and then open ground only, the paper's ground-only Plane. The approach is not logged and not scored. The primary score is the whole log.
 2. **Route.** Driven once by hand (`drive_manual.py`, 0.25 m/s latched, turn steps of 0.05 rad/s, no spins, about 105 m, the paper's Plane is 109 m). The ground truth of that drive is turned into waypoints 8 m apart (`waypoints_from_gt.py`); the other two runs drive those waypoints with `waypoint_driver_route.py` (0.25 m/s, SPIN_AT=none). The replayed path follows the manual one to about the goal tolerance (1.5 m); the difference in path length is reported.
 3. **Arms.** Run 1 (the manual drive): unfed A-LOAM (F5), which is also the precondition check. Run 2: F26 (the final version; the first protocol named F24, which is no longer the final one). Run 3: SW (exact Switch-SLAM replica, paper rule). Run 4 (added 11 Nov 2026, before any run): F35 (F26 with the guess status driven by our own channels R, T and the additional T, `GUESS_MODE=ours`), same waypoints, same steps as run 2.
 4. **Rig.** The forward-camera rig of the latest farm runs (RGB 640 x 480 at 60 Hz, `husky_velodyne_extra_fwd.urdf.xacro`, `farm_fwd_config.yaml`), in all three runs so the LiDAR and world are identical. The first protocol named the sideways rig.
@@ -45,11 +45,12 @@ xhost +local:docker
 docker exec -it -e ROS_IP=172.17.0.10 -e __NV_PRIME_RENDER_OFFLOAD=1 -e __GLX_VENDOR_LIBRARY_NAME=nvidia switchslam_gpu_v2 bash -c "source /opt/ros/noetic/setup.bash && source /root/catkin_ws/devel/setup.bash && export HUSKY_URDF_EXTRAS=/root/catkin_ws/husky_velodyne_extra_fwd.urdf.xacro && export DISPLAY=:1 && roslaunch cpr_agriculture_gazebo agriculture_world.launch"
 ```
 
-### 2. Controller, then place the robot at the end of the L facing +y
+### 2. Controller, then drive the L approach (nothing is logged yet; the robot stays at the origin until now)
 ```
 docker exec -it -e ROS_IP=172.17.0.10 switchslam_gpu_v2 bash -c "source /opt/ros/noetic/setup.bash && rosservice call /controller_manager/switch_controller '{start_controllers: [\"husky_velocity_controller\"], stop_controllers: [], strictness: 2}'"
-docker exec -it -e ROS_IP=172.17.0.10 switchslam_gpu_v2 bash -c "source /opt/ros/noetic/setup.bash && rosservice call /gazebo/set_model_state '{model_state: {model_name: husky, pose: {position: {x: -38.5, y: -40.0, z: 0.2}, orientation: {x: 0.0, y: 0.0, z: 0.7071068, w: 0.7071068}}}}'"
+docker exec -it -e ROS_IP=172.17.0.10 -e WAYPOINTS="0,-20;0,-40;-20,-40;-40,-40" -e SPIN_AT=none -e LINEAR_SPEED=0.25 switchslam_gpu_v2 bash -c "source /opt/ros/noetic/setup.bash && python3 /root/waypoint_driver_route.py"
 ```
+About 5.5 min. Wait for "Route complete" (the robot is at the L end, fence ahead). Only then start the terminals of the run. Do not touch the robot between the end of the approach and the start of the loggers.
 
 ### RUN 1: manual drive, unfed A-LOAM
 ```
@@ -63,7 +64,7 @@ docker exec -it -e ROS_IP=172.17.0.10 switchslam_gpu_v2 bash -c "source /opt/ros
 # terminal 6: wait about 15 s, then drive by hand. w = go, a / d = turn left / right (small steps), x = straight, s = stop, q = quit
 docker exec -it -e ROS_IP=172.17.0.10 switchslam_gpu_v2 bash -c "source /opt/ros/noetic/setup.bash && python3 /root/thr/drive_manual.py"
 ```
-Drive about 105 m along +y (about 7 min), no turns on the spot, stop with `s` then `q` before any fence or obstacle. Then Ctrl+C terminals 5 and 4 within 30 s.
+First turn right on the spot to face +y (press `d` until the turn rate is -0.4, then `x` once the robot faces +y), then `w`. Drive about 105 m along +y (about 7 min), no turns on the spot, stop with `s` then `q` before any fence or obstacle. Then Ctrl+C terminals 5 and 4 within 30 s.
 ```
 mkdir -p ~/plane_aloam && for f in gt_plane.txt plane_aloam_aft.txt plane_aloam_odom.txt; do docker cp switchslam_gpu_v2:/root/thr/$f ~/plane_aloam/; done
 cd ~/switchslam-project/fusion_v4
