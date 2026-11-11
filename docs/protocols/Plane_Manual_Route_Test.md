@@ -118,3 +118,6 @@ python3 gazebo/live/score_fused.py ~/plane_f26/gt_plane_f26.txt ~/plane_f26/swit
 python3 -c "import csv,sys,collections as c;print(c.Counter(r['guess_kind'] for r in csv.DictReader(open(sys.argv[1]))))" ~/plane_f26/switching_log_v2_F26_plane_live1.csv
 cd ~ && zip -r plane_f26.zip plane_f26
 ```
+
+## Run order change (11 Nov 2026, owner, before any run)
+The first run is F35, driven by hand from the L end (the F35 node, loggers, A-LOAM and VINS-Mono are started after the L approach has finished; the owner drives with `drive_manual.py`). The unfed A-LOAM run (PL-P0) is not made first. Consequences, fixed now: (1) PL-P0 stays open; the A-LOAM output of the F35 log (`aft`, fed by the fused pose) is reported but is not the unfed control and does not decide PL-P0. (2) The waypoints of this drive (`waypoints_from_gt.py` on its ground truth) are used for the later runs (unfed A-LOAM, F26, SW). (3) PL-1 and the PL-2 line for F35 use this run's own VINS-Mono ATE. (4) Whatever the result, a Plane statement needs the unfed run; one F35 run supports no claim.
