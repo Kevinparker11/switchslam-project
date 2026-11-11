@@ -1,0 +1,53 @@
+# Report corrections log (started 11 Nov 2026)
+
+Purpose: every correction discussed with the owner, kept here until the owner says "apply". Nothing in this log has been applied to the report. Report source: docs/thesis/scripts/content2.py (build2.py), built file Thesis_Report_Kavinkumar_S_F26.docx. Status words: DECIDED = owner agreed, ready to apply; OPEN = needs the owner's answer; INFO = facts to use when applying.
+
+## A. Decided
+
+**A1. Paper comparison rows (DECIDED, owner, 11 Nov).** Keep only Farm, Multi Floor and Long Corridor from Switch-SLAM Table II. No table rows for Fast Rotate, Plane, Handheld, ANYmal 1 to 4.
+- Farm row needs a footnote: our route is 80 m, the paper's is 536 m with a fast-rotation and a plane-only stretch; ours has neither (unfed A-LOAM 0.478); n=1 per rig; not like for like.
+- Multi Floor and Long Corridor are the like-for-like rows (same sequences). F24 and F26 were designed on them, so they are not held-out.
+- Claim wording: "compared with Switch-SLAM on 3 of its 10 published datasets".
+
+**A2. Section 3.2 opening sentence (DECIDED, owner approved the wording on 11 Nov).** Current text (content2.py lines 166 to 168): "The fusion is VIO-primary (Figure 3.2). For every LiDAR scan ..." Replace the first sentences by:
+"The fusion splits the work by direction (Figure 3.2). For every LiDAR scan the node receives A-LOAM's scan-to-map pose and Hessian and VINS-Mono's pose. Rotation comes from VINS-Mono; translation comes from the LiDAR along the directions the scan constrains and from VINS-Mono along the others. Where VINS-Mono is unusable (warm-up, loss, or a failed trust check), the LiDAR carries the whole step."
+Keep the rest of the paragraph (the blend, Eqs. 3.1 and 3.2, warm-up, loop closed through the guess). Reason: VIO-primary describes the structure only; on GEODE F24 ran as LiDAR-only A-LOAM on about 78 % of scans, and in the F26/F35 Long Corridor runs A-LOAM's own pose beat the fused output.
+- Also: our front end is A-LOAM (LiDAR odometry, no IMU preintegration), so say "LiDAR", never "LIO", for our own system anywhere in the report (check the whole text).
+
+**A3. Max / RMSE order (DECIDED).** The paper prints Max first, then RMSE. Check every table and sentence that quotes published values (also docs/protocols/Plane_Manual_Route_Test.md, which writes "1.27 / 0.35" and "1.17 / 0.41" in RMSE / max style; Switch-SLAM Plane is 1.27 max / 0.35 RMSE). Label the order in each table caption.
+
+**A4. Failed runs and the paper's "-" (DECIDED).** In the paper "-" means failure of localization, with no number and no stated rule. Never write "-" in our columns. Our failures are printed as numbers and tagged by our rule (sim: ATE > 2.5 m or end-point error > 5 m; Handheld protocol: RMSE > 10 m; the success-rate table uses 10 m). Add a "failed" column or a footnote that says this. Example row: Corridor02 F24 run 2, 104.00 / 149.20, failed.
+
+## B. Open (need the owner's answer)
+
+**B1. Limitations sentence.** Name the dropped seven (Fast Rotate, Plane, Handheld, ANYmal 1 to 4) as "not run or not completed". Recommended (owner has not answered): also say that the Plane (F35, U-shaped route, 16.32 m) and Handheld (old F20 log, 19.30 / 70.55 m horizontal) attempts were made and are not reported as comparisons; leaving them out silently would look selective.
+
+**B2. Corridor02, Cave02, GEODE and the replica.** No replica variant (SW, SWI, SWM, SW1, V7, SWD) has a recorded run on these three bags (SWD queue of 10 Nov: no result found in the docs, unknown whether it ran). Choose: (1) one SW run per bag, about 1.7 h (GEODE about 13 min, Cave02 about 36 min, Corridor02 about 50 min at 0.33x), or (2) report as "not run" with the reason, plus the log-based prediction labelled as a prediction (rule fires on 2.1 % of Corridor02 scans, 0 % Cave02, 10.3 % GEODE; A-LOAM with a scan-to-scan guess, F5, failed on Corridor02 in all four runs at 46.5 to 93.0 m).
+
+**B3. Published values of other papers on these three bags (context table).** Owner asked for the values (see C2). Open: full published list with our rank as a context table, or only a limitations sentence naming the better methods. Rule if included: all methods the source paper reports on that sequence, chosen before looking at our value, not only those worse than ours. Conflict to resolve: the current Table 5.10 says "A-LOAM stack only, no GenZ-LIO or iG-LIO values".
+
+**B4. Switch-SLAM-table methods on these three bags.** Only GEODE alpha has any (LIO-SAM 6.30, LVI-SAM failed, R3LIVE 4.54). Corridor02 and Cave02: none found. Proposed: Corridor02 and Cave02 as own-runs-only rows; GEODE carries the three published numbers (our F26 mean 5.04, runs 3.26 to 6.36, so LIO-SAM 6.30 is inside our own range, R3LIVE 4.54 is a tie, LVI-SAM failed where ours did not but ours is essentially A-LOAM there). Phrase as "none found", not "none exist".
+
+**B5. Standalone baselines table (A-LOAM alone, VINS-Mono alone).** Values given on 11 Nov (see C3). Open: include or not; maxima are missing from the older tables (can be pulled from the logs); standalone F0/F5 used earlier replay rates and code than F26, so they are context, not matched controls.
+
+**B6. Earlier unanswered offers.** Add the F35 Farm run to the report (change "four sequences with runs" to five, rebuild, check 45 pages); 3 h F35 evidence-gap batch; SWM with gyro prior on Long Corridor; failed column and footnote format in the comparison tables (see A4).
+
+## C. Facts to use when applying (INFO)
+
+**C1. Our values to quote (F26 final, RMSE / max, m, no loops).** Multi Floor 0.54 / 1.01 (n=1). Long Corridor 2.10 / 3.73 (n=1). Corridor02 1.93 / 3.46, 2.04 / 3.46 (mean 1.99). Cave02 6.23 / 10.56 (n=1). GEODE 6.36 / 14.07, 3.26 / 7.81, 5.51 / 15.25 (mean 5.04 / 12.38). F35: Corridor02 2.82 / 5.19 (n=1, worse), GEODE mean 5.04, Cave02 void; F26 stays final. F24 values in F24_to_F27_All_Bags.md.
+
+**C2. Published values of other papers (11 Nov).**
+- Corridor02 (SuperLoc release; identity confirmed: RC1, 893 s, 690 m): GenZ-LIO Table 4 row read 11 Nov: 1.89, 2.88, 1.98, 1.74, 65.59, 1.39, 1.48, 0.73, 0.77, 0.69 (FAST-LIO2, Faster-LIO, AdaLIO, Point-LIO, LIO-EKF, DLIO, iG-LIO, PV-LIO, GenZ-LIO; the 0.77 is an extra column not in the 21 Oct reading, probably a baseline or ablation). SuperLoc gives outlier percentages only (HDL_LOC 42.45, FAST_LIO_LOC 73.99, SuperLoc 23.99). Not M3DGR corridor02.
+- Cave02: FAST-LIO2 4.49, Faster-LIO 0.81, AdaLIO 3.98, Point-LIO 6.57, LIO-EKF diverged, DLIO 0.57, iG-LIO 0.43, PV-LIO 0.43, GenZ-LIO 0.44 (21 Oct reading of the v3 PDF; not re-checked on 11 Nov, web extract garbled). DCReg Table 5 is prior-map localisation, not comparable. "Laurel Cavern" values are a different sequence (Cave03 in SuperLoc).
+- GEODE stairs alpha (Table 6, re-read 11 Nov; failure = breakdown or error above 100 m): LIO-SAM 6.30, FAST-LIO2 4.69, DLIO 4.89, R3LIVE 4.54, LVI-SAM failed, COIN-LIO not adapted, RELEAD 0.57. Beta (OS1-64) is a different device: LIO-SAM 4.19, FAST-LIO2 0.38, DLIO 0.41, COIN-LIO 0.45, RELEAD 0.21.
+- Caution for all: alignment and span are rarely stated; differences under about 0.1 m are ties; those are LiDAR-inertial methods tuned per sequence.
+- Tie rule used for the selection: band max(0.1 m, 10 %) of our value. Against F26: Corridor02 worse than ours = Faster-LIO 2.88, LIO-EKF; tie = FAST-LIO2 1.89, AdaLIO 1.98. Cave02 worse = LIO-EKF; tie = Point-LIO 6.57 (n=1). GEODE worse = LIO-SAM 6.30 (inside our run range), LVI-SAM; tie = FAST-LIO2, DLIO, R3LIVE.
+- SuperLoc ATE table row "Zheng [18]" (reference list maps [18] to FAST-LIVO, table does not name it): Corridor01 (Long Corridor) 55.205, Floor01 (Multi Floor) 19.769. Context for the kept rows only; Switch-SLAM marks FAST-LIVO failed on both.
+
+**C3. Standalone A-LOAM (F5) and VINS-Mono (F0), RMSE m.** Multi Floor 26.4 and 1.28 +- 0.02. Long Corridor 15.8 +- 6.3 and 5.81 +- 0.27. Corridor02 66 +- 24 (46.5, 58.6, 93.0 and one more; failed in all four) and 4.03 +- 0.01. Cave02: A-LOAM not standalone (from fused F24 logs 11.09, 9.63, 10.45), VINS 10.25 +- 0.03. GEODE: A-LOAM 7.98 (PC, one run; fused logs 6.07, 9.11, 7.01, 6.35), VINS failed (fused logs 153 to 271). Farm L route: unfed A-LOAM 0.478; VINS 1.222 (sideways), 14.47 and 4.31 (forward RGB rig). Handheld: F0 59.01 / 206.44, F20 log VINS 24.33. Plane: VINS 4.53 (F35 log). Fast Rotate, ANYmal: none.
+
+**C4. Handheld (parked by the owner, 11 Nov; no more time).** Not run in the report's sense. Facts: F20 log of 30 Oct scored 19.54 / 73.91 (owner's console, old scorer) and 19.30 / 70.55 (my horizontal scorer, 2-D fit, gaps left out); A-LOAM output of the F20 log 12.06 / 51.06; F0 VINS-only 59.01 / 206.44; paper's Switch-SLAM 3.07 max / 1.25 RMSE, LVI-SAM 3.27 / 1.23, VINS-Mono 21.4 / 10.3. The LVI-SAM paper's own Handheld numbers (RMSE vs GPS: VINS-Mono no loop 87.53, LIO-SAM no loop 53.62, LVI-SAM no loop 7.87, with loop 0.83) differ from Switch-SLAM's table for the same method (LVI-SAM 1.23), so the paper's Handheld footing is not like for like with any score of ours. Smoke F26 run of 11 Nov failed in the feature tracker (fisheye: 1 in my config, fixed to 0, commit f71304a); the 30 Oct config in ~/runs_handheld differs by 3 bytes from mine (diff not yet seen); how images were fed on 30 Oct (no republish line in the old seq.env) is unknown. Full F26 run (about 1 h at 0.5x) not started.
+
+**C5. Plane (partial).** F35 run 1 on a U-shaped route (not the planned straight +y line), n=1: F35 16.32 / 32.09 / 32.08 (RMSE / max / end), A-LOAM output (fed) 16.54, VINS-Mono 4.53 / 7.54 / 6.72. PL-P0 (unfed A-LOAM fails) open, PL-1 not met (VINS 4.53 > 2.5), PL-2 not met. Not a Plane result; no claim.
+
+**C6. Wording rules that apply throughout.** n=1 supports no claim; label every sequence as development or held-out (Multi Floor calibrated the gates; Long Corridor, Corridor02, Cave02, GEODE were used in F24 to F34 work, so none is held-out for F26/F35); failed and void runs are reported, not adjusted; short plain sentences, no em dashes.
