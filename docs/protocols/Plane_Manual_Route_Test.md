@@ -3,7 +3,7 @@
 ## What changes against FastRotate_Plane_Test_Protocol.md (announced here, before the run)
 1. **Start.** The robot is placed at the end of the L route, (-38.5, -40.0, z 0.2), facing +y (yaw +90 degrees: the L ends heading -x, a right turn points along +y), not at (0, 0). Everything the robot sees from there is open ground, so the whole run is the paper's "ground only" Plane. The two-part score of the first protocol (L plus open leg) is dropped; the primary score is the whole log from the reset.
 2. **Route.** Driven once by hand (`drive_manual.py`, 0.25 m/s latched, turn steps of 0.05 rad/s, no spins, about 105 m, the paper's Plane is 109 m). The ground truth of that drive is turned into waypoints 8 m apart (`waypoints_from_gt.py`); the other two runs drive those waypoints with `waypoint_driver_route.py` (0.25 m/s, SPIN_AT=none). The replayed path follows the manual one to about the goal tolerance (1.5 m); the difference in path length is reported.
-3. **Arms.** Run 1 (the manual drive): unfed A-LOAM (F5), which is also the precondition check. Run 2: F26 (the final version; the first protocol named F24, which is no longer the final one). Run 3: SW (exact Switch-SLAM replica, paper rule).
+3. **Arms.** Run 1 (the manual drive): unfed A-LOAM (F5), which is also the precondition check. Run 2: F26 (the final version; the first protocol named F24, which is no longer the final one). Run 3: SW (exact Switch-SLAM replica, paper rule). Run 4 (added 11 Nov 2026, before any run): F35 (F26 with the guess status driven by our own channels R, T and the additional T, `GUESS_MODE=ours`), same waypoints, same steps as run 2.
 4. **Rig.** The forward-camera rig of the latest farm runs (RGB 640 x 480 at 60 Hz, `husky_velodyne_extra_fwd.urdf.xacro`, `farm_fwd_config.yaml`), in all three runs so the LiDAR and world are identical. The first protocol named the sideways rig.
 5. Wiggle for the VINS-Mono initialisation is a circle of 0.5 m radius turning right (angular -0.3), away from the fence on the left.
 
@@ -12,6 +12,7 @@
 - **PL-P0 (precondition, else void and not adjusted).** Unfed A-LOAM fails on the run: ATE > 2.5 m or end-point error > 5 m. If it does not, the test is void for the failure direction (this world did not reproduce the paper's LOAM failure), the numbers are reported, and runs 2 and 3 are not read as a Plane result. The recorded route is still used.
 - **PL-1.** VINS-Mono alone (from the F26 log) does not fail: ATE <= 2.5 m (paper 1.17 / 0.41).
 - **PL-2 (the question).** F26 ATE <= max(1.0 m, 1.5 x VINS-Mono ATE of the same run). Published Switch-SLAM 1.27 / 0.35 for context.
+- **PL-2 for F35 (added with run 4, before any run).** The same line as PL-2 and the same VINS-Mono ATE of its own run. F35 is judged against F26 only by the tie band of F35_All_Bags_Test.md (max(0.1 m, 10 %) of F26's ATE); one run each supports no claim and F26 stays final whatever the result.
 - **PL-3 (reported, not judged).** SW against F26 and unfed A-LOAM; share of scans flagged degenerate by the paper's rule; guess kinds of F26.
 - **Void starts.** Node not running, A-LOAM or VINS-Mono not initialised, SW without /laser_hessian or /vins_mono_hessian, robot stuck: reported, not scored, restarted from step 0 with the same settings.
 - **Counts.** One run per arm supports no claim. A second and third run are made only if the F26 result lies within 50 % of the PL-2 line.
@@ -98,13 +99,17 @@ docker exec -it -e ROS_IP=172.17.0.10 -e EXTRINSIC_YAML=/root/thr/farm_live_extr
 ```
 docker exec -it -e ROS_IP=172.17.0.10 -e EXTRINSIC_YAML=/root/thr/farm_live_extrinsics.yaml -e RUN_TAG=SW_plane_live1 -e FUSION_MODE=switch_slam -e HESS_TOPIC=/laser_hessian -e N_BUF=5 -e LT_MODE=published -e EQ15_W=0.5 switchslam_gpu_v2 bash -c "source /opt/ros/noetic/setup.bash && source /root/catkin_ws/devel/setup.bash && cd /root/thr && rm -f switching_log_v2_SW_plane_live1.csv && python3 -u switch_slam_node.py 2>&1 | tee node_SW_plane_live1.out"
 ```
+7c. RUN 4 node, F35 (printout must show GUESS_MODE=ours, HANDOVER=anchor, PREDICT_GUARD=1; logger file gt_plane_f35.txt):
+```
+docker exec -it -e ROS_IP=172.17.0.10 -e EXTRINSIC_YAML=/root/thr/farm_live_extrinsics.yaml -e RUN_TAG=F35_plane_live1 -e FUSION_MODE=fused -e C_T=3e-2 -e KAPPA_TH=1e9 -e SAH=1 -e ROT_CHECK=1 -e OT_SRC=geom -e OT_MODE=gmax -e VIO_CHECK=1 -e VIO_CHECK_FAST=5 -e LIDAR_GUARD_T=2 -e LIDAR_GUARD_EX=4.325 -e VIO_CHECK_REF=0.157 -e VIO_CHECK_FAST_REF=0.277 -e VIO_CHECK_START=1 -e HANDOVER=anchor -e PREDICT_GUARD=1 -e GUESS_MODE=ours -e DET_CH=R,T,TT -e DET_CT=0.03 -e DET_KR=15.7 -e DET_TT_RULE=min switchslam_gpu_v2 bash -c "source /opt/ros/noetic/setup.bash && source /root/catkin_ws/devel/setup.bash && cd /root/thr && rm -f switching_log_v2_F35_plane_live1.csv && python3 -u fusion_node_v2.py 2>&1 | tee node_F35_plane_live1.out"
+```
 8. When the node prints FUSED (about 25 s), the replay driver with the WAYPOINTS line from run 1:
 ```
 docker exec -it -e ROS_IP=172.17.0.10 -e WAYPOINTS="<paste the WAYPOINTS value printed in run 1>" -e SPIN_AT=none -e LINEAR_SPEED=0.25 switchslam_gpu_v2 bash -c "source /opt/ros/noetic/setup.bash && python3 /root/waypoint_driver_route.py"
 ```
 No second reset. When the driver prints "Route complete", Ctrl+C the logger and the node within 30 s.
 
-9. Pull, score, zip (RUN 2 shown; RUN 3: replace f26 with sw, F26 with SW):
+9. Pull, score, zip (RUN 2 shown; RUN 3: replace f26 with sw, F26 with SW; RUN 4: replace f26 with f35, F26 with F35):
 ```
 mkdir -p ~/plane_f26 && cd ~/switchslam-project/fusion_v4
 for f in gt_plane_f26.txt switching_log_v2_F26_plane_live1.csv node_F26_plane_live1.out; do docker cp switchslam_gpu_v2:/root/thr/$f ~/plane_f26/; done
