@@ -153,6 +153,11 @@ def main():
             print("%-24s %9.4f %9.4f %9.4f %12s" % (name, q(x, 50), q(x, 90), q(x, 99), unit))
     ratio = q(df["e_t"], 50) / max(q(df["rep_t"], 50), 1e-9) if "rep_t" in df else float("nan")
     print("median translation error, IMU / repeat-last = %.2f   (below 1 means the IMU beats repeating the last step)" % ratio)
+    if "rep_t" in df:                  # information only, declared after the first full-bag output; the go rule above is the median over all scans
+        mv = df[df["step"] >= 0.05]
+        if len(mv) >= 20:
+            print("moving scans only (step >= 0.05 m: %d of %d scans): translation median IMU %.4f m, repeat-last %.4f m, ratio %.2f; rotation median IMU %.3f deg, repeat-last %.3f deg"
+                  % (len(mv), len(df), mv["e_t"].median(), mv["rep_t"].median(), mv["e_t"].median() / max(mv["rep_t"].median(), 1e-9), mv["e_r"].median(), mv["rep_r"].median()))
     e3 = ahead_errors(imu, t, Rs, P, R_IL, t_IL)
     if len(e3):
         print("\nThree scans ahead, no update in between (%d windows): translation error median %.4f m, 90 %% %.4f m (median travel %.3f m); rotation median %.3f deg"
