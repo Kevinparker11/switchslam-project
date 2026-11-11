@@ -291,6 +291,13 @@ One run of the variant without gated prediction diverged on Corridor02 (104.00\,
 \label{fig:runs}
 \end{figure}
 
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig_other_seq.pdf}
+\caption{Top-down paths on the sequences without a published Switch-SLAM run, first run of DualChan-LVIO. Same conventions as Fig.~\ref{fig:trajA}. VINS-Mono alone is off the plot on Cave02 and GEODE.}
+\label{fig:trajB}
+\end{figure*}
+
 \subsection{Hypothesis tests}\label{sec:hyp}
 Table~\ref{tab:hyp} gives the tests of Section~IV-C for every baseline that has runs on the same sequence. DualChan-LVIO was lower than the baseline in every pairing of runs against VINS-Mono alone and A-LOAM alone. Only the GEODE comparison with VINS-Mono alone rejects $H_0$ with the exact test ($p=0.008$, 21 of 21 pairs; Welch $p=1.7\times10^{-5}$). On Corridor02 the exact test cannot go below 0.10 with three and two runs, and Welch's test rejects against VINS-Mono alone ($p=0.008$) and A-LOAM alone ($p=0.022$). On Multi Floor, Long Corridor and Cave02 one run of DualChan-LVIO sets the limit at $p=0.25$, so the test cannot reject whatever the numbers are.
 
@@ -348,12 +355,7 @@ Heading correction, total ($^\circ$) & 80.8 & 37.2 & 24.4 & 0.0 & 1.3\\
 \subsection{Where the error remains}
 Cave02 and GEODE stay at 5 to 6\,m. On Cave02 the error is concentrated in the first 300\,s. In the three runs without gated prediction, aligning each segment on its own, the fused error is 0.67 to 0.70\,m after 300\,s and 2.2 to 2.4\,m before it, so most of the 6 to 7\,m full-span error is an offset between segments. A-LOAM stalls between 285 and 305\,s, and the VIO, whose scale is 22 to 28\,\% off on this sequence, is rejected by the scale gate, as designed, so nothing replaces the stalled LiDAR. On GEODE VINS-Mono diverged in every run, the fused output is close to A-LOAM's, and the remaining error is mostly vertical. In both cases the front end is limited by the odometries it fuses. An offline loop-closure back end on the saved keyframes of the variant without gated prediction lowered Corridor02 from 1.47 to 1.11\,m with 22 loops but found no loops on GEODE.
 
-\begin{figure*}[t]
-\centering
-\includegraphics[width=\textwidth]{figures/fig_other_seq.pdf}
-\caption{Top-down paths on the sequences without a published Switch-SLAM run, first run of DualChan-LVIO. Same conventions as Fig.~\ref{fig:trajA}. VINS-Mono alone is off the plot on Cave02 and GEODE.}
-\label{fig:trajB}
-\end{figure*}
+
 
 
 On the 80\,m route in the Gazebo farm world with a forward 60\,Hz RGB camera, DualChan-LVIO reached 0.290 / 0.562\,m against 0.472 / 1.068\,m without gated prediction and 0.478 / 0.977\,m for A-LOAM alone (one run each; VINS-Mono alone 4.31 and 14.47\,m in two runs). The route is shorter than the 536\,m Farm sequence of \cite{switchslam2024} and lacks its fast-rotation and plane-only phases, so the numbers are not comparable with the published ones (Fig.~\ref{fig:trajA}).
