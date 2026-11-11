@@ -37,8 +37,8 @@
 \newlabel{eq:t}{{1}{2}{Overview and notation}{equation.3.1}{}}
 \newlabel{eq:r}{{2}{2}{Overview and notation}{equation.3.2}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-B}}Rotation and translation channels}{2}{subsection.3.2}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Structure of CSD-LVIO. Both odometries run unchanged and A-LOAM has no IMU. The fusion node weights their increments per direction, gates the VIO by consistency, anchors heading to wall structure and returns a degeneracy-gated initial guess to the scan-to-map matching.}}{2}{figure.1}\protected@file@percent }
-\newlabel{fig:overview}{{1}{2}{Structure of CSD-LVIO. Both odometries run unchanged and A-LOAM has no IMU. The fusion node weights their increments per direction, gates the VIO by consistency, anchors heading to wall structure and returns a degeneracy-gated initial guess to the scan-to-map matching}{figure.1}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Structure of DualChan-LVIO. Both odometries run unchanged and A-LOAM has no IMU. The fusion node weights their increments per direction, gates the VIO by consistency, anchors heading to wall structure and returns a degeneracy-gated initial guess to the scan-to-map matching.}}{2}{figure.1}\protected@file@percent }
+\newlabel{fig:overview}{{1}{2}{Structure of DualChan-LVIO. Both odometries run unchanged and A-LOAM has no IMU. The fusion node weights their increments per direction, gates the VIO by consistency, anchors heading to wall structure and returns a degeneracy-gated initial guess to the scan-to-map matching}{figure.1}{}}
 \newlabel{eq:wt}{{4}{2}{Rotation and translation channels}{equation.3.4}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-C}}Orientation-tensor support}{2}{subsection.3.3}\protected@file@percent }
 \newlabel{sec:ot}{{\mbox  {III-C}}{2}{Orientation-tensor support}{subsection.3.3}{}}
@@ -78,29 +78,25 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-A}}Accuracy against the baselines}{4}{subsection.5.1}\protected@file@percent }
 \@writefile{lot}{\contentsline {table}{\numberline {III}{\ignorespaces ATE of the front end, RMSE / max in metres; $n$ = number of live runs, mean over runs. ``--'': not available or not recorded (not a failed run); a run with ATE above 10\,m counts as failed. Bold: best of our own rows. Farm: Gazebo simulation, route about 80\,m.}}{5}{table.3}\protected@file@percent }
 \newlabel{tab:main}{{III}{5}{ATE of the front end, RMSE / max in metres; $n$ = number of live runs, mean over runs. ``--'': not available or not recorded (not a failed run); a run with ATE above 10\,m counts as failed. Bold: best of our own rows. Farm: Gazebo simulation, route about 80\,m}{table.3}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Top-down paths on the three sequences for which Switch-SLAM publishes results. Ground truth, CSD-LVIO, A-LOAM's output and VINS-Mono alone are from the same run and each is aligned to the ground truth on its own; the legends give ATE RMSE / maximum. Switch-SLAM published values only, no path is available. On the farm the published route is 536\,m with fast-rotation and plane-only stretches; ours is about 80\,m without them, with one run per version.}}{5}{figure.2}\protected@file@percent }
-\newlabel{fig:trajA}{{2}{5}{Top-down paths on the three sequences for which Switch-SLAM publishes results. Ground truth, CSD-LVIO, A-LOAM's output and VINS-Mono alone are from the same run and each is aligned to the ground truth on its own; the legends give ATE RMSE / maximum. Switch-SLAM published values only, no path is available. On the farm the published route is 536\,m with fast-rotation and plane-only stretches; ours is about 80\,m without them, with one run per version}{figure.2}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-B}}Effect of the gated prediction}{5}{subsection.5.2}\protected@file@percent }
 \newlabel{sec:ablation}{{\mbox  {V-B}}{5}{Effect of the gated prediction}{subsection.5.2}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Cave02, first run of each variant: RMSE per 120\,s window. The gated prediction lowers every window; the first 240\,s dominate both runs.}}{5}{figure.3}\protected@file@percent }
-\newlabel{fig:cave}{{3}{5}{Cave02, first run of each variant: RMSE per 120\,s window. The gated prediction lowers every window; the first 240\,s dominate both runs}{figure.3}{}}
-\citation{switchslam2024}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-C}}Hypothesis tests}{5}{subsection.5.3}\protected@file@percent }
+\newlabel{sec:hyp}{{\mbox  {V-C}}{5}{Hypothesis tests}{subsection.5.3}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {IV}{\ignorespaces One-sided tests of $H_0$: median ATE RMSE of the baseline equals that of DualChan-LVIO, against $H_1$: baseline larger. $n$: runs of the baseline / of DualChan-LVIO. Exact Mann-Whitney $p$ for the RMSE and the maximum error, Welch $p$ for the RMSE. ``--'': not computed (one run in a group, or maximum not recorded).}}{5}{table.4}\protected@file@percent }
+\newlabel{tab:hyp}{{IV}{5}{One-sided tests of $H_0$: median ATE RMSE of the baseline equals that of DualChan-LVIO, against $H_1$: baseline larger. $n$: runs of the baseline / of DualChan-LVIO. Exact Mann-Whitney $p$ for the RMSE and the maximum error, Welch $p$ for the RMSE. ``--'': not computed (one run in a group, or maximum not recorded)}{table.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-D}}How often each part acted}{5}{subsection.5.4}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Top-down paths on the three sequences for which Switch-SLAM publishes results. Ground truth, DualChan-LVIO, A-LOAM's output and VINS-Mono alone are from the same run and each is aligned to the ground truth on its own; the legends give ATE RMSE / maximum. Switch-SLAM published values only, no path is available. On the farm the published route is 536\,m with fast-rotation and plane-only stretches; ours is about 80\,m without them, with one run per version.}}{6}{figure.2}\protected@file@percent }
+\newlabel{fig:trajA}{{2}{6}{Top-down paths on the three sequences for which Switch-SLAM publishes results. Ground truth, DualChan-LVIO, A-LOAM's output and VINS-Mono alone are from the same run and each is aligned to the ground truth on its own; the legends give ATE RMSE / maximum. Switch-SLAM published values only, no path is available. On the farm the published route is 536\,m with fast-rotation and plane-only stretches; ours is about 80\,m without them, with one run per version}{figure.2}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Cave02, first run of each variant: RMSE per 120\,s window. The gated prediction lowers every window; the first 240\,s dominate both runs.}}{6}{figure.3}\protected@file@percent }
+\newlabel{fig:cave}{{3}{6}{Cave02, first run of each variant: RMSE per 120\,s window. The gated prediction lowers every window; the first 240\,s dominate both runs}{figure.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-E}}Where the error remains}{6}{subsection.5.5}\protected@file@percent }
 \@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces ATE RMSE of every live run, logarithmic scale. The diverged Corridor02 run of the variant without gated prediction is the point at 104\,m.}}{6}{figure.4}\protected@file@percent }
 \newlabel{fig:runs}{{4}{6}{ATE RMSE of every live run, logarithmic scale. The diverged Corridor02 run of the variant without gated prediction is the point at 104\,m}{figure.4}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-C}}Hypothesis tests}{6}{subsection.5.3}\protected@file@percent }
-\newlabel{sec:hyp}{{\mbox  {V-C}}{6}{Hypothesis tests}{subsection.5.3}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-D}}How often each part acted}{6}{subsection.5.4}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {IV}{\ignorespaces One-sided tests of $H_0$: median ATE RMSE of the baseline equals that of CSD-LVIO, against $H_1$: baseline larger. $n$: runs of the baseline / of CSD-LVIO. Exact Mann-Whitney $p$ for the RMSE and the maximum error, Welch $p$ for the RMSE. ``--'': not computed (one run in a group, or maximum not recorded).}}{6}{table.4}\protected@file@percent }
-\newlabel{tab:hyp}{{IV}{6}{One-sided tests of $H_0$: median ATE RMSE of the baseline equals that of CSD-LVIO, against $H_1$: baseline larger. $n$: runs of the baseline / of CSD-LVIO. Exact Mann-Whitney $p$ for the RMSE and the maximum error, Welch $p$ for the RMSE. ``--'': not computed (one run in a group, or maximum not recorded)}{table.4}{}}
 \@writefile{lot}{\contentsline {table}{\numberline {V}{\ignorespaces How often each part acted (final system, first run per sequence; shares of scans)}}{6}{table.5}\protected@file@percent }
 \newlabel{tab:act}{{V}{6}{How often each part acted (final system, first run per sequence; shares of scans)}{table.5}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-E}}Where the error remains}{6}{subsection.5.5}\protected@file@percent }
 \citation{switchslam2024}
 \citation{switchslam2024}
-\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Top-down paths on the sequences without a published Switch-SLAM run, first run of CSD-LVIO. Same conventions as Fig.~\ref {fig:trajA}. VINS-Mono alone is off the plot on Cave02 and GEODE.}}{7}{figure.5}\protected@file@percent }
-\newlabel{fig:trajB}{{5}{7}{Top-down paths on the sequences without a published Switch-SLAM run, first run of CSD-LVIO. Same conventions as Fig.~\ref {fig:trajA}. VINS-Mono alone is off the plot on Cave02 and GEODE}{figure.5}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {VI}Discussion}{7}{section.6}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {VII}Limitations}{7}{section.7}\protected@file@percent }
+\citation{switchslam2024}
 \bibstyle{IEEEtran}
 \bibdata{refs}
 \bibcite{loam2014}{1}
@@ -112,6 +108,10 @@
 \bibcite{lvisam2021}{7}
 \bibcite{r2live2021}{8}
 \bibcite{r3live2022}{9}
+\@writefile{toc}{\contentsline {section}{\numberline {VI}Discussion}{7}{section.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {VII}Limitations}{7}{section.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {VIII}Conclusion}{7}{section.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{References}{7}{section*.1}\protected@file@percent }
 \bibcite{fastlivo2022}{10}
 \bibcite{superodom2021}{11}
 \bibcite{switchslam2024}{12}
@@ -131,6 +131,6 @@
 \bibcite{geode2026}{26}
 \bibcite{umeyama1991}{27}
 \bibcite{ganesan2024}{28}
-\@writefile{toc}{\contentsline {section}{\numberline {VIII}Conclusion}{8}{section.8}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{References}{8}{section*.1}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Top-down paths on the sequences without a published Switch-SLAM run, first run of DualChan-LVIO. Same conventions as Fig.~\ref {fig:trajA}. VINS-Mono alone is off the plot on Cave02 and GEODE.}}{8}{figure.5}\protected@file@percent }
+\newlabel{fig:trajB}{{5}{8}{Top-down paths on the sequences without a published Switch-SLAM run, first run of DualChan-LVIO. Same conventions as Fig.~\ref {fig:trajA}. VINS-Mono alone is off the plot on Cave02 and GEODE}{figure.5}{}}
 \gdef \@abspage@last{8}

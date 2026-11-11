@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2026.10.27)  11 NOV 2026 09:30
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2026.10.27)  11 NOV 2026 09:51
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -813,33 +813,31 @@ File: figures/fig_switch_seq.pdf Graphic file (type pdf)
 Package pdftex.def Info: figures/fig_switch_seq.pdf  used on input line 268.
 (pdftex.def)             Requested size: 516.0pt x 216.20404pt.
  [4]
-<figures/cave02_blocks.pdf, id=269, 249.3315pt x 137.313pt>
+<figures/cave02_blocks.pdf, id=268, 249.3315pt x 137.313pt>
 File: figures/cave02_blocks.pdf Graphic file (type pdf)
 <use figures/cave02_blocks.pdf>
 Package pdftex.def Info: figures/cave02_blocks.pdf  used on input line 280.
 (pdftex.def)             Requested size: 252.0pt x 138.7835pt.
-
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
- [5 <./figures/fig_switch_seq.pdf> <./figures/cave02_blocks.pdf>]
-<figures/per_run_rmse.pdf, id=299, 249.3315pt x 169.8345pt>
+<figures/per_run_rmse.pdf, id=269, 249.3315pt x 169.8345pt>
 File: figures/per_run_rmse.pdf Graphic file (type pdf)
 <use figures/per_run_rmse.pdf>
 Package pdftex.def Info: figures/per_run_rmse.pdf  used on input line 289.
 (pdftex.def)             Requested size: 252.0pt x 171.65327pt.
-<figures/fig_other_seq.pdf, id=302, 517.45322pt x 216.81pt>
+ [5] [6 <./figures/fig_switch_seq.pdf> <./figures/cave02_blocks.pdf> <./figures
+/per_run_rmse.pdf>]
+<figures/fig_other_seq.pdf, id=325, 517.45322pt x 216.81pt>
 File: figures/fig_other_seq.pdf Graphic file (type pdf)
 <use figures/fig_other_seq.pdf>
 Package pdftex.def Info: figures/fig_other_seq.pdf  used on input line 353.
 (pdftex.def)             Requested size: 516.0pt x 216.20404pt.
- [6 <./figures/per_run_rmse.pdf>] [7 <./figures/fig_other_seq.pdf>] (./main.bbl
-
+ (./main.bbl
+[7]
 Underfull \hbox (badness 2452) in paragraph at lines 146--149
 \OT1/ptm/m/n/8 GitHub repos-i-tory. [On-line]. Avail-able: https://github.com/H
 KUST-
  []
 
-) [8] (./main.aux)
+) [8 <./figures/fig_other_seq.pdf>] (./main.aux)
  ***********
 LaTeX2e <2023-11-01> patch level 1
 L3 programming layer <2024-01-22>
@@ -854,7 +852,7 @@ Here is how much of TeX's memory you used:
  44055 multiletter control sequences out of 15000+600000
  608297 words of font info for 136 fonts, out of 8000000 for 9000
  59 hyphenation exceptions out of 8191
- 84i,12n,93p,1911b,831s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 84i,12n,93p,1978b,831s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx10.pfb></us
 r/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx7.pfb></usr/share
 /texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx8.pfb></usr/share/texliv
@@ -880,7 +878,7 @@ cm/cmsy7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy
 re/texlive/texmf-dist/fonts/type1/urw/times/utmbi8a.pfb></usr/share/texlive/tex
 mf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/share/texlive/texmf-dist/fonts/t
 ype1/urw/times/utmri8a.pfb>
-Output written on main.pdf (8 pages, 513980 bytes).
+Output written on main.pdf (8 pages, 515623 bytes).
 PDF statistics:
  493 PDF objects out of 1000 (max. 8388607)
  396 compressed objects within 4 object streams
