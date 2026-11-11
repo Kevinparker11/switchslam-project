@@ -1,0 +1,20 @@
+%YAML 1.2
+---
+# LVI-SAM public dataset (handheld). Sources: config/params_lidar.yaml (extrinsicRot, extrinsicTrans: lidar <-> /imu_raw)
+# and config/params_camera.yaml (extrinsicRotation, extrinsicTranslation: camera -> IMU).
+# laser_to_imu: x_imu = R x_laser + t, with R = diag(-1, 1, -1) (a 180 degree turn about y; its own inverse) and t = 0.
+laser_to_imu:
+  rows: 4
+  cols: 4
+  data: [-1.0, 0.0, 0.0, 0.0,
+          0.0, 1.0, 0.0, 0.0,
+          0.0, 0.0, -1.0, 0.0,
+          0.0, 0.0, 0.0, 1.0]
+
+rgb_camera_to_imu:
+  rows: 4
+  cols: 4
+  data: [ 0.0, 0.0, -1.0, 0.006422381632411965,
+         -1.0, 0.0,  0.0, 0.019939800449065116,
+          0.0, 1.0,  0.0, 0.03364235163589248,
+          0.0, 0.0,  0.0, 1.0]

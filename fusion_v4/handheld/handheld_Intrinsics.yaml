@@ -1,0 +1,19 @@
+%YAML 1.2
+---
+# LVI-SAM public dataset (handheld), transcribed unchanged from config/params_camera.yaml of the LVI-SAM repo
+rgb_camera:
+  model_type: MEI
+  image_width: 720
+  image_height: 540
+  mirror_parameters:
+    xi: 1.9926618269451453
+  distortion_parameters:
+    k1: -0.0399258932468764
+    k2: 0.15160828121223818
+    p1: 0.00017756967825777937
+    p2: -0.0011531239076798612
+  projection_parameters:
+    gamma1: 669.8940458885896
+    gamma2: 669.1450614220616
+    u0: 377.9459252967363
+    v0: 279.63655686698144
