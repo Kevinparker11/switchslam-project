@@ -121,3 +121,21 @@ cd ~ && zip -r plane_f26.zip plane_f26
 
 ## Run order change (11 Nov 2026, owner, before any run)
 The first run is F35, driven by hand from the L end (the F35 node, loggers, A-LOAM and VINS-Mono are started after the L approach has finished; the owner drives with `drive_manual.py`). The unfed A-LOAM run (PL-P0) is not made first. Consequences, fixed now: (1) PL-P0 stays open; the A-LOAM output of the F35 log (`aft`, fed by the fused pose) is reported but is not the unfed control and does not decide PL-P0. (2) The waypoints of this drive (`waypoints_from_gt.py` on its ground truth) are used for the later runs (unfed A-LOAM, F26, SW). (3) PL-1 and the PL-2 line for F35 use this run's own VINS-Mono ATE. (4) Whatever the result, a Plane statement needs the unfed run; one F35 run supports no claim.
+
+## F35 run 1, driven by hand from the L end (11 Nov 2026; owner's printout, the zip was not attached with it, so nothing is re-scored here)
+Printout: GT 9,700 samples, GT path 110.5 m; log rows 4,845, modes FUSED 4,645 / WARMUP 199 / INIT 1; rotation check closed on 0 of 4,645 FUSED rows. Guess kinds VO 4,843 / INIT 1 / empty 1 (the VINS-Mono step on every scan).
+
+| Output | ATE / max / end-point (m) |
+|---|---|
+| F35 fused | 16.321 / 32.093 / 32.084 |
+| A-LOAM output (fed by the fused pose) | 16.537 / 32.288 / 32.279 |
+| VINS-Mono alone | 4.534 / 7.541 / 6.716 |
+
+Route actually driven (`waypoints_from_gt.py`): moving part 109.0 m in 444 s (0.245 m/s), start (-39.97, -39.24) heading 174 degrees, end (4.16, -61.43), straight line start to end 49.4 m. The waypoints go west to x = -56, south to y = -68 and then east to x = 4: a U-shaped path with two turns, not the straight 105 m along +y that this protocol describes. This is a deviation from the planned route, recorded here; the 40 s window after arrival was not applied (zip needed).
+
+Reading by the rules above (n = 1, no claim):
+- PL-P0: open, no unfed A-LOAM run yet.
+- PL-1: VINS-Mono alone 4.53 m is above 2.5 m, so not met on this route (paper 1.17).
+- PL-2 for F35: 16.32 m against max(1.0, 1.5 x 4.53 = 6.80) m, not met.
+- Fused is within 0.2 m of the A-LOAM output; the VINS-Mono step was the guess on 99.96 % of the scans.
+- FC-P0' (sensor rates) printout not seen. Not a Plane result until the unfed run and a straight route exist.
