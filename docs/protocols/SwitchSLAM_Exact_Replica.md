@@ -209,3 +209,24 @@ Long Corridor result of the same variant. Failed or void runs are listed, not dr
 the quiet-window check on the mean norm tests this.
 
 **Status 11 Nov 2026.** Written and tested on synthetic data; no run on a bag yet (the laptop was not linked to the session).
+
+## 19. Short tests before the three-run check (declared 11 Nov 2026, before any run)
+
+Aim: find faults in `SWF` in minutes instead of 16 min bag runs. Neither test is a result; both are screens.
+
+**Test 1, offline IMU check (seconds, no ROS).** `bash fusion_v4/extract_imu.sh <bag folder> ~/imu_<seq>.csv` once per bag (one pass, no replay), then
+`python3 fusion_v4/offline_imu_check.py --imu ~/imu_<seq>.csv --log <a finished run's switching_log_v2_*.csv>`. It feeds the filter the logged poses as scan updates and reports, for the next increment
+predicted before the pose is seen: translation and rotation error one scan ahead and three scans ahead, along and across the direction of travel, against two trivial predictors
+(zero motion, repeat the last increment), by 60 s segment, and over an IMU time-offset sweep of -0.1 to +0.1 s; it also reports when the filter started (first quiet window), the gravity found and the biases.
+Go on to a bag run only if: (a) the filter starts (exit code 2 = it never did: SWF would use A-LOAM's increment for the whole run), (b) the median one-scan translation error is below that of repeating the last increment
+(printed ratio below 1), (c) the best time offset is within 0.04 s of zero. If (c) fails the offset is reported and fixed in the node as a declared change before any run, not tuned. Open loop: this says nothing
+about whether A-LOAM stops sliding with the guess.
+
+**Test 2, window screen (about 9 min per run at 0.5x, estimate).** `batches/switchslam_window.sh`: `PLAY_DUR` plays and scores only the first DUR seconds (default 180) of Corridor02 and
+Cave02, for `SW` and `SWF`; results in `<runs dir>/window<DUR>/`, never in the full-bag tables. A prefix, not a stretch from the middle, because the filter needs a quiet start. These two sequences,
+not Multi Floor or Long Corridor, so that no variant is chosen by looking at the published comparison sequences; those stay for the final three-run check of section 18.
+A variant goes to the three-run check only if the window RMSE of `SWF` is below that of `SW` on both windows and the IMU guess was used on more than 90 % of the scans (printed by the script).
+Window ATE is over the window only: compare variants with each other on the same window, never with a full-bag number. A variant that passes both screens is still judged only by section 18.
+
+**Also fixed on 11 Nov.** The run script copies a fixed list of files into the container and `imu_prop.py` was missing from it, so a first `SWF` bag run would have stopped at the import; added (found while writing these tests, before any run).
+Gravity initialisation now also needs the LiDAR poses of the last second to show a mean speed below 0.1 m/s, because a slow steady push passes the IMU-only tests and would tilt the gravity estimate.

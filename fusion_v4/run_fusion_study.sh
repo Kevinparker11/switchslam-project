@@ -4,6 +4,7 @@
 # Multi Floor runs of fusion_node_v2 (VIO-primary, degeneracy-gated LiDAR correction), one full bag replay each.
 #   ./run_fusion_study.sh --dry                 print what would run
 #   SMOKE=1 ./run_fusion_study.sh F1            70 s smoke test, no scoring (SMOKE_SECS=160 for a longer one)
+#   PLAY_DUR=180 ...     window run: play and score only the first 180 s of the bag (short screening of a variant; results in <OUT_DIR>/window180, not in the three-run tables)
 #   PLAY_RATE=0.33 ...   replay the bag slower (node time is the bag clock, so a slow machine then drops no scans)
 #   ./run_fusion_study.sh F0                    one configuration
 #   REPEAT=3 ./run_fusion_study.sh              all configurations, 3 repeats each (~18 x 8 min)
@@ -225,7 +226,7 @@ for a in "$@"; do [ "$a" = "--dry" ] && DRY=1 || SEL+=("$a"); done
 REPEAT=${REPEAT:-1}; SMOKE=${SMOKE:-0}; RECORD_KF=${RECORD_KF:-0}
 [ -z "$BAGS" ] && { echo "no .bag files found in $BAG_DIR"; exit 1; }
 [ -f "$GT" ] || { echo "ground truth not found: $GT"; exit 1; }
-for f in fusion_core.py fusion_node_v2.py switch_slam_core.py switch_slam_node.py switch_slam_detect.py gyro_prior.py switching_node_v7.py v2_tools.py fusion_summary.py structure_heading.py lio_bridge.py genz/make_genz_config.py; do
+for f in fusion_core.py fusion_node_v2.py switch_slam_core.py switch_slam_node.py switch_slam_detect.py gyro_prior.py imu_prop.py switching_node_v7.py v2_tools.py fusion_summary.py structure_heading.py lio_bridge.py genz/make_genz_config.py; do
   [ -f "$FUSION_DIR/$f" ] || { echo "missing $FUSION_DIR/$f"; exit 1; }
 done
 if [ "$FRONT" = genz ]; then
@@ -246,7 +247,9 @@ if [ "$FRONT" = iglio ]; then
 fi
 for s_ in "${SEL[@]}"; do case "$s_" in SW*|V7*) [ "$FRONT" = aloam ] || { echo "$s_ (Switch-SLAM replica) runs on the A-LOAM stack: use FRONT=aloam"; exit 1; } ;; esac; done
 echo "bags: $BAGS"
-OUT=$OUT_DIR; mkdir -p $OUT; RES=$OUT/results_index.csv
+PLAY_DUR=${PLAY_DUR:-}            # window run: only the first PLAY_DUR seconds of the bag are played and scored; logs and index go to $OUT_DIR/window<PLAY_DUR>
+OUT=$OUT_DIR${PLAY_DUR:+/window$PLAY_DUR}; mkdir -p $OUT; RES=$OUT/results_index.csv
+[ -n "$PLAY_DUR" ] && MIN_ROWS=$((PLAY_DUR * 4))
 exec 9>$OUT/.run.lock
 flock -n 9 || { echo "another run_fusion_study.sh is already running - not starting"; exit 1; }
 [ -f "$RES" ] || echo "tag,config,rows,ate_full_rmse,ate_full_max,finished" > "$RES"
@@ -279,7 +282,7 @@ run_one() {
   done
   echo "$GPU $VINS" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+ [0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' || { echo "    no vins_bridge IPs after restart (got: $GPU $VINS), abort"; exit 1; }
   docker exec $GPU_C bash -c "mkdir -p /root/thr; pkill -9 -f '[s]witching_node'; pkill -9 -f '[f]usion_node_v2'; pkill -9 -f '[s]witch_slam_node'; pkill -9 -f '[k]eyframe_recorder'; pkill -9 -f '[l]io_bridge'; pkill -9 -f '[g]enz_lio_node'; pkill -9 -f '[i]g_lio_node'; rm -f /root/thr/switching_log_v2_$tag.csv /root/thr/keyframes_$tag.npz /root/thr/aloam.out /root/thr/genz.out /root/thr/iglio.out /root/thr/bridge.out /root/thr/velodyne.out"
-  for f in fusion_core.py fusion_node_v2.py still_detect.py guess_status.py switch_slam_core.py switch_slam_node.py switch_slam_detect.py gyro_prior.py switching_node_v7.py keyframe_recorder.py structure_heading.py lio_bridge.py genz/make_genz_config.py; do
+  for f in fusion_core.py fusion_node_v2.py still_detect.py guess_status.py switch_slam_core.py switch_slam_node.py switch_slam_detect.py gyro_prior.py imu_prop.py switching_node_v7.py keyframe_recorder.py structure_heading.py lio_bridge.py genz/make_genz_config.py; do
     docker cp $FUSION_DIR/$f $GPU_C:/root/thr/ || { echo "    docker cp $f failed"; exit 1; }
   done
   [ "$FRONT" = iglio ] && { docker cp $FUSION_DIR/ig_lio/make_iglio_config.py $GPU_C:/root/thr/ || { echo "    docker cp make_iglio_config.py failed"; exit 1; }; }
@@ -299,7 +302,7 @@ run_one() {
     docker exec $GPU_C grep -q "keyframe_recorder listening" /root/thr/kf_$tag.out || { echo "    keyframe_recorder did not start, abort"; docker exec $GPU_C cat /root/thr/kf_$tag.out; exit 1; }
   fi
 
-  local PLAYOPT=""; [ $SMOKE = 1 ] && PLAYOPT="-u ${SMOKE_SECS:-70}"
+  local PLAYOPT=""; [ $SMOKE = 1 ] && PLAYOPT="-u ${SMOKE_SECS:-70}"; [ -z "$PLAYOPT" ] && [ -n "$PLAY_DUR" ] && PLAYOPT="-u $PLAY_DUR"
   docker run --rm --network vins_bridge -v "$BAG_DIR":/bags:ro -e ROS_MASTER_URI=http://$GPU:11311 \
     --entrypoint bash ros:noetic -c "export ROS_IP=\$(hostname -i); source /opt/ros/noetic/setup.bash; rosbag play --clock -q -r ${PLAY_RATE:-1.0} $PLAYOPT $BAGS" \
     > $OUT/player_$tag.out 2>&1

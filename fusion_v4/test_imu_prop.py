@@ -43,6 +43,14 @@ def lidar_pose(t, noise=0.0):
     return RL, pL
 
 
+def init_at(f, t_end, t_start=0.4):
+    """offer scans at 10 Hz from t_start to t_end (true LiDAR poses) until the filter starts; returns the stamp or None"""
+    for t in np.arange(t_start, t_end + 1e-9, 0.1):
+        if f.try_init(round(t, 4), *lidar_pose(t)):
+            return round(t, 4)
+    return None
+
+
 def feed(f, t0, t1):
     for t in np.arange(t0, t1, 1.0 / FS):
         g, a = imu_sample(t); f.add(t, g, a)
@@ -52,15 +60,15 @@ def feed(f, t0, t1):
 f = ip.ImuPropagator(R_IL, t_IL)
 feed(f, 0.0, 1.6)
 assert not f.try_init(0.5, *lidar_pose(0.5)), "window shorter than init_win must not initialise"
-assert f.try_init(1.5, *lidar_pose(1.5))
+t_init = init_at(f, 1.9); assert t_init is not None and 1.3 <= t_init <= 1.5, t_init
 assert np.linalg.norm(f.g - G_TRUE) < 0.12, (f.g, G_TRUE)                    # accelerometer bias of norm 0.07 m/s^2 tilts the gravity direction by up to 0.4 deg
 assert np.linalg.norm(f.bg - BG) < 0.004, f.bg
 
 # ---- 2 moving: after a few updates the increment is accurate (rotation and translation, LiDAR frame), also over dropped scans
 f = ip.ImuPropagator(R_IL, t_IL)
 feed(f, 0.0, 8.0)
-assert f.try_init(1.5, *lidar_pose(1.5))
-t = 1.5; errs_p, errs_r, errs_p3 = [], [], []
+t_init = init_at(f, 1.9)
+t = t_init; errs_p, errs_r, errs_p3 = [], [], []
 while t < 7.0:
     tn = round(t + 0.1, 4)
     inc = f.increment(tn)
@@ -81,16 +89,15 @@ R_t, _, v_t, _, _ = truth(7.0); assert np.linalg.norm(f.v - v_t) < 0.1, (f.v, v_
 
 # ---- 3 the IMU keeps the translation where a scan-to-scan odometer slides: a pose update that does NOT move (LiDAR stuck along x) still
 #      gives an IMU increment of the true size at the next scan
-f = ip.ImuPropagator(R_IL, t_IL); feed(f, 0.0, 8.0); f.try_init(1.5, *lidar_pose(1.5))
-t = 1.5
+f = ip.ImuPropagator(R_IL, t_IL); feed(f, 0.0, 8.0); t = init_at(f, 1.9)
 while t < 5.0:
     tn = round(t + 0.1, 4); f.update(tn, *lidar_pose(tn, noise=0.02)); t = tn
 inc = f.increment(round(t + 0.1, 4)); R0, p0 = lidar_pose(t); R1, p1 = lidar_pose(round(t + 0.1, 4)); _, dp_true = fc.rel_body(R0, p0, R1, p1)
 assert np.linalg.norm(inc[1]) > 0.5 * np.linalg.norm(dp_true) and np.linalg.norm(inc[1] - dp_true) < 0.01
 
 # ---- 4 coverage: no IMU for a scan -> None, update re-seeds the pose and keeps v
-f = ip.ImuPropagator(R_IL, t_IL); feed(f, 0.0, 3.0); f.try_init(1.5, *lidar_pose(1.5))
-assert f.increment(1.6) is not None
+f = ip.ImuPropagator(R_IL, t_IL); feed(f, 0.0, 3.0); t_init = init_at(f, 1.9)
+assert f.increment(round(t_init + 0.1, 4)) is not None
 assert f.increment(3.4) is None, "IMU ends at 3.0: a scan at 3.4 is not covered"
 v_before = f.v.copy(); d = f.update(5.0, *lidar_pose(5.0)); assert d["covered"] is False and np.allclose(f.v, v_before) and f.t == 5.0
 assert f.increment(5.0) is None and f.increment(4.0) is None                 # not later than the state
@@ -98,7 +105,7 @@ assert not ip.ImuPropagator(R_IL, t_IL).try_init(1.0, np.eye(3), np.zeros(3)), "
 # moving start: not quiet -> not initialised
 f = ip.ImuPropagator(R_IL, t_IL)
 for t in np.arange(0.0, 6.0, 1 / FS): g, a = imu_sample(t); f.add(t, g, a)
-assert not f.try_init(5.0, *lidar_pose(5.0)), "a window with 0.8 m/s^2 acceleration and a turn is not quiet"
+assert init_at(f, 5.0, t_start=3.0) is None, "a window with 0.8 m/s^2 acceleration and a turn is not quiet"
 
 # ---- 5 core: imu_dT replaces the whole LiDAR increment, differences logged, no imu = unchanged
 core = sw.SwitchSlamCore(n_buf=5, lt=sw.LT_PUBLISHED, hess_frame="body")
@@ -146,14 +153,14 @@ for t in np.arange(0.0, 8.0, 1 / FS):
     g, a = imu_sample(t); node.imu_cb(Msg(header=Msg(stamp=Stamp(t)), angular_velocity=Msg(x=g[0], y=g[1], z=g[2]), linear_acceleration=Msg(x=a[0], y=a[1], z=a[2])))
 H = list(H_OK.ravel())
 n = 0
-for k in range(15, 71):
+for k in range(10, 71):
     t = round(0.1 * k, 4); RL, pL = lidar_pose(t)
     node.hess_cb(Msg(data=H + [1.0, 100.0])); node.laser_odom_cb(odom(t, RL, pL)); node.aft_cb(odom(t, RL, pL)); n += 1
 node.log.flush()
 import pandas as pd
 L = pd.read_csv("switching_log_v2_TESTF.csv")
 assert len(L) == n and "sw_imu" in L.columns
-assert L["sw_imu"].iloc[0] == 0 and L["sw_imu"].iloc[1] == 1, "first scan = initialisation (quiet window found, filter starts); the next scan already uses the IMU"
+assert L["sw_imu"].iloc[:8].sum() == 0 and L["sw_imu"].iloc[12:].sum() > 40, "A-LOAM's increment until a quiet 1 s window of IMU and poses exists, then the IMU"
 used = L[L["sw_imu"] == 1]
 assert len(used) > 40, len(used)
 late = L[L["time"] > 4.0]

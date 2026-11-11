@@ -29,12 +29,14 @@ I3 = np.eye(3)
 
 class ImuPropagator:
     def __init__(self, R_IL, t_IL, g_norm=9.81007, acc_n=0.08, gyr_n=0.004, acc_w=4e-5, gyr_w=2e-6,
-                 sig_p=0.1, sig_th=0.01, init_win=1.0, quiet_g=0.6, quiet_acc_std=0.6, quiet_gyro=0.15, max_gap=0.05, maxlen=8000):
+                 sig_p=0.1, sig_th=0.01, init_win=1.0, quiet_g=0.6, quiet_acc_std=0.6, quiet_gyro=0.15, quiet_speed=0.1, max_gap=0.05, maxlen=8000):
         self.R_IL, self.t_IL = np.asarray(R_IL, float), np.asarray(t_IL, float)
         self.g_norm = float(g_norm)
         self.acc_n, self.gyr_n, self.acc_w, self.gyr_w = acc_n, gyr_n, acc_w, gyr_w
         self.sig_p, self.sig_th = sig_p, sig_th
         self.init_win, self.quiet_g, self.quiet_acc_std, self.quiet_gyro, self.max_gap = init_win, quiet_g, quiet_acc_std, quiet_gyro, max_gap
+        self.quiet_speed = quiet_speed                   # m/s: mean speed of the LiDAR poses over the window (a slow steady push passes the IMU tests)
+        self._ph = deque(maxlen=64)                      # (t, p_L) of the scans offered to try_init
         self.buf = deque(maxlen=maxlen)                  # (t, gx, gy, gz, ax, ay, az), IMU frame, increasing t
         self.ready = False
         self.t = None                                    # stamp of the state (last update)
@@ -74,11 +76,19 @@ class ImuPropagator:
 
     # ------------------------------------------------------------------ initialisation (gravity)
     def try_init(self, t, R_L, p_L):
-        """called at a finished scan with its final LiDAR pose; succeeds when the last init_win seconds of IMU look quiet.
+        """called at every finished scan with its final LiDAR pose until it succeeds; succeeds when the last init_win seconds look quiet: IMU (mean specific force
+        near g, small spread, small gyro) and poses (mean speed below quiet_speed).
         Returns True once the filter is running."""
         if self.ready:
             return True
         self.stats["init_tries"] += 1
+        self._ph.append((float(t), np.asarray(p_L, float).copy()))
+        while self._ph and self._ph[0][0] < t - self.init_win:
+            self._ph.popleft()
+        if len(self._ph) < 2 or self._ph[-1][0] - self._ph[0][0] < 0.8 * self.init_win:
+            return False                                 # the poses must span most of the window to show that the sensor stood still
+        if np.linalg.norm(self._ph[-1][1] - self._ph[0][1]) / (self._ph[-1][0] - self._ph[0][0]) > self.quiet_speed:
+            return False
         win = [s for s in self.buf if t - self.init_win <= s[0] <= t]
         if len(win) < 20 or win[-1][0] - win[0][0] < 0.8 * self.init_win:
             return False
