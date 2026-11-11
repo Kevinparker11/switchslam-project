@@ -8,7 +8,7 @@
 5. Wiggle for the VINS-Mono initialisation is a circle of 0.5 m radius turning right (angular -0.3), away from the fence on the left.
 
 ## Reading rules (fixed now)
-- **Score.** Umeyama SE(3), no scale, from the reset to 40 s after the robot first comes within 1.5 m of the last waypoint (the end of the manual path). Printed full-span values are reported too. Loggers are stopped within 30 s of arrival, so the window normally equals the log.
+- **Score.** Umeyama SE(3), no scale, from the first ground-truth sample (no reset now) to 40 s after the robot first comes within 1.5 m of the last waypoint (the end of the manual path). Printed full-span values are reported too. Loggers are stopped within 30 s of arrival, so the window normally equals the log.
 - **PL-P0 (precondition, else void and not adjusted).** Unfed A-LOAM fails on the run: ATE > 2.5 m or end-point error > 5 m. If it does not, the test is void for the failure direction (this world did not reproduce the paper's LOAM failure), the numbers are reported, and runs 2 and 3 are not read as a Plane result. The recorded route is still used.
 - **PL-1.** VINS-Mono alone (from the F26 log) does not fail: ATE <= 2.5 m (paper 1.17 / 0.41).
 - **PL-2 (the question).** F26 ATE <= max(1.0 m, 1.5 x VINS-Mono ATE of the same run). Published Switch-SLAM 1.27 / 0.35 for context.
@@ -108,7 +108,7 @@ docker exec -it -e ROS_IP=172.17.0.10 -e EXTRINSIC_YAML=/root/thr/farm_live_extr
 ```
 docker exec -it -e ROS_IP=172.17.0.10 -e WAYPOINTS="<paste the WAYPOINTS value printed in run 1>" -e SPIN_AT=none -e LINEAR_SPEED=0.25 switchslam_gpu_v2 bash -c "source /opt/ros/noetic/setup.bash && python3 /root/waypoint_driver_route.py"
 ```
-No second reset. When the driver prints "Route complete", Ctrl+C the logger and the node within 30 s.
+No reset at all. When the driver prints "Route complete", Ctrl+C the logger and the node within 30 s.
 
 9. Pull, score, zip (RUN 2 shown; RUN 3: replace f26 with sw, F26 with SW; RUN 4: replace f26 with f35, F26 with F35):
 ```
