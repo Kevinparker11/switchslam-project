@@ -167,3 +167,45 @@ Statement for the report: our implementations of Switch-SLAM (SW, SWI, SWM) do n
 - The misses repeat: the two runs of each differ by 0.5 m or less, against gaps to the published value of 3.4 m (Multi Floor SW) and 10.7 to 11.4 m (Long Corridor). They were not bad luck.
 - Verdict by the reproduction rule (within 50 % of the published value): **not reproduced** for SW on Multi Floor and for SW and SWI on Long Corridor, two runs each. SWI on Multi Floor (1.51 / 4.35) is close in one run only and is not repeated, so it is not a reproduction claim.
 - The cause of the gap to the paper is still not isolated (stack differences D1 to D5 and unspecified parameters A1 to A8 in sections 2 to 3; Hessian choice and gyro prior did not close it on Long Corridor, sections 13 to 16).
+
+## 18. SWF: LiDAR-IMU propagation as the LiDAR guess (declared 11 Nov 2026, before any run)
+
+**Why.** Sections 11 to 17: with the Hessians available here the paper's rule fires on 1.5 % (Multi Floor) and 4.5 % (Long Corridor) of scans, so
+`SW`, `SWI` and `SWM` behave mostly like A-LOAM with a scan-to-scan guess, and none reaches the published level on Long Corridor (12.6 to 13.8 m
+against 2.42 m). The paper's LiDAR guess is an IMU propagation (D1). The gyro-only `SWI` replaced only the rotation. `SWF` replaces the whole LiDAR
+increment with a propagation from the gyro and the accelerometer. Hypothesis, not a result: with a guess that carries the translation along the
+corridor axis, A-LOAM no longer slides, and `SWF` moves toward the published level.
+
+**What (`fusion_v4/imu_prop.py`, `IMU_PROP=1`, config `SWF`).** A loosely coupled error-state Kalman filter with the state R, p, v, gyro bias, accelerometer bias.
+Gravity is fixed once, from the mean specific force of the first quiet IMU window (1 s, mean norm within 0.6 m/s2 of 9.81007, accelerometer
+spread below 0.6 m/s2, mean gyro below 0.15 rad/s); until such a window exists the replica uses A-LOAM's increment, as `SW` does. The gyro bias starts from the mean
+gyro of that window. Between two finished scans the filter integrates the bias-corrected IMU (midpoint); the resulting increment, moved to the LiDAR
+frame with the extrinsic, is the LiDAR increment of Algorithm 1 (rotation and translation). After every finished scan the filter is corrected with
+the final pose of the node (position and orientation), so velocity and biases follow the LiDAR and the IMU only carries the motion over one scan period or a few dropped scans.
+If the IMU does not cover a scan, that scan uses A-LOAM's increment. Everything else is `SW` (rule, queue of 5, interpolation, Eqs. 14 to 16, scan-to-scan Hessian).
+
+**Fixed before the first run, never tuned.** Noise: the project's own VINS-Mono IMU values (acc_n 0.08, gyr_n 0.004, acc_w 4e-5, gyr_w 2e-6, g 9.81007);
+pose noise 0.1 m and 0.01 rad; initial covariance as in the code. Not in `SWF`: deskewing (A-LOAM's own constant-velocity deskew stays), IMU-rate
+output, iSAM2 factors, any LiDAR-based gravity refinement. The IMU topics are `/imu/data` and `/cmu_sp1/imu/data`, as for `SWI`.
+
+**Tests (`test_imu_prop.py`, passed 11 Nov, synthetic IMU).** Gravity and gyro bias from a quiet start; a moving trajectory with accelerometer and gyro bias and
+noise: after 4 s the 0.1 s increment is within 8 mm and 0.4 deg (mean 4 mm), within 3 cm over three scans without update; velocity and biases converge;
+the IMU increment keeps its size when the pose update stalls; no cover returns nothing and re-seeds the pose; a moving start is not used for gravity;
+the core replaces the LiDAR increment and logs the difference to A-LOAM's; a node run with stubbed ROS uses the IMU on 55 of 56 scans. These show the filter is implemented
+as described, not that it reproduces anything. The earlier `SW` and `SWI` tests still pass.
+
+**Run.** `REPEAT=1 bash batches/switchslam_swf.sh` (first look, about 30 min) or `REPEAT=3 ...` (the check below, about 1.5 h). Log columns added with `IMU_PROP=1`:
+`sw_imu` (1 = IMU guess), `sw_imu_rdeg`, `sw_imu_tdiff` (difference to A-LOAM's increment), `sw_imu_bg`, `sw_imu_ba`, `sw_imu_v` (norms), `sw_imu_innov_th`, `sw_imu_innov_p`.
+The script prints the share of scans on which the IMU guess was used, when the filter started, and the medians, for each run.
+
+**Pass rule (same as section 5, fixed now).** Three runs each on Multi Floor and Long Corridor; the mean RMSE of `SWF` within +-50 % of the published value on both
+(Multi Floor 1.61, Long Corridor 2.42). Within: report `SWF` as "Switch-SLAM, our implementation with LiDAR-IMU propagation" next to the published numbers.
+Outside: report it on every sequence under that name and make no claim about the published system. `SW`, `SWI`, `SWM` stay in the tables as they are. If `SWF` fails, a change is a new
+variant with its own name, declared with its reason before it is run, and all variants are reported; no setting is chosen by looking at the Multi Floor or
+Long Corridor result of the same variant. Failed or void runs are listed, not dropped.
+
+**Open before the run.** (1) Whether the sequences start quiet; if not, `sw_imu` stays 0 until a quiet window and the share printed by the script shows it.
+(2) IMU and LiDAR stamps are assumed aligned; a time offset would show as a large `sw_imu_rdeg`. (3) The accelerometer scale and the `/imu/data` units (m/s2) are assumed;
+the quiet-window check on the mean norm tests this.
+
+**Status 11 Nov 2026.** Written and tested on synthetic data; no run on a bag yet (the laptop was not linked to the session).
