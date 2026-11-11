@@ -83,18 +83,32 @@ class Media:
         return rid, name
 
 
-def figure(media, path, width_in, num, title, uid):
+def _draw(media, path, cx, cy, did):
     rid, name = media.add(path)
-    w, h = Image.open(path).size
-    cx = int(width_in * 914400); cy = int(cx * h / w)
-    draw = ('<w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="%d" cy="%d"/>'
+    return ('<w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="%d" cy="%d"/>'
             '<wp:effectExtent l="0" t="0" r="0" b="0"/><wp:docPr id="%d" name="Picture %d"/>'
             '<wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr>'
             '<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic>'
             '<pic:nvPicPr><pic:cNvPr id="%d" name="%s"/><pic:cNvPicPr/></pic:nvPicPr>'
             '<pic:blipFill><a:blip r:embed="%s"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>'
             '<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="%d" cy="%d"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>'
-            '</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>') % (cx, cy, 2000 + uid, 2000 + uid, 2000 + uid, name, rid, cx, cy)
+            '</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>') % (cx, cy, did, did, did, name, rid, cx, cy)
+
+
+def figure(media, path, width_in, num, title, uid):
+    if isinstance(path, (list, tuple)):
+        # several pictures side by side on one line, same height, aspect ratios kept
+        sizes = [Image.open(q).size for q in path]
+        gap = 0.1
+        H = (width_in - gap * (len(path) - 1)) / sum(w / h for w, h in sizes)
+        parts = []
+        for k, (q, (w, h)) in enumerate(zip(path, sizes)):
+            parts.append(_draw(media, q, int(H * w / h * 914400), int(H * 914400), 2000 + uid * 10 + k))
+        draw = '</w:r><w:r><w:t xml:space="preserve">  </w:t></w:r><w:r>'.join(parts)
+    else:
+        w, h = Image.open(path).size
+        cx = int(width_in * 914400); cy = int(cx * h / w)
+        draw = _draw(media, path, cx, cy, 2000 + uid)
     p1 = '<w:p><w:pPr><w:keepNext/><w:spacing w:before="120" w:after="0" w:line="240" w:lineRule="auto"/><w:jc w:val="center"/></w:pPr><w:r>%s</w:r></w:p>' % draw
     p2 = P("Figure %s: %s" % (num, title), jc="center", line=360, before=60, after=200)
     return p1 + p2
