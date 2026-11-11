@@ -43,7 +43,7 @@ for b, st in zip(bags, starts):
             rows.append((m.header.stamp.to_sec(), m.angular_velocity.x, m.angular_velocity.y, m.angular_velocity.z,
                          m.linear_acceleration.x, m.linear_acceleration.y, m.linear_acceleration.z))
             if len(rows) % 20000 == 0:
-                print("  %d samples, bag time +%.0f s, %.0f s elapsed" % (len(rows), rows[-1][0] - t0, time.time() - t_wall), flush=True)
+                print("  %d samples, IMU time +%.0f s, %.0f s elapsed" % (len(rows), rows[-1][0] - rows[0][0], time.time() - t_wall), flush=True)
 assert rows, "none of %s found in %s" % (topics, bags)
 rows.sort()
 with open(out, "w", newline="") as f:
