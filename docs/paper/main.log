@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2026.10.27)  11 NOV 2026 09:25
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2026.10.27)  11 NOV 2026 09:30
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -585,6 +585,10 @@ File: pgflibraryarrows.meta.code.tex 2023-01-15 v3.1.10 (3.1.10)
 zlibraryfit.code.tex
 File: tikzlibraryfit.code.tex 2023-01-15 v3.1.10 (3.1.10)
 )
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/frontendlayer/tikz/libraries/tik
+zlibrarycalc.code.tex
+File: tikzlibrarycalc.code.tex 2023-01-15 v3.1.10 (3.1.10)
+)
 (/usr/share/texlive/texmf-dist/tex/latex/hyperref/hyperref.sty
 Package: hyperref 2024-01-20 v7.01h Hypertext links for LaTeX
 
@@ -801,18 +805,18 @@ dist/fonts/enc/dvips/base/8r.enc}
 
 ] [2]
 Package hyperref Info: bookmark level for unknown algorithm defaults to 0 on in
-put line 147.
+put line 148.
  [3]
-<figures/fig_switch_seq.pdf, id=254, 517.45322pt x 216.81pt>
+<figures/fig_switch_seq.pdf, id=257, 517.45322pt x 216.81pt>
 File: figures/fig_switch_seq.pdf Graphic file (type pdf)
 <use figures/fig_switch_seq.pdf>
-Package pdftex.def Info: figures/fig_switch_seq.pdf  used on input line 267.
+Package pdftex.def Info: figures/fig_switch_seq.pdf  used on input line 268.
 (pdftex.def)             Requested size: 516.0pt x 216.20404pt.
  [4]
 <figures/cave02_blocks.pdf, id=269, 249.3315pt x 137.313pt>
 File: figures/cave02_blocks.pdf Graphic file (type pdf)
 <use figures/cave02_blocks.pdf>
-Package pdftex.def Info: figures/cave02_blocks.pdf  used on input line 279.
+Package pdftex.def Info: figures/cave02_blocks.pdf  used on input line 280.
 (pdftex.def)             Requested size: 252.0pt x 138.7835pt.
 
 Underfull \vbox (badness 10000) has occurred while \output is active []
@@ -821,12 +825,12 @@ Underfull \vbox (badness 10000) has occurred while \output is active []
 <figures/per_run_rmse.pdf, id=299, 249.3315pt x 169.8345pt>
 File: figures/per_run_rmse.pdf Graphic file (type pdf)
 <use figures/per_run_rmse.pdf>
-Package pdftex.def Info: figures/per_run_rmse.pdf  used on input line 288.
+Package pdftex.def Info: figures/per_run_rmse.pdf  used on input line 289.
 (pdftex.def)             Requested size: 252.0pt x 171.65327pt.
 <figures/fig_other_seq.pdf, id=302, 517.45322pt x 216.81pt>
 File: figures/fig_other_seq.pdf Graphic file (type pdf)
 <use figures/fig_other_seq.pdf>
-Package pdftex.def Info: figures/fig_other_seq.pdf  used on input line 352.
+Package pdftex.def Info: figures/fig_other_seq.pdf  used on input line 353.
 (pdftex.def)             Requested size: 516.0pt x 216.20404pt.
  [6 <./figures/per_run_rmse.pdf>] [7 <./figures/fig_other_seq.pdf>] (./main.bbl
 
@@ -844,10 +848,10 @@ Package rerunfilecheck Info: File `main.out' has not changed.
 (rerunfilecheck)             Checksum: BF2264295F185098000176C804611004;4209.
  ) 
 Here is how much of TeX's memory you used:
- 22451 strings out of 476106
- 416618 string characters out of 5793932
- 1958975 words of memory out of 5000000
- 43982 multiletter control sequences out of 15000+600000
+ 22527 strings out of 476106
+ 418248 string characters out of 5793932
+ 1959975 words of memory out of 5000000
+ 44055 multiletter control sequences out of 15000+600000
  608297 words of font info for 136 fonts, out of 8000000 for 9000
  59 hyphenation exceptions out of 8191
  84i,12n,93p,1911b,831s stack positions out of 10000i,1000n,20000p,200000b,200000s
@@ -876,7 +880,7 @@ cm/cmsy7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy
 re/texlive/texmf-dist/fonts/type1/urw/times/utmbi8a.pfb></usr/share/texlive/tex
 mf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/share/texlive/texmf-dist/fonts/t
 ype1/urw/times/utmri8a.pfb>
-Output written on main.pdf (8 pages, 513758 bytes).
+Output written on main.pdf (8 pages, 513980 bytes).
 PDF statistics:
  493 PDF objects out of 1000 (max. 8388607)
  396 compressed objects within 4 object streams

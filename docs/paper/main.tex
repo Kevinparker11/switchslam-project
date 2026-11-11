@@ -9,7 +9,7 @@
 \algrenewcommand\algorithmicrequire{\textbf{Input:}}
 \algrenewcommand\algorithmicensure{\textbf{Output:}}
 \usepackage{tikz}
-\usetikzlibrary{positioning,arrows.meta,fit}
+\usetikzlibrary{positioning,arrows.meta,fit,calc}
 \usepackage[hidelinks]{hyperref}
 
 \newcommand{\Exp}{\operatorname{Exp}}
@@ -80,11 +80,12 @@ with $\mathbf R_k=\mathbf R_{k-1}\Exp(\boldsymbol\phi)$ and $\mathbf p_k=\mathbf
 \draw[arr] (lidar) -- (schur); \draw[arr] (lidar) -- (ot);
 \draw[arr] (schur) -- (fuse); \draw[arr] (ot) -- (fuse);
 \draw[arr] (vio) -- (gate); \draw[arr] (gate) -| (fuse);
-\draw[arr] (lidar.north) |- ++(0,3mm) -| (fuse.north);
+\draw[arr] (lidar.north) |- ++(0,9mm) -| (fuse.north);
 \draw[arr] (fuse) -- (sah);
 \draw[arr] (sah.east) -- ++(3mm,0) node[right, align=left]{pose};
 \draw[arr] (sah) -- (dgp);
-\draw[arr, dashed] (dgp.south) |- ++(0,-6mm) -| node[pos=0.25, below]{initial guess} (lidar.south west);
+\draw[arr, dashed] (dgp.south) |- ($(vio.south)+(0,-6mm)$) coordinate (gb) -| ($(lidar.west)+(-5mm,0)$) -- (lidar.west);
+\node[below, font=\scriptsize] at ($(gb)+(14mm,0)$) {initial guess};
 \end{tikzpicture}
 \caption{Structure of CSD-LVIO. Both odometries run unchanged and A-LOAM has no IMU. The fusion node weights their increments per direction, gates the VIO by consistency, anchors heading to wall structure and returns a degeneracy-gated initial guess to the scan-to-map matching.}
 \label{fig:overview}
