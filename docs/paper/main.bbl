@@ -162,4 +162,9 @@ S.~Umeyama, ``Least-squares estimation of transformation parameters between two
   point patterns,'' \emph{IEEE Trans. Pattern Anal. Mach. Intell.}, vol.~13,
   no.~4, pp. 376--380, Apr. 1991.
 
+\bibitem{ganesan2024}
+S.~Ganesan, B.~Ramalingam, and R.~E. Mohan, ``A hybrid sampling-based {RRT*}
+  path planning algorithm for autonomous mobile robot navigation,''
+  \emph{Expert Systems with Applications}, vol. 258, p. 125206, Dec. 2024.
+
 \end{thebibliography}
