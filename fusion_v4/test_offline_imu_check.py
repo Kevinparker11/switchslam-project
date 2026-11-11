@@ -46,4 +46,8 @@ mv = pd.read_csv(os.path.join(d, "imu+0.00.csv")); mv = mv[mv["t"] > 4.0]; mv.to
 lg = pd.read_csv(os.path.join(d, "log.csv")); lg = lg[lg["time"] > 4.5]; lg.to_csv(os.path.join(d, "log_late.csv"), index=False)
 o3 = subprocess.run([sys.executable, script, "--imu", os.path.join(d, "imu_late.csv"), "--log", os.path.join(d, "log_late.csv")], capture_output=True, text=True)
 assert o3.returncode == 2 and "never started" in o3.stdout, o3.stdout[-400:]
+# IMU file shorter than the poses (a first-N-seconds extraction): only the covered scans are checked
+sh = pd.read_csv(os.path.join(d, "imu+0.00.csv")); sh = sh[sh["t"] < 12.0]; sh.to_csv(os.path.join(d, "imu_short.csv"), index=False)
+o4 = subprocess.run([sys.executable, script, "--imu", os.path.join(d, "imu_short.csv"), "--log", os.path.join(d, "log.csv"), "--no-sweep"], capture_output=True, text=True)
+assert o4.returncode == 0 and "IMU file ends at" in o4.stdout and "only the first" in o4.stdout, o4.stdout[:500] + o4.stderr[-300:]
 print("offline_imu_check tests passed;  median IMU / repeat-last = %s, injected 0.04 s offset found" % m.group(1))
