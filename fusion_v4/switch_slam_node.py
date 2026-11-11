@@ -14,6 +14,10 @@ Environment (all optional):
   LT_MODE      published (default, [0.12, 0.27, 0.48] as printed) | formula (Eq. 12 evaluated: [0.116, 0.271, 0.471])
   EQ15_W       weight of the LiDAR step in Eq. 15 (default 0.5 = the literal reading, mean of the two steps)
   GYRO         1 = SWI variant: rotation of the LiDAR increment from the integrated gyro (IMU_TOPICS, default /imu/data,/cmu_sp1/imu/data)
+  IMU_PROP     1 = SWF variant: the whole LiDAR increment (the guess of Algorithm 1) from a LiDAR-IMU propagation, imu_prop.ImuPropagator
+               (gyro + accelerometer + biases + velocity, corrected after every scan with the final pose; docs section 18).  Falls back to
+               A-LOAM's increment while the filter is not initialised (no quiet IMU window yet) or the IMU does not cover a scan.
+               Takes precedence over GYRO.
   DETECT       sw (default: Switch-SLAM's own rule, the replica) | ours: Switch-SLAM's rule plus our R, T and additional-T channels
                | ours_only: our channels only, with our own thresholds (kappa 15.7 for R, c_T 0.03 information weight for T), no
                Switch-SLAM thresholds at all (switch_slam_detect.py; the switching structure is unchanged)
@@ -45,6 +49,7 @@ import fusion_core as fc
 import switch_slam_core as sw
 import switch_slam_detect as sd
 import gyro_prior as gp
+import imu_prop as ip
 
 E = os.environ.get
 HESS_TOPIC = E("HESS_TOPIC", "/laser_hessian")
@@ -53,7 +58,8 @@ N_BUF = int(E("N_BUF", "5"))
 LT_MODE = E("LT_MODE", "published")
 EQ15_W = float(E("EQ15_W", "0.5"))
 RUN_TAG = E("RUN_TAG", "SW")
-GYRO = E("GYRO", "0") == "1"                  # SWI: rotation of the LiDAR increment from the integrated gyro (docs section 12)
+IMU_PROP = E("IMU_PROP", "0") == "1"          # SWF: LiDAR-IMU propagation as the LiDAR guess (docs section 18)
+GYRO = E("GYRO", "0") == "1" and not IMU_PROP  # SWI: rotation of the LiDAR increment from the integrated gyro (docs section 12)
 IMU_TOPICS = E("IMU_TOPICS", "/imu/data,/cmu_sp1/imu/data").split(",")
 DETECT = E("DETECT", "sw")
 DET_CH = sd.parse_channels(E("DET_CH", "R,T,TT"))
@@ -113,6 +119,8 @@ t_rng = np.random.default_rng(0)
 t_stats = dict(have=0, miss=0)
 lock = threading.Lock()
 gyro_buf = gp.GyroBuffer()
+imu = ip.ImuPropagator(R_IL, t_IL) if IMU_PROP else None
+imu_diag = dict(innov_th=np.nan, innov_p=np.nan)
 vins_buf = deque(maxlen=400)
 odoms, pubs, decs = OrderedDict(), OrderedDict(), OrderedDict()
 latest_H = [None, np.nan, np.nan]
@@ -130,7 +138,8 @@ w.writerow(["time", "mode", "fused_x", "fused_y", "fused_z", "fused_qx", "fused_
             "hess_src", "cost", "m_res"] + HCOLS + ["sah_corr_deg", "sah_total_deg", "sah_acc"] +
            ["sw_case", "sw_status", "sw_vo_fail", "sw_lam1", "sw_lam2", "sw_lam3", "sw_w", "sw_degen", "sw_race", "sw_gyro", "sw_gyro_deg"] +
            (["det_sw", "det_R", "det_T", "det_TT", "det_T_missing", "det_nrem"] if DETECT != "sw" else []) +
-           (["vio_gamma"] if VIO_CHECK else []) + (["sw_rotv"] if ROT_SRC == "vins" else []))
+           (["vio_gamma"] if VIO_CHECK else []) + (["sw_rotv"] if ROT_SRC == "vins" else []) +
+           (["sw_imu", "sw_imu_rdeg", "sw_imu_tdiff", "sw_imu_bg", "sw_imu_ba", "sw_imu_v", "sw_imu_innov_th", "sw_imu_innov_p"] if IMU_PROP else []))
 
 
 def odom_to_pose(msg):
@@ -201,7 +210,11 @@ def vins_cb(msg):
 def imu_cb(msg):
     a = msg.angular_velocity
     with lock:
-        gyro_buf.add(msg.header.stamp.to_sec(), a.x, a.y, a.z)
+        if IMU_PROP:
+            f = msg.linear_acceleration
+            imu.add(msg.header.stamp.to_sec(), (a.x, a.y, a.z), (f.x, f.y, f.z))
+        else:
+            gyro_buf.add(msg.header.stamp.to_sec(), a.x, a.y, a.z)
 
 
 def hess_cb(msg):
@@ -363,7 +376,8 @@ def laser_odom_cb(msg):
                 if T_hit is not None and T_hit[1] > 0.0:
                     t_stats["lag"] = t_stats.get("lag", 0) + 1
             trusted = vio_check is None or vio_check.gamma() > 0.5
-            dec = core.decide(O, vins_at(t), H, gyro_dR=dR_L, t=t, T=T_scan, vo_trusted=trusted)
+            dT_L = imu.increment(t) if IMU_PROP and core.prev_t is not None else None
+            dec = core.decide(O, vins_at(t), H, gyro_dR=dR_L, t=t, T=T_scan, vo_trusted=trusted, imu_dT=dT_L)
             dec["H"] = H
             dec["race"] = len(decs) > 0                      # an earlier scan is still being mapped: its T_w_odom is not in yet
             P = core.pose_to_publish(dec["guess"])
@@ -409,6 +423,12 @@ def aft_cb(msg):
                     R, corr_now, job = sah_on_step(t, Ra, pa, v, not info["vo_fail"], R)
                 except Exception as ex:                         # never let SAH break the estimator
                     rospy.logwarn("SAH step failed at %.2f: %s", t, ex)
+        if IMU_PROP:                                          # SWF: the final pose of this scan corrects the LiDAR-IMU filter
+            if imu.ready:
+                d_ = imu.update(t, R, p)
+                imu_diag.update(d_ if d_ is not None else dict(innov_th=np.nan, innov_p=np.nan))
+            else:
+                imu.try_init(t, R, p)
         cost, mres = latest_H[1], latest_H[2]
     if job is not None:
         sah_submit(job)
@@ -422,7 +442,9 @@ def aft_cb(msg):
                [info["case"], info["status"], int(info["vo_fail"]), lb[0], lb[1], lb[2], info["w"], int(info["degen"]), int(race), int(info["gyro"]), info["gyro_deg"]] +
                ([int(ch["SW"]), int(ch["R"]), int(ch["T"]), int(ch["TT"]), int(ch["T_missing"]), info["nrem"]] if DETECT != "sw" and (ch := info.get("chan")) is not None else
                 ([0, 0, 0, 0, 0, -1] if DETECT != "sw" else [])) +
-               ([vio_check.gamma()] if vio_check is not None else []) + ([int(info.get("rot_vins", False))] if ROT_SRC == "vins" else []))
+               ([vio_check.gamma()] if vio_check is not None else []) + ([int(info.get("rot_vins", False))] if ROT_SRC == "vins" else []) +
+               ([int(info.get("imu", False)), info.get("imu_rdeg", np.nan), info.get("imu_tdiff", np.nan), float(np.linalg.norm(imu.bg)), float(np.linalg.norm(imu.ba)),
+                 float(np.linalg.norm(imu.v)), imu_diag["innov_th"], imu_diag["innov_p"]] if IMU_PROP else []))
     stats["rows"] += 1
     stats["race"] += int(race)
     if stats["rows"] % 50 == 0:
@@ -448,12 +470,12 @@ def main():
             threading.Thread(target=sah_worker, daemon=True).start()
         print("SAH=1 KF_DIST=%g KF_ROT=%g SAH_RMIN=%g SAH_RMAX=%g SAH_VOXEL=%g SAH_MAXPTS=%d SAH_MAX_STEP=%.2f deg"
               % (KF_DIST, KF_ROT, SAH_RMIN, SAH_RMAX, SAH_VOXEL, SAH_MAXPTS, np.degrees(SAH_MAX_STEP)))
-    if GYRO:
+    if GYRO or IMU_PROP:
         from sensor_msgs.msg import Imu
         for tp in IMU_TOPICS:
             rospy.Subscriber(tp, Imu, imu_cb, queue_size=1000)
-    print("FUSION_MODE=switch_slam HESS_TOPIC=%s HESS_FRAME=%s N_BUF=%d LT_MODE=%s LT=%s EQ15_W=%g GYRO=%d RUN_TAG=%s"
-          % (HESS_TOPIC, HESS_FRAME, N_BUF, LT_MODE, np.round(lt, 3).tolist(), EQ15_W, int(GYRO), RUN_TAG))
+    print("FUSION_MODE=switch_slam HESS_TOPIC=%s HESS_FRAME=%s N_BUF=%d LT_MODE=%s LT=%s EQ15_W=%g GYRO=%d IMU_PROP=%d RUN_TAG=%s"
+          % (HESS_TOPIC, HESS_FRAME, N_BUF, LT_MODE, np.round(lt, 3).tolist(), EQ15_W, int(GYRO), int(IMU_PROP), RUN_TAG))
     print("DETECT=%s DET_CH=%s T_KNN=%d T_SUB=%d" % (DETECT, ",".join(DET_CH), T_KNN, T_SUB))
     print("ROT_SRC=%s EQ15_MODE=%s SAH=%d" % (ROT_SRC, EQ15_MODE, int(SAH)))
     print("VINS_JUMP_POS=%g VINS_JUMP_ROT_DEG=%g VIO_CHECK=%d VIO_CHECK_REF=%g VIO_CHECK_FAST=%g VIO_CHECK_FAST_REF=%g VIO_CHECK_START=%d"
@@ -471,4 +493,6 @@ if __name__ == "__main__":
             print("additional T: tensor found for %d scans (%d of them the previous scan's, up to %.2f s old), missing for %d (plain Schur T used there)" % (t_stats["have"], t_stats.get("lag", 0), T_LAG_MAX, t_stats["miss"]))
         if SAH:
             print("SAH keyframes %d dropped %d applied %.2f deg stats %s" % (sah_state["n_kf"], sah_state["dropped"], np.degrees(sah_state["applied"]), sah.stats))
+        if IMU_PROP:
+            print("IMU propagation: filter ready %s, init tries %d, updates %d, scans without IMU cover %d" % (imu.ready, imu.stats["init_tries"], imu.stats["updates"], imu.stats["no_cover"]))
         print("Saved", log_path, "rows", stats["rows"], "race (earlier scan unfinished at publish)", stats["race"], "no decision", stats["no_dec"])

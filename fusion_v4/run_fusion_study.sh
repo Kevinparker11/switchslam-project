@@ -200,6 +200,7 @@ declare -A CFG=(
   # docs/protocols/Switch_SLAM_With_Our_Detection_Protocol.md.  Same Hessian topic, N_BUF, thresholds and Eq. 15 as SW.
   [SWD]="FUSION_MODE=switch_slam HESS_TOPIC=/laser_hessian N_BUF=5 LT_MODE=published EQ15_W=0.5 DETECT=ours DET_CH=R,T,TT"    # + R, T and additional T
   [SWDRT]="FUSION_MODE=switch_slam HESS_TOPIC=/laser_hessian N_BUF=5 LT_MODE=published EQ15_W=0.5 DETECT=ours DET_CH=R,T"      # ablation: R and T only, no tensor
+  [SWF]="FUSION_MODE=switch_slam HESS_TOPIC=/laser_hessian N_BUF=5 LT_MODE=published EQ15_W=0.5 IMU_PROP=1"  # variant: LiDAR guess from a LiDAR-IMU propagation (gyro, accelerometer, bias, velocity; imu_prop.py), D1 closed as far as this stack allows. docs/protocols/SwitchSLAM_Exact_Replica.md section 18
   [SW1]="FUSION_MODE=switch_slam HESS_TOPIC=/laser_hessian N_BUF=5 LT_MODE=published EQ15_W=1.0"      # variant: whole projected LiDAR step in Eq. 15 (documented, not the literal reading)
   [G16]="FUSION_MODE=fused C_T=$GENZ_C_T_F8 KAPPA_TH=1e9 SAH=1"            # ablation: F16 rule on GenZ (+ SAH)
   [G9]="FUSION_MODE=fused C_T=$GENZ_C_T C_R=$GENZ_C_R KAPPA_TH=1e9"         # R and T both from Schur: S_RR and S_tt active weights
