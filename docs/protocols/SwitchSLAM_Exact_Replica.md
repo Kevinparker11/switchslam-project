@@ -251,3 +251,29 @@ This supersedes the quiet-window rule and the 0.1 m/s speed condition of section
 3. The best time offset is the one with the lowest median one-scan rotation error (translation error is flat in the offset), flagged only if at least 10 % better than zero and at least 0.04 s away. The IMU-start warning needs a gap above 0.5 s.
 
 The go rules of section 19 stand. Next: re-run the offline check on both bags (Corridor02 full IMU file; Cave02 600 s file) and read the numbers over the whole bag, then the window screen, then section 18.
+
+## 21. Offline IMU check over the whole bag (12 Nov 2026; commit af549e6, before any SWF bag run)
+
+Corridor02 (full 893 s IMU file, 8276 scans) and Cave02 (first 599 s of 955 s, 5922 scans). The filter started +2.0 s and +1.6 s after the first pose, gravity norm 9.810 on both, no scan without IMU cover.
+
+| | Corridor02 | Cave02 (first 599 s) |
+|---|---|---|
+| one-scan translation error, median / 90 % / 99 % (m) | 0.0188 / 0.0910 / 0.1817 | 0.0291 / 0.0685 / 0.1260 |
+| repeat last, same (m) | 0.0187 / 0.1454 / 0.3314 | 0.0361 / 0.0861 / 0.1596 |
+| one-scan rotation, median / 90 % (deg) | 0.065 / 0.892 | 0.325 / 1.290 |
+| repeat last, rotation (deg) | 0.221 / 2.912 | 1.297 / 3.145 |
+| median ratio IMU / repeat-last (rule b) | 1.00 | 0.81 |
+| three scans ahead, median translation (m), median travel (m) | 0.076, 0.053 | 0.078, 0.163 |
+| best time offset by rotation error (rule c) | +0.00 s | +0.00 s |
+
+Rules of section 19: (a) filter starts: met on both. (c) best offset within 0.04 s of zero: met on both. (b) median ratio below 1: met on Cave02 (0.81), **not met on Corridor02 (1.00, a tie)**.
+
+Reading, not a re-scoring: on Corridor02 about half of the bag is standing still (median step 0.002 to 0.003 m in the 0 to 120 s and 780 to 893 s segments), where the median error is the pose noise of the reference and no predictor can beat another, so the all-scan
+median sits at 1.00. In the moving part the IMU filter has the lower 90 % and 99 % translation error (0.091 and 0.182 m against 0.145 and 0.331 m) and a rotation error three to four times lower. This reading is made after seeing the output and
+does not change rule (b); `offline_imu_check.py` now also prints the ratio over moving scans only (step at least 0.05 m), labelled information only, not a go rule.
+
+Weaknesses that stay in view: (1) the signed error along travel is negative in every 60 s segment on both bags (Cave02 -0.012 to -0.029 m per scan, against a step of 0.06 to 0.08 m), so the filter predicts a shorter step than the poses show; (2) on Cave02 the one-scan translation error is about half the step
+(0.029 m against 0.058 m) and only 19 % below repeating the last step, and the three-scan error is 0.078 m against 0.163 m travel. The IMU is clearly better in rotation and at best modestly better in translation there. No setting is changed on this evidence.
+
+Decision for the next step: the strict rule (b) is not met on Corridor02, so the go to the window screen is the owner's call, not automatic. The window screen (section 19, test 2) is itself a pre-declared gate on Corridor02 and Cave02 first 180 s with its own pass rule,
+costs a few minutes per run, and uses neither Multi Floor nor Long Corridor.
