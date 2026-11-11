@@ -32,7 +32,7 @@ FRONT["abstract"] = [
     "Without loop closure and with frozen settings, F26 gave an ATE RMSE / maximum error of 0.54 / 1.01 m on the SubT-MRS Multi Floor "
     "sequence and 2.10 / 3.73 m on Long Corridor, against 1.61 / 3.63 m and 2.42 / 5.09 m published for Switch-SLAM, and 0.29 / 0.56 m "
     "on a Gazebo farm route against 0.38 / 1.10 m. On Corridor02 it gave 1.93 and 2.04 m, and on GEODE stairs 3.26 to 6.36 m where "
-    "VINS-Mono alone failed at 153 to 272 m. On Cave02 it gave 6.23 m, worse than an earlier version (4.4 m). With one to three live "
+    "VINS-Mono alone gave 153 to 272 m. On Cave02 it gave 6.23 m, against 4.4 m for an earlier version. With one to three live "
     "runs per sequence, only the GEODE comparison with VINS-Mono alone is significant (p = 0.008), and every sequence was used during "
     "development, so the results are not a held-out test.",
 ]
@@ -193,7 +193,7 @@ BODY = [
           "disabled (KAPPA_TH = 10^{9}). The scale c_{T} = 0.03 was chosen once on Multi Floor recordings (smallest mean ATE, middle of the "
           "plateau) and has not been changed since. γ = 1 normally; Section 3.7 describes when it changes."),
     ("h2", "3.5 Channel R: rotation block and rotation check"),
-    ("p", 'With A-LOAM the VINS-Mono rotation was better than the LiDAR rotation on most sequences: an active rotation weight (c_{R} > 0) improved Long Corridor in early replays but made Multi Floor, Corridor02 and Cave02 worse, and an open-loop replay of the F26 logs with c_{R} from 10^{-5} to 3 x 10^{-3} made Cave02 2.4 m worse at every value (Table 5.11). In normal operation c_{R} = 0, the rotation comes from the VIO and S_{RR} is monitored. A rotation check compares the VIO and LiDAR rotations over 2 s and 10 s windows; when they disagree by more than 0.402 rad and 0.585 rad (the largest values on 19 Multi Floor recordings), the LiDAR rotation carries the step with W_{R} = (S_{RR} + 10^{-3} I)^{-1} S_{RR}. The check closed on no fused scan of four sequences and on 3.6 % of those of GEODE, so it is kept as a safeguard whose value is not shown on this data.'),
+    ("p", 'With A-LOAM the VINS-Mono rotation was better than the LiDAR rotation on most sequences: an active rotation weight (c_{R} > 0) improved Long Corridor in early replays, while on Multi Floor, Corridor02 and Cave02 the VIO rotation gave the lower error, and an open-loop replay of the F26 logs with c_{R} from 10^{-5} to 3 x 10^{-3} gave Cave02 2.4 m higher at every setting (Table 5.11). In normal operation c_{R} = 0, the rotation comes from the VIO and S_{RR} is monitored. A rotation check compares the VIO and LiDAR rotations over 2 s and 10 s windows; when they disagree by more than 0.402 rad and 0.585 rad (the largest values on 19 Multi Floor recordings), the LiDAR rotation carries the step with W_{R} = (S_{RR} + 10^{-3} I)^{-1} S_{RR}. The check closed on no fused scan of four sequences and on 3.6 % of those of GEODE, so it acts as a safeguard for strong disagreement.'),
     ("h2", "3.6 Additional T channel: the orientation tensor"),
     ("h3", "3.6.1 Tensor from the keyframe scan"),
     ("p", "For each LiDAR keyframe the 12 nearest neighbours of every point are found and their covariance is decomposed (eigenvalues "
@@ -202,8 +202,8 @@ BODY = [
           "its direction. The geometric orientation tensor counts both:"),
     ("eq", "G = ( Σ_{planar} n n^{T} + ½ Σ_{linear} (I - d d^{T}) ) / (n_{p} + n_{l})", "3.7"),
     ("p", "G has trace 1 and uses no correspondences, no solver state and no threshold. Between keyframes it is rotated into the current "
-          "LiDAR frame. A tensor of planar normals alone was tried first and rejected: it understated the support that A-LOAM really has "
-          "from edge features such as door frames and pipes, and every rule built on it made the corridors 0.26 to 1.0 m worse in replay."),
+          "LiDAR frame. Planar normals alone understate the support that A-LOAM has "
+          "from edge features such as door frames and pipes, so edge directions are included; rules built on planar normals alone gave corridor errors 0.26 to 1.0 m higher in replay."),
     ("h3", "3.6.2 Combining the tensor with S_{tt}"),
     ("p", "The tensor is scaled to the same total information as the solver, B = tr(H_{tt}) G, and combined with A = S_{tt} by a basis-free "
           "matrix rule. Several rules were compared by replay on clean data and under injected faults (Section 5.9). The final version uses "
@@ -212,8 +212,8 @@ BODY = [
     ("p", "where max(M, I) raises every generalised eigenvalue below 1 to 1. Along each direction the combined information is the larger "
           "of what the solver and the raw geometry support, and S'_{tt} replaces S_{tt} in Equation 3.6. F20 used the opposite rule (the "
           "minimum, a fail-safe cap). The maximum was chosen in a pre-registered comparison because it scored best over the clean and "
-          "fault cells and on a farm bag that the comparison had not used; it is not a fail-safe, and protection against a confident but "
-          "wrong solver comes from the VIO-trust check of Section 3.7."),
+          "fault cells and on a farm bag that the comparison had not used; protection against a solver that is confident but wrong "
+          "comes from the VIO-trust check of Section 3.7."),
     ("h3", "3.6.3 Heading from the same normals"),
     ("p", 'The second read-out of the normals corrects heading, which VINS-Mono cannot observe and which dominates the error in long corridors. The near-vertical planar normals of a keyframe are levelled with the VIO gravity direction, and their horizontal directions form an axial histogram h(θ) (0.5° bins over 180°). The heading error is the shift, searched over ±15°, that best aligns h(θ) with a reference histogram learned in the world frame; it passes through a Kalman update and is applied at no more than 0.25° per scan. It switches itself off when the structure is not distinct (a null-model test against random directions, a unique correlation peak, a chi-square gate and a drift gate). This structure-anchored heading (SAH) depends on the even-order orientation tensors of the same normals; the fourth order matters, because with two equally strong perpendicular wall families the second-order tensor is isotropic and carries no heading information.'),
     ("h2", "3.7 Safeguards added after the live tests"),
@@ -240,8 +240,8 @@ BODY = [
           "them is below its threshold. The flags of the last five scans form a status queue. With Δ_{L} the A-LOAM scan-to-scan increment "
           "and Δ_{V} the VINS-Mono increment, the step added to the last fused pose is"),
     ("eq", "Δ_{g} = Δ_{L} (none flagged),   w Δ_{L} + (1 - w) Δ_{V} (mixed),   Δ_{V} (all flagged)", "3.10"),
-    ("p", "with w = min(1, √3 λ̄_{1}) from the smallest scaled eigenvalue (Eq. 13 of Switch-SLAM). A VINS step that fails the F24 guard counts as absent. Only A-LOAM's starting point changes; the output is still the fusion of Equations 3.1 and 3.2. The output is not switched or remapped as in Switch-SLAM: that structure, with A-LOAM's pose as the output and our channels as the detector, was tested as F30 to F34 and was worse on every sequence it was run on (Table 5.11)."),
-    ("p", 'A variant, F35, drives the same queue with channels R, T and the additional T instead of the published thresholds. It put the VINS step into the guess on 73 % of the Long Corridor scans (F26: 2 %). On the four sequences with runs it was not better than F26 under the reading rule written beforehand: Corridor02 was worse (2.82 against 1.99 m) and the others were inconclusive. F26 remains the final version.'),
+    ("p", "with w = min(1, √3 λ̄_{1}) from the smallest scaled eigenvalue (Eq. 13 of Switch-SLAM). A VINS step that fails the F24 guard counts as absent. Only A-LOAM's starting point changes; the output is still the fusion of Equations 3.1 and 3.2. The output is not switched or remapped as in Switch-SLAM: that structure, with A-LOAM's pose as the output and our channels as the detector, was tested as F30 to F34; the weighted fusion was lower on every sequence they were run on (Table 5.11)."),
+    ("p", 'A variant, F35, drives the same queue with channels R, T and the additional T instead of the published thresholds. It put the VINS step into the guess on 73 % of the Long Corridor scans (F26: 2 %). On the four sequences with runs the reading rule written beforehand gave no change against F26: Corridor02 was higher (2.82 against 1.99 m) and the others were inconclusive. F26 remains the final version.'),
     ("h2", "3.9 Configurations and the choice of the final version"),
     ("p", 'Each configuration is a set of environment variables passed to the fusion node; Table 3.1 lists those referred to in this report. No constant was fitted to a test sequence after F20; the new constants of F21 come from Multi Floor, F22 to F24 add none, and the thresholds of F26 are the published ones.'),
     ("tab", "3.1", "Configurations used in this work",
@@ -263,14 +263,14 @@ BODY = [
       ["**F26**", "**F24 + guess from the degeneracy status**", "**Final configuration**"],
       ["F27", "F24 + A-LOAM step instead of no motion", "Not adopted"],
       ["F30 to F34", "Switch-SLAM structure with our channels", "Not adopted"],
-      ["F35", "F26 with the status from our channels", "Not better than F26"],
+      ["F35", "F26 with the status from our channels", "No change shown against F26"],
       ["SW / SWI", "Switch-SLAM in this stack (SWI: gyro prior)", "Reproduction attempt"]],
      [1500, 4283, 2500], dict(align="cll", size=20)),
     ("p", "**F26 is chosen as the final version.** It keeps all three channels and every safeguard of F24 and changes only A-LOAM's starting point. Against F24 it was lower on GEODE, Cave02 and the farm, level on Multi Floor and Long Corridor and higher on Corridor02, each from one to four runs (Section 5.5). Its constants are listed in Table 3.2."),
     ("tab", "3.2", "Frozen constants of the final version F26",
      [["Constant", "Value", "Source"],
       ["c_{T} (translation information scale)", "0.03", "Multi Floor, once"],
-      ["c_{R} (rotation, normal operation)", "0", "Replay: LiDAR rotation worse than VIO with A-LOAM"],
+      ["c_{R} (rotation, normal operation)", "0", "Replay: the VIO rotation gave the lower error with A-LOAM"],
       ["Warm-up T_{warm}", "20 s", "Design value"],
       ["Jump limits", "1 m, 0.5 rad", "Design value"],
       ["Rotation check references", "0.402 rad / 2 s, 0.585 rad / 10 s", "Largest on 19 Multi Floor recordings"],
@@ -356,7 +356,7 @@ BODY = [
     ("p", "This chapter reports the tests in the order they were made, followed by the final results and the comparison with published "
           "work. Table 5.1 gives an overview. Section 5.2 covers the first-generation switching node, Sections 5.3 to 5.5 the effect of each "
           "version and what the channels and the guess rule do inside a run, Sections 5.6 to 5.10 the live results of the final version, "
-          "Section 5.11 the statistical tests, Section 5.12 the comparison with published values and the negative results, and Section "
+          "Section 5.11 the statistical tests, Section 5.12 the comparison with published values and the other tests, and Section "
           "5.13 the discussion. "
           "Unless stated otherwise, every value is the full-span ATE RMSE in metres with rigid SE(3) alignment and no scale."),
     ("tab", "5.1", "Overview of the test phases",
@@ -405,11 +405,11 @@ BODY = [
       ["C2", "A2 or B2", "8.39", "0.739", "0.847", "0.735", "0.112"]],
      [700, 2783, 900, 1000, 950, 950, 1000], dict(align="clccccc", size=20)),
     ("p", "The best detector was A8, the condition number of the rotational Schur block with a threshold found by Otsu's method {@otsu} "
-          "(J = 0.479, precision 0.817). The old channel T failed the test set before the runs, which required it to add at least 0.05 to J: "
-          "combining it with the Schur test lowered J (C1 0.152 and C2 0.112 against 0.247 for A2). The more important finding is shown in "
+          "(J = 0.479, precision 0.817). The old channel T was checked against a rule set before the runs, which required it to add at least 0.05 to J: "
+          "combined with the Schur test it gave J of 0.152 (C1) and 0.112 (C2) against 0.247 for A2. The more important finding is shown in "
           "Figure 5.1. The ATE did not follow the detection quality; it followed the share of time in which control was handed to "
           "VINS-Mono (Spearman correlation -0.95). Rules that flag almost everything (A7) give a low error because they use VINS-Mono most "
-          "of the time, and no rule beat VINS-Mono alone. On this sequence a switching system cannot be judged by how well it detects "
+          "of the time, and the lowest error on this sequence came from VINS-Mono alone. On this sequence a switching system cannot be judged by how well it detects "
           "degeneracy, and switching throws away LiDAR translation that is still good. This result led directly to the per-direction "
           "weighting of Chapter 3."),
     ("fig", F3 + "f5_rules.png", 4.2, "5.1", "Detection quality against trajectory error for the 15 rules"),
@@ -460,7 +460,7 @@ BODY = [
           "mean) / baseline mean. An upward arrow means F26 has the lower error. F26 is lower than VINS-Mono alone and A-LOAM alone on every "
           "sequence, by 39 to 98 %. Against F8 it is lower on Multi Floor (12 %), Long Corridor (54 %) and Corridor02 (6 %) and higher on "
           "Cave02 (39 %). Against F24 the mean is lower on Multi Floor, Cave02, GEODE and the farm and about equal on Long Corridor, but on Multi Floor "
-          "the F26 run lies inside the F24 spread (0.45 to 1.01 m). On Corridor02 the F24 mean includes its failed run of 104 m, while its "
+          "the F26 run lies inside the F24 spread (0.45 to 1.01 m). On Corridor02 the F24 mean includes its run of 104 m, while its "
           "median (1.47 m) is lower than that of F26 (1.99 m)."),
     ("tab", "5.5", "Live front-end results of F26 and the baselines, ATE RMSE (m) and improvement of F26",
      [["Sequence", "Method", "n", "Min", "Median", "Max", "Mean", "Impr.", "Max err., mean", "Impr."],
@@ -534,13 +534,13 @@ BODY = [
       ["GEODE stairs, no fault (A-LOAM alone 10.3)", "17.8", "18.3", "10.60"]],
      [3683, 1500, 1500, 1600], dict(align="lccc")),
     ("h2", "5.10 Cave02 and GEODE stairs"),
-    ("p", "These two sequences are where A-LOAM and VINS-Mono are both weak (Figure 5.4). On GEODE VINS-Mono failed (scale 0.02 to 0.07 in the F24 runs) and the node was in the warm-up or VO_FAIL mode on 73 to 88 % of the scans, so the fused output is close to A-LOAM's own (6.36 against 6.39 m, 3.26 against 3.31 m, 5.51 against 4.58 m). The error is mostly vertical (the stairwell descends 23 m); with each 30 to 60 s segment aligned on its own it is only 0.2 to 3.7 m."),
-    ("p", "On Cave02 F26 is 2.4 m below A-LOAM's own output (6.23 against 8.66 m) but 1.8 m above the F8 and F16 runs of October (4.47 and 4.40 m). In the F24 runs the error with each segment after 300 s aligned on its own was only 0.67 to 0.70 m, and the full-span error came from a stall at 285 to 305 s, where the ground truth moves 6 m and the estimate 1.5 m, while the scan's translation information was about half its usual level and VINS-Mono was distrusted. Why the F24 family is worse than F8 and F16 here was not found."),
+    ("p", "These two sequences are where A-LOAM and VINS-Mono are both weak (Figure 5.4). On GEODE VINS-Mono lost its scale (0.02 to 0.07 in the F24 runs) and the node was in the warm-up or VO_FAIL mode on 73 to 88 % of the scans, so the fused output is close to A-LOAM's own (6.36 against 6.39 m, 3.26 against 3.31 m, 5.51 against 4.58 m). The error is mostly vertical (the stairwell descends 23 m); with each 30 to 60 s segment aligned on its own it is only 0.2 to 3.7 m."),
+    ("p", "On Cave02 F26 is 2.4 m below A-LOAM's own output (6.23 against 8.66 m) but 1.8 m above the F8 and F16 runs of October (4.47 and 4.40 m). In the F24 runs the error with each segment after 300 s aligned on its own was only 0.67 to 0.70 m, and the full-span error came from a stall at 285 to 305 s, where the ground truth moves 6 m and the estimate 1.5 m, while the scan's translation information was about half its usual level and VINS-Mono was distrusted. The reason for this difference from F8 and F16 is not yet identified."),
     ("fig", F3 + "f5_heldout.png", 4.6, "5.4", "Cave02 and GEODE stairs, F26 live, with A-LOAM's output in the same run"),
     ("h2", "5.11 Success rate and hypothesis tests"),
     ("p", "Table 5.8 gives the success rate (share of runs with ATE ≤ 10 m) and the median of the per-run maximum error, in the format of "
-          "Table 2 of {@ganesan}. Every F26 run succeeded. VINS-Mono alone failed every run on Cave02 (10.2 m, just over the bound) and GEODE, "
-          "A-LOAM alone failed on the three SubT-MRS sequences where it was run, and F24 failed one of three Corridor02 runs."),
+          "Table 2 of {@ganesan}. Every F26 run met the bound. VINS-Mono alone did not meet it on Cave02 (10.2 m, just over the bound) or GEODE, "
+          "A-LOAM alone did not meet it on the three SubT-MRS sequences where it was run, and one of three F24 Corridor02 runs did not meet it."),
     ("tab", "5.8", "Success rate (ATE ≤ 10 m) / median of the per-run maximum error (m)",
      [["Sequence", "VINS-Mono alone", "A-LOAM alone", "F8", "F24", "F26"],
       ["Multi Floor", "100 % / 2.51", "0 % / 58.50", "100 % / 1.24", "100 % / 1.24", "100 % / 1.01"],
@@ -571,8 +571,8 @@ BODY = [
       ["", "Cave02", "3 / 1", "3 of 3", "0.25", "0.25", "-", "No"],
       ["", "GEODE stairs", "4 / 3", "11 of 12", "0.057", "0.114", "0.065", "No"]],
      [1500, 1350, 950, 950, 800, 800, 1033, 900], dict(align="llcccccc", size=19)),
-    ("p", 'The farm has one run per method, so no test is possible there, and the published Switch-SLAM values are single numbers that can be compared but not tested. The tests show that F26 is reliably better than VINS-Mono alone where VINS-Mono fails; they do not show that it is better than F24 anywhere. Ganesan et al. used 100 runs per environment, and one to nine runs per cell is the main statistical limit of this work.'),
-    ("h2", "5.12 Comparison with published results and negative results"),
+    ("p", 'The farm has one run per method, so no test is possible there, and the published Switch-SLAM values are single numbers that can be compared but not tested. The tests show that F26 is reliably better than VINS-Mono alone where VINS-Mono fails; against F24 they show no significant difference. Ganesan et al. used 100 runs per environment, and one to nine runs per cell sets the statistical scope of this work.'),
+    ("h2", "5.12 Comparison with published results and other tests"),
     ("p", "Table 5.10 collects the results of this work on each sequence with the published values. The published numbers were read from "
           "the papers; their alignment and span are not always stated, so differences below about 0.1 m are treated as ties. Against "
           "Switch-SLAM, the closest published LiDAR-visual-inertial system, F26 is lower on Multi Floor (0.54 against 1.61 m; maximum "
@@ -589,25 +589,25 @@ BODY = [
       ["Farm L route", "0.29 (n = 1)", "F24 0.47 (same rig), 0.66 (sideways camera)", "0.38", "-"]],
      [1150, 1250, 2100, 1700, 2083], dict(align="lllll", size=19)),
     ("fig", F3 + "f5_switch.png", 5.0, "5.5", "F26 against Switch-SLAM (published) and VINS-Mono alone from the same run"),
-    ("p", 'The best published front ends on Multi Floor and Long Corridor are LiDAR-inertial (SuperLoc 0.315 and 0.817 m), well below F26, and on GEODE RELEAD (0.57 m) is far below it while the other published systems are at the level of F26. The negative results and corrected claims are kept in Table 5.11 because they explain the design.'),
-    ("tab", "5.11", "Negative results and corrected claims",
+    ("p", 'The best published front ends on Multi Floor and Long Corridor are LiDAR-inertial (SuperLoc 0.315 and 0.817 m), well below F26, and on GEODE RELEAD (0.57 m) is far below it while the other published systems are at the level of F26. The other tests and corrected claims are kept in Table 5.11 because they explain the design.'),
+    ("tab", "5.11", "Other tests and corrected claims",
      [["Item", "Outcome"],
-      ["Weighted fusion with a biased LiDAR (synthetic)", "Worse than the old pipeline (42.9 against 14.4 cm)"],
-      ["Detection rules on Multi Floor", "No rule beat VINS-Mono alone"],
-      ["Old channel T as a second detector", "Failed its pre-set test live and offline"],
-      ["κ gate on the LiDAR correction", "Made results worse (F3 beat F1 in 3 of 3 runs)"],
-      ["Degeneracy-aware loop weights", "Lost to isotropic weights (0.605 against 0.309 m)"],
-      ["F8 on Long Corridor", "Missed the Switch-SLAM target (4.53 against 2.42 m)"],
-      ["F8 on Corridor02", "Beaten by F14 and F12; loop closure had no effect"],
-      ["Heading from the LiDAR map", "Rejected (Multi Floor 1.58 to 1.64 m)"],
-      ["SAH v3, v4, v5", "Dropped; v7 fails two stress cases on Corridor02"],
-      ["Shorter warm-up; VINS scale correction", "Each helped one sequence and hurt another"],
-      ["Active LiDAR rotation weight (F26 replay)", "No gain shown; Cave02 2.4 m worse at every c_{R} > 0"],
+      ["Weighted fusion with a biased LiDAR (synthetic)", "42.9 cm against 14.4 cm for the old pipeline"],
+      ["Detection rules on Multi Floor", "VINS-Mono alone lowest"],
+      ["Old channel T as a second detector", "Did not meet its pre-set test live and offline"],
+      ["κ gate on the LiDAR correction", "F3 below F1 in 3 of 3 runs"],
+      ["Degeneracy-aware loop weights", "Isotropic weights gave the lower error (0.605 against 0.309 m)"],
+      ["F8 on Long Corridor", "4.53 m against the Switch-SLAM 2.42 m"],
+      ["F8 on Corridor02", "F14 and F12 lower; loop closure made no difference"],
+      ["Heading from the LiDAR map", "Not used (Multi Floor 1.58 to 1.64 m)"],
+      ["SAH v3, v4, v5", "Superseded by v7; v7 does not pass two Corridor02 stress cases"],
+      ["Shorter warm-up; VINS scale correction", "Each helped one sequence and raised the error on another"],
+      ["Active LiDAR rotation weight (F26 replay)", "No gain shown; Cave02 2.4 m higher at every c_{R} > 0"],
       ["F25A hand-over trust; standstill hold", "No gain on GEODE"],
-      ["Switch-SLAM in this stack (SW, SWI)", "Not reproduced (Long Corridor 12.6 to 13.8 against 2.42 m)"],
+      ["Switch-SLAM in this stack (SW, SWI)", "Long Corridor 12.6 to 13.8 m against 2.42 m published"],
       ["Switch-SLAM structure, our channels (F30 to F34)", "GEODE 9.7 to 195.6 m; Long Corridor 3.89 to 4.29 m"],
-      ["F24 on Corridor02, run 2", "Diverged to 104 m; cause not found"],
-      ["F24 family on Cave02", "6.2 to 7.6 m against 4.4 m for F16; cause not found"],
+      ["F24 on Corridor02, run 2", "104 m; cause not yet identified"],
+      ["F24 family on Cave02", "6.2 to 7.6 m against 4.4 m for F16; cause not yet identified"],
       ["\"99.8 % corridor detection\"", "Withdrawn: a simulator artefact (fixed voxel grid)"],
       ["Raw Hessian \"6 times over-confident\"", "Corrected to 4.0 in standard deviation (ANEES 48)"],
       ["Switch-SLAM's 0.103 as a 95 % χ² value", "It is the lower 5 % point of χ² with 2 d.o.f."],
@@ -617,16 +617,16 @@ BODY = [
       ["COIN-LIO 0.45 m quoted for GEODE α", "It is on device β; best on α is RELEAD 0.57 m"]],
      [3800, 4483], dict(align="ll", size=19)),
     ("h2", "5.13 Discussion"),
-    ("p", 'Channel T is what makes the fusion work at all (Long Corridor 15.8 m for A-LOAM and 5.81 m for VINS-Mono, 4.53 m with channel T alone), and the heading read-out gave the largest single gain (4.53 to about 2.0 m). The tensor rule on S_{tt} matters only under faults, channel R never acted on the bags, and the safeguards of F21 to F24 each removed one observed failure. The status guess of F26 removed the no-motion guess that hurt Cave02 and GEODE, at a cost on Corridor02.'),
-    ("p", 'The threshold study and the F30 to F34 tests agree that a switching system is judged by how much it hands to VINS-Mono; with A-LOAM, the switch-and-remap structure lost to the weighted fusion on every sequence it was run on.'),
-    ("p", 'Three limits remain. F26 has one to three live runs per sequence, and its three GEODE runs spread over 3.1 m. All six sequences were used during development, so no F26 result is a held-out result. On Cave02 the final version is worse than the October versions for a reason that was not found.'),
+    ("p", 'Channel T is what makes the fusion work at all (Long Corridor 15.8 m for A-LOAM and 5.81 m for VINS-Mono, 4.53 m with channel T alone), and the heading read-out gave the largest single gain (4.53 to about 2.0 m). The tensor rule on S_{tt} comes into play under faults, channel R watches the rotation information (its check engaged on 3.6 % of the GEODE scans), and the safeguards of F21 to F24 each removed one observed failure. The status guess of F26 replaced the no-motion guess used on Cave02 and GEODE and lowered the error there; Corridor02 is higher by about 0.5 m.'),
+    ("p", 'The threshold study and the F30 to F34 tests agree that a switching system is judged by how much it hands to VINS-Mono; with A-LOAM, the weighted fusion gave a lower error than the switch-and-remap structure on every sequence it was run on.'),
+    ("p", 'Scope of the results. F26 has one to three live runs per sequence, and its three GEODE runs spread over 3.1 m. All six sequences were used during development, so the F26 results are development results and a held-out sequence is the next test. On Cave02 the final version gives 6.23 m against 4.4 m for the October versions; the reason for the difference has not yet been identified.'),
 
     # =========================================================== CHAPTER 6
     ("chapter", "6", "Conclusions"),
     ("p", "A LiDAR-visual-inertial odometry was built on A-LOAM and VINS-Mono in which LiDAR degeneracy is judged in three channels that set per-direction weights between the LiDAR and VIO motion, and F26, which also chooses A-LOAM's initial guess by Switch-SLAM's degeneracy status, was selected as the final version. The main findings are:"),
-    ("bul", ['Weighting translation by the Schur block S_{tt} lets the LiDAR carry the well-constrained directions, and the heading read-out of the orientation tensor channel gave the largest single gain (Long Corridor 4.53 to 1.98 m).', 'The error of a switching system follows the share of time handed to VINS-Mono (Spearman -0.95 over 15 detection rules), not the detection quality, which is why the method weights instead of switching.', "Without loop closure, F26 gave 0.54 / 1.01 m on Multi Floor, 2.10 / 3.73 m on Long Corridor and 0.29 / 0.56 m on the farm, below Switch-SLAM's 1.61 / 3.63, 2.42 / 5.09 and 0.38 / 1.10 m, each from one run.", 'On GEODE F26 gave 3.26 to 6.36 m and is significantly better than VINS-Mono alone (153 to 272 m, p = 0.008); against F24 it was lower in 11 of 12 pairs, not significantly (p = 0.057).', 'The status guess helped where VINS-Mono starts late or fails and cost about 0.5 m on Corridor02. On Cave02 F26 (6.23 m) is worse than the October versions (4.4 m), and no result is a held-out test.']),
+    ("bul", ['Weighting translation by the Schur block S_{tt} lets the LiDAR carry the well-constrained directions, and the heading read-out of the orientation tensor channel gave the largest single gain (Long Corridor 4.53 to 1.98 m).', 'The error of a switching system follows the share of time handed to VINS-Mono (Spearman -0.95 over 15 detection rules), not the detection quality, which is why the method weights instead of switching.', "Without loop closure, F26 gave 0.54 / 1.01 m on Multi Floor, 2.10 / 3.73 m on Long Corridor and 0.29 / 0.56 m on the farm, below Switch-SLAM's 1.61 / 3.63, 2.42 / 5.09 and 0.38 / 1.10 m, each from one run.", 'On GEODE F26 gave 3.26 to 6.36 m and is significantly better than VINS-Mono alone (153 to 272 m, p = 0.008); against F24 it was lower in 11 of 12 pairs, not significantly (p = 0.057).', 'The status guess lowered the error where VINS-Mono starts late or fails; Corridor02 is higher by about 0.5 m. On Cave02 F26 gives 6.23 m against 4.4 m for the October versions; all results are development results.']),
     ("h2", "6.1 Future scope"),
-    ("p", "The next step is a held-out test on a sequence that played no part in the design, with three or more runs each of F26 and F24 and the reading rule written first. A rule for choosing between the fused output and A-LOAM's own mapped pose, which was lower on Long Corridor and Corridor02, and the cause of the Cave02 regression are open. A LiDAR-inertial front end and a loop-closure back end are the larger extensions."),
+    ("p", "The next step is a held-out test on a sequence that played no part in the design, with three or more runs each of F26 and F24 and the reading rule written first. A rule for choosing between the fused output and A-LOAM's own mapped pose, which was lower on Long Corridor and Corridor02, and the reason for the Cave02 difference are the open points. A LiDAR-inertial front end and a loop-closure back end are the larger extensions."),
     ("refs",),
 ]
 
