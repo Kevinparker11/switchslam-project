@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2026.10.27)  11 NOV 2026 09:51
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2026.10.27)  11 NOV 2026 09:54
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -823,21 +823,19 @@ File: figures/per_run_rmse.pdf Graphic file (type pdf)
 <use figures/per_run_rmse.pdf>
 Package pdftex.def Info: figures/per_run_rmse.pdf  used on input line 289.
 (pdftex.def)             Requested size: 252.0pt x 171.65327pt.
- [5] [6 <./figures/fig_switch_seq.pdf> <./figures/cave02_blocks.pdf> <./figures
-/per_run_rmse.pdf>]
-<figures/fig_other_seq.pdf, id=325, 517.45322pt x 216.81pt>
+<figures/fig_other_seq.pdf, id=270, 517.45322pt x 216.81pt>
 File: figures/fig_other_seq.pdf Graphic file (type pdf)
 <use figures/fig_other_seq.pdf>
-Package pdftex.def Info: figures/fig_other_seq.pdf  used on input line 353.
+Package pdftex.def Info: figures/fig_other_seq.pdf  used on input line 296.
 (pdftex.def)             Requested size: 516.0pt x 216.20404pt.
- (./main.bbl
-[7]
+ [5] [6 <./figures/fig_switch_seq.pdf> <./figures/cave02_blocks.pdf> <./figures
+/per_run_rmse.pdf>] [7 <./figures/fig_other_seq.pdf>] (./main.bbl
 Underfull \hbox (badness 2452) in paragraph at lines 146--149
 \OT1/ptm/m/n/8 GitHub repos-i-tory. [On-line]. Avail-able: https://github.com/H
 KUST-
  []
 
-) [8 <./figures/fig_other_seq.pdf>] (./main.aux)
+) [8] (./main.aux)
  ***********
 LaTeX2e <2023-11-01> patch level 1
 L3 programming layer <2024-01-22>
@@ -878,7 +876,7 @@ cm/cmsy7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy
 re/texlive/texmf-dist/fonts/type1/urw/times/utmbi8a.pfb></usr/share/texlive/tex
 mf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/share/texlive/texmf-dist/fonts/t
 ype1/urw/times/utmri8a.pfb>
-Output written on main.pdf (8 pages, 515623 bytes).
+Output written on main.pdf (8 pages, 515517 bytes).
 PDF statistics:
  493 PDF objects out of 1000 (max. 8388607)
  396 compressed objects within 4 object streams
