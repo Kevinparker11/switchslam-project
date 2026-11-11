@@ -18,17 +18,17 @@
 
 \begin{document}
 
-\title{CSD-LVIO: Channel-Separated, Consistency-Gated\\ LiDAR-Visual-Inertial Odometry for Degenerate Environments}
+\title{DualChan-LVIO: Two-Channel, Consistency-Gated\\ LiDAR-Visual-Inertial Odometry with an Added Orientation-Tensor Channel}
 
 \author{Kavinkumar~S and G.~Sivasankar%
 \thanks{The authors are with Amrita School of Engineering, Coimbatore, Amrita Vishwa Vidyapeetham, India.}}
 
-\markboth{Preprint, November 2026}{Kavinkumar and Sivasankar: CSD-LVIO}
+\markboth{Preprint, November 2026}{Kavinkumar and Sivasankar: DualChan-LVIO}
 
 \maketitle
 
 \begin{abstract}
-LiDAR odometry loses accuracy along directions that the scene does not constrain, such as the axis of a corridor, while visual-inertial odometry (VIO) fails under fast rotation, darkness and poor initialisation. Switching-based systems pick one source when the other is judged degenerate, but a binary decision on the whole pose discards the LiDAR information that remains in the constrained directions. We present CSD-LVIO, a loosely coupled front end that fuses A-LOAM and VINS-Mono per scan and per direction. The registration Hessian is split by Schur complements into a rotation channel and a translation channel. The translation channel sets an information weight along each eigen-direction, and an orientation tensor computed from the raw scan geometry adds support that the solver under-reports. The VIO is trusted only while its scale agrees with the LiDAR, a guard catches LiDAR blow-ups, and the hand-over between modes is anchored to avoid heading steps. A degeneracy-gated prediction takes the scan-to-map initial guess from the LiDAR unless the scan is degenerate. All constants were fixed on one calibration sequence. On the SubT-MRS Multi Floor and Long Corridor sequences the front end reaches 0.54 m and 2.10 m ATE RMSE against 1.61 m and 2.42 m published for Switch-SLAM, a LiDAR-inertial front end, so the comparison is not like for like. On a Gazebo farm route it reaches 0.29 m against 0.38 m published. On Corridor02, where A-LOAM alone diverged in every run, it reaches 1.99 m, and on Cave02 and the GEODE stairs it leaves 5 to 6 m. One-sided tests separate the fusion from VINS-Mono alone only on GEODE ($p=0.008$). We report every run, including one divergence of the variant without gated prediction, and discuss how far the small number of runs and the shared development data limit these comparisons.
+LiDAR odometry loses accuracy along directions that the scene does not constrain, such as the axis of a corridor, while visual-inertial odometry (VIO) fails under fast rotation, darkness and poor initialisation. Switching-based systems pick one source when the other is judged degenerate, but a binary decision on the whole pose discards the LiDAR information that remains in the constrained directions. We present DualChan-LVIO, a loosely coupled front end that fuses A-LOAM and VINS-Mono per scan and per direction through two channels plus one added channel. Schur complements split the registration Hessian into a rotation channel and a translation channel. The translation channel sets an information weight along each eigen-direction, and the added channel, an orientation tensor computed from the raw scan geometry, supplies support that the solver under-reports. The VIO is trusted only while its scale agrees with the LiDAR, a guard catches LiDAR blow-ups, and the hand-over between modes is anchored to avoid heading steps. A degeneracy-gated prediction takes the scan-to-map initial guess from the LiDAR unless the scan is degenerate. All constants were fixed on one calibration sequence. On the SubT-MRS Multi Floor and Long Corridor sequences the front end reaches 0.54 m and 2.10 m ATE RMSE against 1.61 m and 2.42 m published for Switch-SLAM, a LiDAR-inertial front end, so the comparison is not like for like. On a Gazebo farm route it reaches 0.29 m against 0.38 m published. On Corridor02, where A-LOAM alone diverged in every run, it reaches 1.99 m, and on Cave02 and the GEODE stairs it leaves 5 to 6 m. One-sided tests separate the fusion from VINS-Mono alone only on GEODE ($p=0.008$). We report every run, including one divergence of the variant without gated prediction, and discuss how far the small number of runs and the shared development data limit these comparisons.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -42,7 +42,7 @@ Tightly coupled LiDAR-visual-inertial systems \cite{lvisam2021,r2live2021,r3live
 
 This letter describes a front end that keeps both odometries running and fuses them per direction. Our contributions are:
 \begin{enumerate}
-\item A channel-separated weighting. Schur complements of the registration Hessian give a rotation block and a translation block in their own units. The translation block sets a per-direction information weight between the LiDAR and VIO increments, and an orientation tensor of the raw scan geometry supplies support that the solver under-reports.
+\item A two-channel weighting with one added channel. Schur complements of the registration Hessian give a rotation block and a translation block in their own units. The translation block sets a per-direction information weight between the LiDAR and VIO increments, and an orientation tensor of the raw scan geometry supplies support that the solver under-reports.
 \item A consistency-gated trust of the VIO. A scale-consistency gate, a rotation-consistency check, a LiDAR blow-up guard and an anchored hand-over decide when each source may carry a step. Their constants come from one calibration sequence and were not refitted.
 \item A degeneracy-gated prediction that uses the switching rule of \cite{switchslam2024} only for the scan-to-map initial guess, while the output stays the fused estimate.
 \item A live evaluation on five real sequences with ground truth and a simulated farm route, against the published Switch-SLAM results and against our own re-implementation of it in the same pipeline, with every run reported and a one-sided significance test for each comparison.
@@ -87,7 +87,7 @@ with $\mathbf R_k=\mathbf R_{k-1}\Exp(\boldsymbol\phi)$ and $\mathbf p_k=\mathbf
 \draw[arr, dashed] (dgp.south) |- ($(vio.south)+(0,-6mm)$) coordinate (gb) -| ($(lidar.west)+(-5mm,0)$) -- (lidar.west);
 \node[below, font=\scriptsize] at ($(gb)+(14mm,0)$) {initial guess};
 \end{tikzpicture}
-\caption{Structure of CSD-LVIO. Both odometries run unchanged and A-LOAM has no IMU. The fusion node weights their increments per direction, gates the VIO by consistency, anchors heading to wall structure and returns a degeneracy-gated initial guess to the scan-to-map matching.}
+\caption{Structure of DualChan-LVIO. Both odometries run unchanged and A-LOAM has no IMU. The fusion node weights their increments per direction, gates the VIO by consistency, anchors heading to wall structure and returns a degeneracy-gated initial guess to the scan-to-map matching.}
 \label{fig:overview}
 \end{figure}
 
@@ -135,7 +135,7 @@ A-LOAM starts each scan-to-map registration from a predicted pose. We compose th
 \begin{equation}
 \boldsymbol\delta=\begin{cases}
 \boldsymbol\delta_L & \text{(a)},\\
-\sqrt3\bar\lambda_1\boldsymbol\delta_L\oplus(1-\sqrt3\bar\lambda_1)\boldsymbol\delta_V & \text{(b)},\\
+w\,\boldsymbol\delta_L\oplus(1-w)\,\boldsymbol\delta_V,\ w=\min(1,\sqrt3\bar\lambda_1) & \text{(b)},\\
 \boldsymbol\delta_V & \text{(c)},
 \end{cases}
 \end{equation}
@@ -173,7 +173,7 @@ Algorithm~\ref{alg:node} puts the parts together for one scan. Lines 1 to 20 for
 \If{$u$ or no scan in $Q_s$ is degenerate}
   \State $\boldsymbol\delta\leftarrow\boldsymbol\delta_L$ \Comment{A-LOAM's own increment}
 \ElsIf{$Q_s$ holds both states}
-  \State $\boldsymbol\delta\leftarrow\sqrt3\bar\lambda_1\boldsymbol\delta_L\oplus(1-\sqrt3\bar\lambda_1)\boldsymbol\delta_V$ \Comment{interpolation}
+  \State $w\leftarrow\min(1,\sqrt3\bar\lambda_1)$; $\boldsymbol\delta\leftarrow w\boldsymbol\delta_L\oplus(1-w)\boldsymbol\delta_V$ \Comment{interpolation}
 \Else
   \State $\boldsymbol\delta\leftarrow\boldsymbol\delta_V$ \Comment{only degenerate scans}
 \EndIf
@@ -231,7 +231,7 @@ A-LOAM \cite{aloam} is patched to publish the Hessian of its scan-to-scan regist
 \subsection{Protocol}
 The constants in Table~\ref{tab:const} were fixed on Multi Floor and not changed afterwards. Multi Floor is therefore calibration data, and Long Corridor and Corridor02 were used while designing the heading anchor and the guards. Cave02 and GEODE were first run after the configuration without gated prediction was frozen, but the gated prediction was added after those runs, so for the final system no sequence is strictly held out. The prediction rule adds no fitted constant; its thresholds are those of \cite{switchslam2024}. Every completed run is reported, failures included.
 
-\emph{Significance tests.} Following the format of Ganesan \emph{et al.} \cite{ganesan2024}, each comparison tests $H_0$: the median ATE RMSE of the baseline equals that of CSD-LVIO, against $H_1$: the baseline is larger, at the 5\,\% level. We use the exact one-sided Mann-Whitney test, whose null distribution is enumerated over all arrangements of the pooled runs, so that no normal approximation is needed with so few runs, and add Welch's $t$-test where both groups have at least two runs. With $n$ baseline runs and $m$ runs of CSD-LVIO the smallest possible $p$ is $1/\binom{n+m}{m}$, so one CSD-LVIO run against three baseline runs cannot go below 0.25. The Farm has one run per method and is not tested. The published Switch-SLAM values are single numbers and cannot be tested.
+\emph{Significance tests.} Following the format of Ganesan \emph{et al.} \cite{ganesan2024}, each comparison tests $H_0$: the median ATE RMSE of the baseline equals that of DualChan-LVIO, against $H_1$: the baseline is larger, at the 5\,\% level. We use the exact one-sided Mann-Whitney test, whose null distribution is enumerated over all arrangements of the pooled runs, so that no normal approximation is needed with so few runs, and add Welch's $t$-test where both groups have at least two runs. With $n$ baseline runs and $m$ runs of DualChan-LVIO the smallest possible $p$ is $1/\binom{n+m}{m}$, so one DualChan-LVIO run against three baseline runs cannot go below 0.25. The Farm has one run per method and is not tested. The published Switch-SLAM values are single numbers and cannot be tested.
 
 \subsection{Baselines}
 We report A-LOAM alone and VINS-Mono alone in our pipeline, the published Switch-SLAM results \cite{switchslam2024} (mean of three runs, real time on an Intel i7-1165G7), and our re-implementation of Switch-SLAM. No code of Switch-SLAM has been released. A-LOAM has no IMU, whereas Switch-SLAM matches each scan to its map with a LiDAR-inertial front end and starts the match from an IMU-propagated guess. Our re-implementation follows its Algorithm 1 and Eqs. (11) to (16) on the same A-LOAM and VINS-Mono, but A-LOAM's scan-to-scan increment replaces the IMU-propagated LiDAR odometry of the original, and the remap is applied to A-LOAM's converged solution instead of inside the solver.
@@ -249,15 +249,15 @@ A-LOAM \cite{aloam}, our pipeline & 26.4 / 49.4 ($n$=3) & 15.8 / --$^{c}$ ($n$=3
 VINS-Mono \cite{vinsmono2018}, our configuration$^{a}$ & 1.28 / 2.47 ($n$=3) & 5.81 / 15.54 ($n$=3) & 4.03 / 6.75 ($n$=3) & 10.2 / -- ($n$=3, failed) & 153 to 272 ($n$=7, failed) & 9.39 / 16.76 ($n$=2)\\\midrule
 Switch-SLAM, published \cite{switchslam2024}$^{d}$ & 1.61 / 3.63 & 2.42 / 5.09 & not reported & not reported & not reported & 0.38 / 1.10\\
 Switch-SLAM, our replica (A-LOAM) & 5.24 / 10.58 ($n$=2) & 12.85 / 23.50 ($n$=2) & not run & not run & not run & not run\\\midrule
-CSD-LVIO without gated prediction & 0.72 / 1.30 ($n$=3) & \textbf{2.01} / 4.80 ($n$=3) & \textbf{1.38} / \textbf{2.60}$^{b}$ ($n$=3) & 7.25 / 12.06 ($n$=3) & 7.23 / 18.25 ($n$=4) & 0.472 / 1.068 ($n$=1)\\
-CSD-LVIO & \textbf{0.54} / \textbf{1.01} ($n$=1) & 2.10 / \textbf{3.73} ($n$=1) & 1.99 / 3.46 ($n$=2) & \textbf{6.23} / \textbf{10.56} ($n$=1) & \textbf{5.04} / \textbf{12.38} ($n$=3) & \textbf{0.290} / \textbf{0.562} ($n$=1)\\
+DualChan-LVIO without gated prediction & 0.72 / 1.30 ($n$=3) & \textbf{2.01} / 4.80 ($n$=3) & \textbf{1.38} / \textbf{2.60}$^{b}$ ($n$=3) & 7.25 / 12.06 ($n$=3) & 7.23 / 18.25 ($n$=4) & 0.472 / 1.068 ($n$=1)\\
+DualChan-LVIO & \textbf{0.54} / \textbf{1.01} ($n$=1) & 2.10 / \textbf{3.73} ($n$=1) & 1.99 / 3.46 ($n$=2) & \textbf{6.23} / \textbf{10.56} ($n$=1) & \textbf{5.04} / \textbf{12.38} ($n$=3) & \textbf{0.290} / \textbf{0.562} ($n$=1)\\
 \bottomrule
 \end{tabular}}\\[2pt]
 \raggedright\scriptsize $^{a}$ VINS-Mono alone is taken from its own runs on Multi Floor, Long Corridor, Corridor02 and Cave02, and from the logs of the fused runs on GEODE and the farm, which is valid because VINS-Mono takes no input from the fusion; a range is given where it failed. $^{b}$ Mean of the two runs that completed normally; the third run diverged at 104.00 / 149.20 m (Section~\ref{sec:ablation}). $^{c}$ Earlier batch at 1.0$\times$ replay; maximum not recorded. $^{d}$ Values copied from Table~II of \cite{switchslam2024} with the order changed to RMSE / max; mean of three runs, real time, LiDAR-inertial scan-to-map front end with an IMU-propagated guess. Not like for like with our rows. The published Farm route is 536\,m with fast-rotation and plane-only stretches; ours is about 80\,m without them. $^{e}$ One run on another machine.
 \end{table*}
 
 \subsection{Accuracy against the baselines}
-Table~\ref{tab:main} gives the results. On Multi Floor CSD-LVIO reached 0.54\,m RMSE and 1.01\,m maximum, against 1.61 / 3.63\,m published for Switch-SLAM \cite{switchslam2024}. On Long Corridor it reached 2.10 / 3.73\,m against 2.42 / 5.09\,m, and on the Gazebo farm route 0.290 / 0.562\,m against 0.38 / 1.10\,m (Fig.~\ref{fig:trajA}). These comparisons are not like for like: Switch-SLAM matches each scan to its map with a LiDAR-inertial front end, starts from an IMU-propagated guess and switches between the sources, whereas A-LOAM has no IMU and our fusion blends the sources per direction. The published values are means of three runs, ours come from one to four runs, cover the front end only and are scored with the protocol of Section~IV. The variant without gated prediction gave 0.72 / 1.30\,m and 2.01 / 4.80\,m over three runs each, with run-to-run ranges of 0.45 to 1.01\,m and 1.75 to 2.15\,m, so the comparison with the published numbers does not depend on one favourable run of one variant.
+Table~\ref{tab:main} gives the results. On Multi Floor DualChan-LVIO reached 0.54\,m RMSE and 1.01\,m maximum, against 1.61 / 3.63\,m published for Switch-SLAM \cite{switchslam2024}. On Long Corridor it reached 2.10 / 3.73\,m against 2.42 / 5.09\,m, and on the Gazebo farm route 0.290 / 0.562\,m against 0.38 / 1.10\,m (Fig.~\ref{fig:trajA}). These comparisons are not like for like: Switch-SLAM matches each scan to its map with a LiDAR-inertial front end, starts from an IMU-propagated guess and switches between the sources, whereas A-LOAM has no IMU and our fusion blends the sources per direction. The published values are means of three runs, ours come from one to four runs, cover the front end only and are scored with the protocol of Section~IV. The variant without gated prediction gave 0.72 / 1.30\,m and 2.01 / 4.80\,m over three runs each, with run-to-run ranges of 0.45 to 1.01\,m and 1.75 to 2.15\,m, so the comparison with the published numbers does not depend on one favourable run of one variant.
 
 Two facts limit this comparison. First, our VINS-Mono configuration alone reaches 1.28\,m on Multi Floor and 5.81\,m on Long Corridor, where the Switch-SLAM letter reports 6.30\,m and 11.8\,m for VINS-Mono; part of the gap therefore lies in the front ends, not in the fusion. Second, our re-implementation of Switch-SLAM in the same pipeline gave 5.24\,m and 12.85\,m, far from the published values. With its rule the scan was degenerate on only 1.5\,\% of Multi Floor scans and 4.5\,\% of Long Corridor scans, so it behaved mostly like A-LOAM, whose guess in our pipeline lacks the IMU propagation of the original. We therefore read the re-implementation as a lower bound on Switch-SLAM in our pipeline, not as a reproduction.
 
@@ -266,7 +266,7 @@ Relative to the two single sources, the fusion was below both on Multi Floor (VI
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/fig_switch_seq.pdf}
-\caption{Top-down paths on the three sequences for which Switch-SLAM publishes results. Ground truth, CSD-LVIO, A-LOAM's output and VINS-Mono alone are from the same run and each is aligned to the ground truth on its own; the legends give ATE RMSE / maximum. Switch-SLAM published values only, no path is available. On the farm the published route is 536\,m with fast-rotation and plane-only stretches; ours is about 80\,m without them, with one run per version.}
+\caption{Top-down paths on the three sequences for which Switch-SLAM publishes results. Ground truth, DualChan-LVIO, A-LOAM's output and VINS-Mono alone are from the same run and each is aligned to the ground truth on its own; the legends give ATE RMSE / maximum. Switch-SLAM published values only, no path is available. On the farm the published route is 536\,m with fast-rotation and plane-only stretches; ours is about 80\,m without them, with one run per version.}
 \label{fig:trajA}
 \end{figure*}
 
@@ -292,12 +292,12 @@ One run of the variant without gated prediction diverged on Corridor02 (104.00\,
 \end{figure}
 
 \subsection{Hypothesis tests}\label{sec:hyp}
-Table~\ref{tab:hyp} gives the tests of Section~IV-C for every baseline that has runs on the same sequence. CSD-LVIO was lower than the baseline in every pairing of runs against VINS-Mono alone and A-LOAM alone. Only the GEODE comparison with VINS-Mono alone rejects $H_0$ with the exact test ($p=0.008$, 21 of 21 pairs; Welch $p=1.7\times10^{-5}$). On Corridor02 the exact test cannot go below 0.10 with three and two runs, and Welch's test rejects against VINS-Mono alone ($p=0.008$) and A-LOAM alone ($p=0.022$). On Multi Floor, Long Corridor and Cave02 one run of CSD-LVIO sets the limit at $p=0.25$, so the test cannot reject whatever the numbers are.
+Table~\ref{tab:hyp} gives the tests of Section~IV-C for every baseline that has runs on the same sequence. DualChan-LVIO was lower than the baseline in every pairing of runs against VINS-Mono alone and A-LOAM alone. Only the GEODE comparison with VINS-Mono alone rejects $H_0$ with the exact test ($p=0.008$, 21 of 21 pairs; Welch $p=1.7\times10^{-5}$). On Corridor02 the exact test cannot go below 0.10 with three and two runs, and Welch's test rejects against VINS-Mono alone ($p=0.008$) and A-LOAM alone ($p=0.022$). On Multi Floor, Long Corridor and Cave02 one run of DualChan-LVIO sets the limit at $p=0.25$, so the test cannot reject whatever the numbers are.
 
-Against the variant without gated prediction no test rejects. On GEODE CSD-LVIO was lower in 11 of 12 pairs ($p=0.057$, Welch $p=0.065$, and $p=0.114$ for the maximum error), and on Corridor02 it was higher in four of six pairs, those against the two normal runs of the variant (the diverged run of 104\,m accounts for the other two). The tests therefore support one claim, that the fusion is reliably better than VINS-Mono alone where VINS-Mono fails, and none about the gated prediction, which the data show only as a lower mean on three sequences.
+Against the variant without gated prediction no test rejects. On GEODE DualChan-LVIO was lower in 11 of 12 pairs ($p=0.057$, Welch $p=0.065$, and $p=0.114$ for the maximum error), and on Corridor02 it was higher in four of six pairs, those against the two normal runs of the variant (the diverged run of 104\,m accounts for the other two). The tests therefore support one claim, that the fusion is reliably better than VINS-Mono alone where VINS-Mono fails, and none about the gated prediction, which the data show only as a lower mean on three sequences.
 
 \begin{table}[t]
-\caption{One-sided tests of $H_0$: median ATE RMSE of the baseline equals that of CSD-LVIO, against $H_1$: baseline larger. $n$: runs of the baseline / of CSD-LVIO. Exact Mann-Whitney $p$ for the RMSE and the maximum error, Welch $p$ for the RMSE. ``--'': not computed (one run in a group, or maximum not recorded).}
+\caption{One-sided tests of $H_0$: median ATE RMSE of the baseline equals that of DualChan-LVIO, against $H_1$: baseline larger. $n$: runs of the baseline / of DualChan-LVIO. Exact Mann-Whitney $p$ for the RMSE and the maximum error, Welch $p$ for the RMSE. ``--'': not computed (one run in a group, or maximum not recorded).}
 \label{tab:hyp}
 \centering\scriptsize
 \setlength{\tabcolsep}{3pt}
@@ -351,12 +351,12 @@ Cave02 and GEODE stay at 5 to 6\,m. On Cave02 the error is concentrated in the f
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/fig_other_seq.pdf}
-\caption{Top-down paths on the sequences without a published Switch-SLAM run, first run of CSD-LVIO. Same conventions as Fig.~\ref{fig:trajA}. VINS-Mono alone is off the plot on Cave02 and GEODE.}
+\caption{Top-down paths on the sequences without a published Switch-SLAM run, first run of DualChan-LVIO. Same conventions as Fig.~\ref{fig:trajA}. VINS-Mono alone is off the plot on Cave02 and GEODE.}
 \label{fig:trajB}
 \end{figure*}
 
 
-On the 80\,m route in the Gazebo farm world with a forward 60\,Hz RGB camera, CSD-LVIO reached 0.290 / 0.562\,m against 0.472 / 1.068\,m without gated prediction and 0.478 / 0.977\,m for A-LOAM alone (one run each; VINS-Mono alone 4.31 and 14.47\,m in two runs). The route is shorter than the 536\,m Farm sequence of \cite{switchslam2024} and lacks its fast-rotation and plane-only phases, so the numbers are not comparable with the published ones (Fig.~\ref{fig:trajA}).
+On the 80\,m route in the Gazebo farm world with a forward 60\,Hz RGB camera, DualChan-LVIO reached 0.290 / 0.562\,m against 0.472 / 1.068\,m without gated prediction and 0.478 / 0.977\,m for A-LOAM alone (one run each; VINS-Mono alone 4.31 and 14.47\,m in two runs). The route is shorter than the 536\,m Farm sequence of \cite{switchslam2024} and lacks its fast-rotation and plane-only phases, so the numbers are not comparable with the published ones (Fig.~\ref{fig:trajA}).
 
 \section{Discussion}
 The measured weights change how the design should be read. On these sequences the translation channel never declared a direction degenerate: the smallest weight stayed between 0.5 and 1, so the LiDAR always carried at least half of every translation component, and the VIO contributed a smaller share along the weakest axis. The accuracy came from three other places: the gate that withdrew a VIO with the wrong scale (Cave02, GEODE), the heading anchor on the corridor sequences, and the predicted pose. A soft blend is cheap to get wrong in a small way and hard to get wrong in a large way, which suited sequences where the LiDAR was weak but rarely blind. On a sequence where the LiDAR is truly blind along an axis, such as the plane-only scenes of \cite{switchslam2024}, the weight would fall towards zero and the VIO would carry that axis; we have not tested such a sequence.
@@ -369,7 +369,7 @@ The two sources also fail in different ways, and the checks have to match them. 
 Most cells of Table~\ref{tab:main} rest on one to three runs, and the final system has one run on Multi Floor, Long Corridor and Cave02. Switch-SLAM reports means of three runs, and the run-to-run spread we observed (0.45 to 1.01\,m on Multi Floor, 6.15 to 9.15\,m on GEODE) is of the same order as some of the differences we discuss, so none of the differences between our two variants is statistically established (Table~\ref{tab:hyp}). The constants were set on Multi Floor, which is also one of the two comparison sequences, and the gated prediction was added after the Cave02 and GEODE runs. A confirmation on sequences that played no part in the design, such as the remaining SubT-MRS caves, is needed before any claim of generalisation. The comparison with Switch-SLAM mixes two hardware platforms and two VINS-Mono configurations, and replay below real time removes the timing pressure that a robot would impose. Finally, the scale gate protects the fusion from a VIO with the wrong scale but cannot replace a LiDAR that stalls, which is the dominant failure on Cave02.
 
 \section{Conclusion}
-CSD-LVIO fuses LiDAR and visual-inertial odometry per direction. Schur complements separate the rotation and translation channels of the registration Hessian, an orientation tensor adds the support of raw geometry, consistency checks decide when the VIO may carry a step, and the switching rule of Switch-SLAM is kept only for the scan-to-map initial guess. In live runs on five real sequences the front end reached 0.54\,m on Multi Floor and 2.10\,m on Long Corridor, below the published Switch-SLAM values on both (a comparison that is not like for like), stayed bounded on the long Corridor02 sequence where A-LOAM alone diverged, and left 5 to 6\,m on Cave02 and GEODE, where the error comes from the odometries themselves. The next steps are repeated runs of the final system on every sequence, a test on held-out caves, and a replacement for the stalled LiDAR on Cave02, where neither source is currently trusted.
+DualChan-LVIO fuses LiDAR and visual-inertial odometry per direction. Schur complements separate the rotation and translation channels of the registration Hessian, an orientation tensor adds the support of raw geometry, consistency checks decide when the VIO may carry a step, and the switching rule of Switch-SLAM is kept only for the scan-to-map initial guess. In live runs on five real sequences the front end reached 0.54\,m on Multi Floor and 2.10\,m on Long Corridor, below the published Switch-SLAM values on both (a comparison that is not like for like), stayed bounded on the long Corridor02 sequence where A-LOAM alone diverged, and left 5 to 6\,m on Cave02 and GEODE, where the error comes from the odometries themselves. The next steps are repeated runs of the final system on every sequence, a test on held-out caves, and a replacement for the stalled LiDAR on Cave02, where neither source is currently trusted.
 
 \bibliographystyle{IEEEtran}
 \bibliography{refs}

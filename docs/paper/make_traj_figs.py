@@ -1,7 +1,7 @@
 """Top-down trajectory figures for the paper (vector PDF).
 fig_switch_seq.pdf : Multi Floor, Long Corridor, Farm (the sequences with Switch-SLAM values)
 fig_other_seq.pdf  : Corridor02, Cave02, GEODE stairs
-Each path is aligned to the ground truth with Umeyama SE(3), no scale; A-LOAM output and VINS-Mono alone are from the same run as CSD-LVIO.
+Each path is aligned to the ground truth with Umeyama SE(3), no scale; A-LOAM output and VINS-Mono alone are from the same run as DualChan-LVIO.
 Needs the run logs of the session (vidlib and the data folders under the scratchpad)."""
 import sys, numpy as np, pandas as pd
 sys.path.insert(0, "/tmp/claude-0/-home-claude/3f90fe9f-923e-500d-a688-dedb31fbfbe6/scratchpad/vid")
@@ -59,7 +59,7 @@ def panel(ax, seq, name, pub=None, note=None):
             vin = ("off", r[0])
     ax.plot(qf[:, 0], qf[:, 1], color=C_FUS, lw=0.9, zorder=4)
     f = "%.3f / %.3f" if seq == "FARM" else "%.2f / %.2f"
-    l2 = ("CSD-LVIO " + f + " m") % lines["fus"]
+    l2 = ("DualChan-LVIO " + f + " m") % lines["fus"]
     l3 = ("Switch-SLAM, published: %s m" % pub) if pub else "Switch-SLAM: no published run"
     g2 = "%.2f / %.2f"
     l4 = ("A-LOAM " + g2) % lines["al"]
@@ -78,7 +78,7 @@ def figure(fname, items, legend_vins=True):
     fig, axs = plt.subplots(1, 3, figsize=(7.16, 3.0))
     for ax, it in zip(axs, items):
         panel(ax, *it)
-    h = [Line2D([], [], color=C_GT, lw=1.1, label="ground truth"), Line2D([], [], color=C_FUS, lw=1.0, label="CSD-LVIO"),
+    h = [Line2D([], [], color=C_GT, lw=1.1, label="ground truth"), Line2D([], [], color=C_FUS, lw=1.0, label="DualChan-LVIO"),
          Line2D([], [], color=C_AL, lw=0.8, label="A-LOAM output (same run)"),
          Line2D([], [], color=C_VI, lw=0.8, label="VINS-Mono alone (same run)")]
     fig.legend(handles=h, loc="lower center", ncol=4, frameon=False, fontsize=6.5, bbox_to_anchor=(0.5, -0.01))
