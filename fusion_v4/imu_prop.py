@@ -5,7 +5,7 @@ guess is A-LOAM's scan-to-scan odometry (difference D1 in docs/protocols/SwitchS
 not help on Long Corridor.  This module gives the missing piece in the simplest standard form:
 
   state    R, p (IMU frame in the pose-chain frame), v (chain frame), gyro bias bg, accelerometer bias ba
-  gravity  g, a fixed vector in the chain frame, estimated once from a quiet IMU window (mean specific force) at the first quiet scan
+  gravity  g, a fixed vector in the chain frame, estimated once from the IMU and the LiDAR poses of the first 2 s (works while moving)
   predict  between two scans: bias-corrected gyro and accelerometer, midpoint integration (the increment handed to Algorithm 1)
   update   after every finished scan with the final pose of the node (position and orientation), 15-state error-state EKF, so v, bg, ba
            are corrected by the LiDAR and the IMU only has to carry the motion over one scan period (about 0.1 s) or a few dropped scans
@@ -29,14 +29,13 @@ I3 = np.eye(3)
 
 class ImuPropagator:
     def __init__(self, R_IL, t_IL, g_norm=9.81007, acc_n=0.08, gyr_n=0.004, acc_w=4e-5, gyr_w=2e-6,
-                 sig_p=0.1, sig_th=0.01, init_win=1.0, quiet_g=0.6, quiet_acc_std=0.6, quiet_gyro=0.15, quiet_speed=0.1, max_gap=0.05, maxlen=8000):
+                 sig_p=0.1, sig_th=0.01, init_win=2.0, g_tol=0.6, max_gap=0.05, maxlen=8000):
         self.R_IL, self.t_IL = np.asarray(R_IL, float), np.asarray(t_IL, float)
         self.g_norm = float(g_norm)
         self.acc_n, self.gyr_n, self.acc_w, self.gyr_w = acc_n, gyr_n, acc_w, gyr_w
         self.sig_p, self.sig_th = sig_p, sig_th
-        self.init_win, self.quiet_g, self.quiet_acc_std, self.quiet_gyro, self.max_gap = init_win, quiet_g, quiet_acc_std, quiet_gyro, max_gap
-        self.quiet_speed = quiet_speed                   # m/s: mean speed of the LiDAR poses over the window (a slow steady push passes the IMU tests)
-        self._ph = deque(maxlen=64)                      # (t, p_L) of the scans offered to try_init
+        self.init_win, self.g_tol, self.max_gap = init_win, g_tol, max_gap
+        self._ph = deque(maxlen=200)                     # (t, R_I, p_I) of the scans offered to try_init
         self.buf = deque(maxlen=maxlen)                  # (t, gx, gy, gz, ax, ay, az), IMU frame, increasing t
         self.ready = False
         self.t = None                                    # stamp of the state (last update)
@@ -74,37 +73,66 @@ class ImuPropagator:
                 out.append((hi - lo, g, a))
         return out
 
-    # ------------------------------------------------------------------ initialisation (gravity)
+    # ------------------------------------------------------------------ initialisation (gravity, gyro bias, velocity) from IMU and poses
     def try_init(self, t, R_L, p_L):
-        """called at every finished scan with its final LiDAR pose until it succeeds; succeeds when the last init_win seconds look quiet: IMU (mean specific force
-        near g, small spread, small gyro) and poses (mean speed below quiet_speed).
-        Returns True once the filter is running."""
+        """called at every finished scan with its final LiDAR pose until it succeeds.  Works while the sensor is moving: over the last init_win
+        seconds the LiDAR poses give the orientation, the mean acceleration and the velocity, so that
+            gravity  g = mean(a_pose) - mean(R f)         (f = accelerometer, R from the poses; at rest a_pose = 0)
+            gyro bias  = mean(gyro - rotation rate of the poses)
+        An earlier version needed a quiet start; the offline check on Corridor02 and Cave02 showed that neither bag has one (filter would have started
+        at +854 s of 893 s and +283 s of 955 s), so SWF would have run as SW.  Accepts when the IMU covers the window and the estimated gravity has a
+        norm within g_tol of g_norm (a poor pose chain or a bad IMU unit fails this test).  Returns True once the filter is running."""
         if self.ready:
             return True
         self.stats["init_tries"] += 1
-        self._ph.append((float(t), np.asarray(p_L, float).copy()))
-        while self._ph and self._ph[0][0] < t - self.init_win:
-            self._ph.popleft()
-        if len(self._ph) < 2 or self._ph[-1][0] - self._ph[0][0] < 0.8 * self.init_win:
-            return False                                 # the poses must span most of the window to show that the sensor stood still
-        if np.linalg.norm(self._ph[-1][1] - self._ph[0][1]) / (self._ph[-1][0] - self._ph[0][0]) > self.quiet_speed:
-            return False
-        win = [s for s in self.buf if t - self.init_win <= s[0] <= t]
-        if len(win) < 20 or win[-1][0] - win[0][0] < 0.8 * self.init_win:
-            return False
-        G = np.array([s[1:4] for s in win]); A = np.array([s[4:7] for s in win])
-        f = A.mean(0)
-        if abs(np.linalg.norm(f) - self.g_norm) > self.quiet_g or np.linalg.norm(A.std(0)) > self.quiet_acc_std \
-                or np.linalg.norm(G.mean(0)) > self.quiet_gyro:
-            return False
         R_I = np.asarray(R_L, float) @ self.R_IL.T
-        self.g = -self.g_norm * (R_I @ f) / np.linalg.norm(f)     # at rest R f = -g
-        self.bg = G.mean(0)                                          # at rest the gyro reads its bias (earth rate neglected)
-        self.ba = np.zeros(3)
-        self._set_pose(R_L, p_L)
-        self.v = np.zeros(3)
+        p_I = np.asarray(p_L, float) - R_I @ self.t_IL
+        self._ph.append((float(t), R_I, p_I))
+        while self._ph and self._ph[0][0] < t - self.init_win - 1e-6:
+            self._ph.popleft()
+        ph = list(self._ph)
+        if len(ph) < 8 or ph[-1][0] - ph[0][0] < 0.8 * self.init_win or not self._covers(ph[0][0], ph[-1][0]):
+            return False
+        ts = np.array([x[0] for x in ph]); Rs = [x[1] for x in ph]; ps = np.array([x[2] for x in ph])
+        # gyro bias from consecutive scans (pose rotation rate against the mean gyro over the same interval)
+        d = []
+        for k in range(len(ph) - 1):
+            dt = ts[k + 1] - ts[k]
+            if 0.02 < dt < 0.5 and self._covers(ts[k], ts[k + 1]):
+                seg = self._segments(ts[k], ts[k + 1])
+                w_imu = sum(dt_s * w for dt_s, w, _ in seg) / sum(dt_s for dt_s, _, _ in seg)
+                d.append(w_imu - fc.so3_log(Rs[k].T @ Rs[k + 1]) / dt)
+        if len(d) < 5:
+            return False
+        bg = np.median(np.array(d), axis=0)
+        # mean acceleration from the velocity at the two ends of the window (each from a displacement over at least 0.4 s)
+        j0 = int(np.argmax(ts - ts[0] >= 0.4 - 1e-6)); j1 = int(len(ts) - 1 - np.argmax((ts[-1] - ts)[::-1] >= 0.4 - 1e-6))
+        if j0 < 1 or j1 > len(ts) - 2 or ts[j1] - ts[j0] < 0.35 * self.init_win:
+            return False
+        v0 = (ps[j0] - ps[0]) / (ts[j0] - ts[0]); tv0 = 0.5 * (ts[0] + ts[j0])
+        v1 = (ps[-1] - ps[j1]) / (ts[-1] - ts[j1]); tv1 = 0.5 * (ts[j1] + ts[-1])
+        a_mean = (v1 - v0) / max(tv1 - tv0, 1e-9)
+        # mean of R f over the same interval [tv0, tv1] (rotation interpolated between the scan poses)
+        sw, n_s, k = np.zeros(3), 0, 0
+        for r in self.buf:
+            if r[0] < tv0 or r[0] > tv1:
+                continue
+            while k + 2 < len(ts) and ts[k + 1] < r[0]:
+                k += 1
+            a = min(1.0, max(0.0, (r[0] - ts[k]) / max(ts[k + 1] - ts[k], 1e-9)))
+            Rt = Rs[k] @ fc.so3_exp(a * fc.so3_log(Rs[k].T @ Rs[k + 1]))
+            sw += Rt @ np.array(r[4:7]); n_s += 1
+        if n_s < 20:
+            return False
+        sw /= n_s
+        g_est = a_mean - sw
+        if abs(np.linalg.norm(g_est) - self.g_norm) > self.g_tol:
+            return False
+        self.g = self.g_norm * g_est / np.linalg.norm(g_est)
+        self.bg, self.ba = bg, np.zeros(3)
+        self.R, self.p, self.v = Rs[-1].copy(), ps[-1].copy(), v1 + a_mean * (ts[-1] - tv1)
         self.t = float(t)
-        self.P = np.diag([1e-4] * 3 + [1e-2] * 3 + [1e-2] * 3 + [1e-4] * 3 + [1e-2] * 3)
+        self.P = np.diag([1e-4] * 3 + [1e-2] * 3 + [1e-1] * 3 + [1e-4] * 3 + [1e-2] * 3)
         self.ready = True
         return True
 
