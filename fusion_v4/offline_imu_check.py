@@ -113,8 +113,15 @@ def main():
     print("IMU: %d samples, %.1f s, %.0f Hz;  poses (%s): %d scans, %.1f s, median step %.3f m"
           % (len(imu), imu[-1, 0] - imu[0, 0], len(imu) / (imu[-1, 0] - imu[0, 0]), a.pose, len(t), t[-1] - t[0],
              np.median([np.linalg.norm(P[i] - P[i - 1]) for i in range(1, len(P))])))
-    if imu[0, 0] > t[0] + 0.05 or imu[-1, 0] < t[-1] - 0.05:
-        print("WARNING: IMU span %.1f..%.1f does not cover the poses %.1f..%.1f (different clocks?)" % (imu[0, 0], imu[-1, 0], t[0], t[-1]))
+    if imu[0, 0] > t[0] + 0.05:
+        print("WARNING: the IMU starts at %.1f, after the first pose %.1f (different clocks, or the IMU file is from another bag?)" % (imu[0, 0], t[0]))
+    if imu[-1, 0] < t[-1] - 0.05:
+        keep = t <= imu[-1, 0] - 0.05
+        if keep.sum() < 50:
+            print("WARNING: IMU span %.1f..%.1f does not cover the poses %.1f..%.1f (different clocks?)" % (imu[0, 0], imu[-1, 0], t[0], t[-1]))
+        else:
+            print("IMU file ends at +%.0f s: only the first %d scans (to +%.0f s) are checked" % (imu[-1, 0] - t[0], int(keep.sum()), t[keep][-1] - t[0]))
+            t, Rs, P = t[keep], [r for r, k in zip(Rs, keep) if k], P[keep]
     f, started, rec = run(imu, t, Rs, P, R_IL, t_IL)
     if started is None:
         print("The filter never started: no quiet IMU window (1 s, |mean f| within 0.6 of 9.81, gyro mean < 0.15 rad/s) at any scan.")
