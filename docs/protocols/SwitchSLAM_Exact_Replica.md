@@ -295,3 +295,18 @@ Outcome: **not passed.** IMU use is met. On Cave02 SWF is worse than SW in both 
 Reading, after the fact: (1) the screen could not discriminate. The rule fired on 0.0 to 0.6 % of the scans, the RMSE of every run is 4 to 6 cm, and when the rule does not fire the published pose is A-LOAM's own, so the IMU guess can change the output only on the few degenerate scans.
 (2) The two repeats of a configuration are almost identical (Cave02 0.06 / 0.06 and 0.04 / 0.04), so they are two looks at one deterministic outcome, not independent samples. (3) A 0.02 m difference with the rule not firing in SWF is unexplained; it may come from timing (the SWF node does more work per scan) or from scans where SW fires and SWF does not.
 `batches/window_compare.py` compares the two logs row by row (rule share, mode and case differences, position difference) to separate these. Nothing is tuned on this result.
+
+## 23. Window comparison of SW and SWF, row by row (12 Nov 2026, `batches/window_compare.py`, the logs of section 22)
+
+| window | run | rule fired SW / SWF | mode differs | case differs | published position difference SW vs SWF: median / 95 % / max / end (m) |
+|---|---|---|---|---|---|
+| Cave02 | 1 | 0.0 / 0.0 % | 0.0 % | 0.0 % | 0.0117 / 0.176 / 0.329 / 0.306 |
+| Cave02 | 2 | 0.0 / 0.0 % | 0.0 % | 0.0 % | 0.0100 / 0.170 / 0.326 / 0.297 |
+| Corridor02 | 1 | 0.6 / 0.6 % | 0.0 % | 0.0 % | 0.0150 / 0.089 / 0.210 / 0.114 |
+| Corridor02 | 2 | 0.6 / 0.6 % | 0.1 % | 0.1 % | 0.0232 / 0.099 / 0.217 / 0.115 |
+
+In every run the published (fused) position equals the A-LOAM position (to 0.0002 m), and the rule fired on exactly the same share of scans in SW and SWF. The mode and case sequences are identical in 99.9 to 100 % of the rows. So on these windows SWF changed
+nothing in what Switch-SLAM publishes; the 0.02 m RMSE gap on Cave02 comes from A-LOAM's own pose differing between the runs (up to 0.33 m, row counts 1774 against 1773 in Cave02 run 1), not from the IMU guess. Why the difference is the same in both repeats of a configuration is not shown
+(CPU load differing between the SW and SWF node is one candidate, untested). Consequence for section 22: the window screen did not test the variant (nothing in the output depended on the guess), and its "not passed" on Cave02 is a statement about A-LOAM run variation. The result stays recorded as not passed, as declared, and is not evidence against SWF.
+
+Open decision (owner): the three-run check of section 18 on Multi Floor and Long Corridor is the first test where the guess can change the output (rule fired 1.5 % and 4.5 % there in the SW runs). Running it after a screen that was not passed is a deviation from section 19 and is reported as one.
