@@ -277,3 +277,21 @@ Weaknesses that stay in view: (1) the signed error along travel is negative in e
 
 Decision for the next step: the strict rule (b) is not met on Corridor02, so the go to the window screen is the owner's call, not automatic. The window screen (section 19, test 2) is itself a pre-declared gate on Corridor02 and Cave02 first 180 s with its own pass rule,
 costs a few minutes per run, and uses neither Multi Floor nor Long Corridor.
+
+## 22. Window screen result (12 Nov 2026, commit af549e6, REPEAT=2, Corridor02 at 0.33x, Cave02 at 0.5x; 02:31 to 04:00 local, 89 min)
+
+Pass rule fixed before the run (message of 12 Nov): mean window RMSE of SWF below that of SW on both windows, IMU guess on more than 90 % of scans; every run reported.
+
+| window (first 180 s) | SW run1 / run2 (RMSE, max, m) | SWF run1 / run2 (RMSE, max, m) |
+|---|---|---|
+| Corridor02 | 0.05, 0.23 / 0.06, 0.22 | 0.05, 0.23 / 0.05, 0.23 |
+| Cave02 | 0.04, 0.17 / 0.04, 0.17 | 0.06, 0.18 / 0.06, 0.18 |
+
+IMU guess used: Corridor02 98.8 % of 1784 scans (from +2.1 s), Cave02 99.0 % of about 1774 scans (from +1.7 s). Median |IMU - A-LOAM| increment: 0.123 deg and 0.0061 m (Corridor02), 0.197 deg and 0.0128 m (Cave02).
+Rule fired in SWF: 0.6 % (Corridor02), 0.0 % (Cave02).
+
+Outcome: **not passed.** IMU use is met. On Cave02 SWF is worse than SW in both runs (0.06 against 0.04 m); on Corridor02 the means differ by under the printed resolution (0.05 against 0.055 m), which is a tie. The mean-below rule fails on Cave02, so SWF does not go to the three-run check of section 18 as it stands.
+
+Reading, after the fact: (1) the screen could not discriminate. The rule fired on 0.0 to 0.6 % of the scans, the RMSE of every run is 4 to 6 cm, and when the rule does not fire the published pose is A-LOAM's own, so the IMU guess can change the output only on the few degenerate scans.
+(2) The two repeats of a configuration are almost identical (Cave02 0.06 / 0.06 and 0.04 / 0.04), so they are two looks at one deterministic outcome, not independent samples. (3) A 0.02 m difference with the rule not firing in SWF is unexplained; it may come from timing (the SWF node does more work per scan) or from scans where SW fires and SWF does not.
+`batches/window_compare.py` compares the two logs row by row (rule share, mode and case differences, position difference) to separate these. Nothing is tuned on this result.
