@@ -1,0 +1,50 @@
+digraph G {
+  graph [rankdir=TB, nodesep=0.3, ranksep=0.2, dpi=220, fontname="TeX Gyre Termes", splines=ortho, pad=0.15, newrank=true];
+  node  [fontname="TeX Gyre Termes", fontsize=13, penwidth=1.3, color="#333333", style=filled, fillcolor="#f5f5f5", shape=box, margin="0.14,0.06"];
+  edge  [fontname="TeX Gyre Termes", fontsize=12, penwidth=1.2, color="#333333", arrowsize=0.75];
+  scan  [group=main, label="New LiDAR scan (10 Hz)", shape=parallelogram, fillcolor="#e8eef7"];
+  aloam [group=main, label="A-LOAM matches the scan to its map, starting from\nthe initial guess, and outputs the LiDAR pose and Hessian H"];
+  d1    [group=main, label="VINS-Mono running\nand 20 s warm-up\ncompleted?", shape=diamond, fillcolor="#fff4d6", margin="0.02,0.02"];
+  lonly [label="LiDAR-only step:\nthe fused pose\nfollows A-LOAM", fillcolor="#fdeceb"];
+  d2    [group=main, label="First fused scan\nafter warm-up?", shape=diamond, fillcolor="#fff4d6", margin="0.02,0.02"];
+  hand  [label="Anchored hand-over:\nalign the VINS-Mono\nrotation with A-LOAM"];
+  d3    [group=main, label="VINS-Mono passes\nthe trust check?", shape=diamond, fillcolor="#fff4d6", margin="0.02,0.02"];
+  gam   [label="Trust removed (γ = 0):\nthe LiDAR carries\nthe whole step", fillcolor="#fdeceb"];
+  info  [group=main, label=<Compute the information blocks S<SUB>RR</SUB> and S<SUB>tt</SUB> (channels R and T) and the<BR/>orientation tensor G (additional T); set the translation weight W<SUB>t</SUB> for each direction:<BR/>near 1 where the scan constrains the motion, near 0 along a degenerate direction>, fillcolor="#e9f5ec"];
+  d4    [group=main, label="VINS-Mono and\nLiDAR rotations\ndisagree?", shape=diamond, fillcolor="#fff4d6", margin="0.02,0.02"];
+  rl    [label=<Rotation from the LiDAR<BR/>(weight from S<SUB>RR</SUB>)>];
+  rv    [label="Rotation from\nVINS-Mono"];
+  blend [group=main, label="Blend the LiDAR and VINS-Mono increments with the weights;\napply the heading correction (SAH) when wall structure is distinct", fillcolor="#e9f5ec"];
+  out   [group=main, label="Fused pose (output)", shape=parallelogram, fillcolor="#e8eef7"];
+  d5    [group=main, label="Degeneracy status\nof the last\nfive scans?", shape=diamond, fillcolor="#fff4d6", margin="0.02,0.02"];
+  g1    [label="None flagged:\nA-LOAM step"];
+  g2    [group=main, label="Some flagged:\nblend of both steps"];
+  g3    [label="All flagged:\nVINS-Mono step"];
+  guess [group=main, label="Initial guess for the next scan =\nfused pose moved by the chosen step"];
+
+  scan -> aloam -> d1;
+  d1 -> d2 [xlabel="Yes  "];
+  d1 -> lonly [xlabel="No"];
+  d2 -> hand [xlabel="Yes"];
+  d2 -> d3 [xlabel="No  "];
+  hand -> d3;
+  d3 -> info [xlabel="Yes  "];
+  d3 -> gam [xlabel="No"];
+  info -> d4;
+  d4 -> rl [xlabel="Yes"];
+  d4 -> rv [xlabel="No"];
+  rl -> blend; rv -> blend;
+  blend -> out;
+  lonly -> out;
+  gam -> out;
+  out -> d5;
+  d5 -> g1; d5 -> g2; d5 -> g3;
+  g1 -> guess; g2 -> guess; g3 -> guess;
+  guess -> aloam [xlabel="next scan", style=dashed, constraint=false];
+  {rank=same; d1; lonly;}
+  {rank=same; d2; hand;}
+  {rank=same; d3; gam;}
+  {rank=same; rl; rv;}
+  {rank=same; g1; g2; g3;}
+  g1 -> g2 -> g3 [style=invis];
+}
