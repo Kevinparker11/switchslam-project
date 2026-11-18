@@ -80,3 +80,20 @@ python3 -m pytest -q test_fusion_core.py test_recorder.py tests_v4/test_lio_brid
 python3 -m pytest -q test_backend.py test_backend_cli.py                                   # needs gtsam; takes minutes
 ```
 These check the code, not the evidence.
+
+## Thesis figures, stock A-LOAM and the report
+
+**Redraw the RViz-style images** from the logs shipped in `docs/thesis/figure_data/` (no bags, no ROS): see [`docs/thesis/README.md`](../thesis/README.md). The output is pixel-identical to `docs/thesis/figures_final/`.
+
+**Stock A-LOAM run** (the unmodified A-LOAM: its scan-to-map guess comes from its own scan-to-scan odometry; the `/laser_odom_to_init -> /switch_fused_pose` remap is removed for the run and put back afterwards). From `fusion_v4/`, with the containers and bags in place:
+```bash
+REPEAT=1 PLAY_RATE=1.0  ./stock_aloam/run_stock_aloam.sh mf -                              # Multi Floor
+REPEAT=1 PLAY_RATE=1.0  ./stock_aloam/run_stock_aloam.sh lc  ~/runs_corridor/seq.env      # Long Corridor
+REPEAT=1 PLAY_RATE=0.33 ./stock_aloam/run_stock_aloam.sh c02 ~/runs_corridor2/seq.env     # Corridor02
+REPEAT=1 PLAY_RATE=0.5  ./stock_aloam/run_stock_aloam.sh cave02 ~/runs_cave02/seq.env     # Cave02
+REPEAT=1 PLAY_RATE=0.5  ./stock_aloam/run_stock_aloam.sh geode ~/runs_geode/seq.env       # GEODE
+```
+Logs go to `~/runs_stock_<name>/`; the script prints the A-LOAM (`aft_`) ATE of each log. Use the replay rate of the F35 runs. Draw the result with `docs/thesis/scripts/render_aloam_alone.py`.
+
+**Rebuild the report**: see [`docs/thesis/README.md`](../thesis/README.md), section "Rebuild the v3 report".
+

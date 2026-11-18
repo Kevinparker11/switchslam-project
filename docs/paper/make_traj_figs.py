@@ -3,8 +3,8 @@ fig_switch_seq.pdf : Multi Floor, Long Corridor, Farm (the sequences with Switch
 fig_other_seq.pdf  : Corridor02, Cave02, GEODE stairs
 Each path is aligned to the ground truth with Umeyama SE(3), no scale; A-LOAM output and VINS-Mono alone are from the same run as DualChan-LVIO.
 Needs the run logs of the session (vidlib and the data folders under the scratchpad)."""
-import sys, numpy as np, pandas as pd
-sys.path.insert(0, "/tmp/claude-0/-home-claude/3f90fe9f-923e-500d-a688-dedb31fbfbe6/scratchpad/vid")
+import os, sys, numpy as np, pandas as pd
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "thesis", "scripts"))
 import vidlib as V
 import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt

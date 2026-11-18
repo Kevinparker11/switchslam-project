@@ -1,5 +1,5 @@
-import sys, numpy as np, pandas as pd
-sys.path.insert(0, "/tmp/claude-0/-home-claude/3f90fe9f-923e-500d-a688-dedb31fbfbe6/scratchpad/vid")
+import os, sys, numpy as np, pandas as pd
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import vidlib as V
 
 S = V.S

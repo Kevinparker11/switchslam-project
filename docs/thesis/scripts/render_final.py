@@ -3,14 +3,20 @@ ground truth (white), final version (green), A-LOAM output of the same run (oran
 where it stays on the plot).  The final version is called F35 in the report (repo name F26, see Report_Corrections_Log.md A10).
 usage: render_final.py MF LC C02 CAVE GEODE FARM   (images go to $S/img/)"""
 import os, sys, numpy as np, pandas as pd
-sys.path.insert(0, "/tmp/claude-0/-home-claude/3f90fe9f-923e-500d-a688-dedb31fbfbe6/scratchpad/vid")
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import vidlib as V
 import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib import cm
 
 S = V.S; D = S + "/data"; K = S + "/f24cave"
-OUT = S + "/img"; os.makedirs(OUT, exist_ok=True)
+OUT = os.environ.get("FIG_OUT", os.path.join(S, "img")); os.makedirs(OUT, exist_ok=True)
+
+
+def rcsv(path):
+    """read a run log, plain or gzipped (the copies in figure_data/ are gzipped)"""
+    return pd.read_csv(path if os.path.exists(path) else path + ".gz")
+
 BG = (15 / 255, 17 / 255, 21 / 255); GRIDC = (70 / 255, 74 / 255, 82 / 255)
 GT_C, AFT_C, FUS_C, VINS_C = "#ffffff", "#ffaa28", "#4fd18b", "#ff6b5e"
 PUB = {"MF": "Published Switch-SLAM (Table II, mean of three runs, a different system): RMSE 1.61 m, max 3.63 m.",
@@ -91,22 +97,22 @@ def stat(e):
 def run(seq):
     kf = None
     if seq == "MF":
-        d = pd.read_csv(K + "/MF_switching_log_v2_F26_kf_run1.csv"); gt = D + "/gt/mf_gt_a.csv"; kf = K + "/MF_keyframes_F26_kf_run1.npz"
+        d = rcsv(K + "/MF_switching_log_v2_F26_kf_run1.csv"); gt = D + "/gt/mf_gt_a.csv"; kf = K + "/MF_keyframes_F26_kf_run1.npz"
         name, view = "Multi Floor (SubT-MRS)", dict(yaw=-50, pitch=40)
     elif seq == "LC":
-        d = pd.read_csv(K + "/LC_switching_log_v2_F26_kf_run1.csv"); gt = D + "/gt/lc_gt.txt"; kf = K + "/LC_keyframes_F26_kf_run1.npz"
+        d = rcsv(K + "/LC_switching_log_v2_F26_kf_run1.csv"); gt = D + "/gt/lc_gt.txt"; kf = K + "/LC_keyframes_F26_kf_run1.npz"
         name, view = "Long Corridor (SubT-MRS)", dict(yaw=-70, pitch=50)
     elif seq == "C02":
-        d = pd.read_csv(K + "/C02_switching_log_v2_F26_kf_run1.csv"); gt = D + "/gt/c02_gt.txt"; kf = K + "/C02_keyframes_F26_kf_run1.npz"
+        d = rcsv(K + "/C02_switching_log_v2_F26_kf_run1.csv"); gt = D + "/gt/c02_gt.txt"; kf = K + "/C02_keyframes_F26_kf_run1.npz"
         name, view = "Corridor02 (SubT-MRS)", dict(yaw=-60, pitch=50)
     elif seq == "CAVE":
-        d = pd.read_csv(K + "/CAVE_switching_log_v2_F26_kf_run1.csv"); gt = D + "/for_claude14/cave02_gt.txt"; kf = K + "/CAVE_keyframes_F26_kf_run1.npz"
+        d = rcsv(K + "/CAVE_switching_log_v2_F26_kf_run1.csv"); gt = D + "/for_claude14/cave02_gt.txt"; kf = K + "/CAVE_keyframes_F26_kf_run1.npz"
         name, view = "Cave02 (SubT-MRS)", dict(yaw=-40, pitch=45)
     elif seq == "GEODE":
-        d = pd.read_csv(K + "/GEODE_switching_log_v2_F26_kf_run1.csv"); gt = D + "/geode/gt_stairs_alpha.txt"; kf = K + "/GEODE_keyframes_F26_kf_run1.npz"
+        d = rcsv(K + "/GEODE_switching_log_v2_F26_kf_run1.csv"); gt = D + "/geode/gt_stairs_alpha.txt"; kf = K + "/GEODE_keyframes_F26_kf_run1.npz"
         name, view = "GEODE stairs", dict(yaw=-90, pitch=72)
     elif seq == "FARM":
-        d = pd.read_csv(S + "/f26z/farm_f26/switching_log_v2_F26_fwdrgb_live1.csv")
+        d = rcsv(S + "/f26z/farm_f26/switching_log_v2_F26_fwdrgb_live1.csv")
         g = np.loadtxt(S + "/f26z/farm_f26/gt_f26.txt", comments="#")
         j = np.linalg.norm(np.diff(g[:, 1:3], axis=0), axis=1); k = int(np.argmax(j))
         t_reset = g[k + 1, 0] if j[k] > 0.5 else g[0, 0]

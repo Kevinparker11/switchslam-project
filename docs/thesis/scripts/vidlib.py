@@ -1,14 +1,17 @@
 """Generic trajectory video: top-down map + paths against ground truth, error panel, mode strip.
 Same layout and colours as LC_run1_F20_vs_F22.mp4."""
-import sys, numpy as np, pandas as pd
-sys.path.insert(0, "/home/claude/switchslam-project/fusion_v4")
+import os, sys, numpy as np, pandas as pd
+HERE = os.path.dirname(os.path.abspath(__file__))
+REPO = os.path.abspath(os.path.join(HERE, "..", "..", ".."))
+sys.path.insert(0, os.path.join(REPO, "fusion_v4"))
 import v2_tools as vt
 import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.animation import FFMpegWriter
 from scipy.spatial.transform import Rotation as Rot
 
-S = "/tmp/claude-0/-home-claude/3f90fe9f-923e-500d-a688-dedb31fbfbe6/scratchpad"
+# root of the figure inputs (logs, keyframe maps, ground truth); override with FIG_DATA=/path to use your own runs
+S = os.environ.get("FIG_DATA", os.path.join(REPO, "docs", "thesis", "figure_data"))
 BG, FG, GRID = "#0f1115", "#e8eaed", "#2a2e36"
 MODE_COL = {"INIT": "#555b66", "WARMUP": "#f2c14e", "FUSED": "#5aa9ff", "VO_FAIL": "#ff6b5e"}
 

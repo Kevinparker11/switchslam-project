@@ -8,3 +8,6 @@ __pycache__/
 *.zip
 harness_out/
 nrm_cache*/
+
+# keep the thesis figure inputs (keyframe maps of the six live runs) in git
+!docs/thesis/figure_data/**/*.npz

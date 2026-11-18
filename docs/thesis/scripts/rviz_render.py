@@ -1,7 +1,7 @@
 """RViz-style still renders (same colours as viz/live.rviz): dark background, 10 m grid, map coloured by height
 (AxisColor), ground truth white, A-LOAM mapped path orange, fused path green. Orbit camera, perspective projection."""
-import sys, numpy as np, pandas as pd
-sys.path.insert(0, "/tmp/claude-0/-home-claude/3f90fe9f-923e-500d-a688-dedb31fbfbe6/scratchpad/vid")
+import os, sys, numpy as np, pandas as pd
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import vidlib as V
 import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt

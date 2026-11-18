@@ -3,7 +3,7 @@ live videos (vidlib.make: top-down map, paths against ground truth, error panel,
 stills (render_final.py).  Green = F35 (final version), orange = A-LOAM output of the same run, red = VINS-Mono alone from the same run
 (only where it stays on the plot).  usage: make_final_videos.py MF LC C02 CAVE GEODE FARM   (videos go to $S/vid_final/)"""
 import os, sys, numpy as np, pandas as pd
-sys.path.insert(0, "/tmp/claude-0/-home-claude/3f90fe9f-923e-500d-a688-dedb31fbfbe6/scratchpad/vid")
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import vidlib as V
 
 S = V.S; D = S + "/data"; K = S + "/f24cave"

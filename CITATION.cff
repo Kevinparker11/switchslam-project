@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+message: "If you use this code or these results, please cite the thesis."
+title: "SwitchSLAM: LiDAR-visual-inertial fusion under LiDAR degeneracy"
+type: software
+authors:
+  - family-names: "S"
+    given-names: "Kavinkumar"
+repository-code: "https://github.com/Kevinparker11/switchslam-project"
+abstract: "A-LOAM and VINS-Mono fused per direction by the Hessian of the scan matching, with safeguards, tested on SubT-MRS, GEODE and a Gazebo farm. M.Tech thesis, advisor Dr. G. Sivasankar."

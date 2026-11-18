@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 320" width="1280" height="320" role="img" aria-label="SwitchSLAM: LiDAR-visual-inertial fusion under LiDAR degeneracy">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1020"/><stop offset="1" stop-color="#14213d"/>
+    </linearGradient>
+    <linearGradient id="fade" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#0b1020" stop-opacity="0.95"/><stop offset="0.55" stop-color="#0b1020" stop-opacity="0.55"/><stop offset="1" stop-color="#0b1020" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="320" fill="url(#bg)"/>
+  <!-- corridor in perspective -->
+  <g stroke="#2c3b5e" stroke-width="1.2" fill="none" opacity="0.9">
+    <path d="M700 20 L1000 150 L1280 130"/><path d="M700 300 L1000 170 L1280 190"/>
+    <path d="M760 40 L1000 150"/><path d="M760 280 L1000 170"/>
+    <path d="M830 70 L1000 150"/><path d="M830 250 L1000 170"/>
+    <path d="M910 105 L1000 150"/><path d="M910 215 L1000 170"/>
+    <path d="M1000 150 L1280 160" stroke-dasharray="4 6"/>
+  </g>
+  <!-- LiDAR scan rings -->
+  <g fill="none" stroke="#4f8cff" stroke-opacity="0.35">
+    <ellipse cx="1000" cy="160" rx="40" ry="14"/><ellipse cx="1000" cy="160" rx="85" ry="30"/><ellipse cx="1000" cy="160" rx="140" ry="50"/>
+  </g>
+  <!-- ground truth (white) and estimate (green) -->
+  <polyline points="560,262 640,246 720,238 800,206 880,196 960,168 1040,160 1120,136 1210,128 1260,120" fill="none" stroke="#ffffff" stroke-width="2.4"/>
+  <polyline points="560,266 640,252 720,246 800,214 880,200 960,174 1040,158 1120,140 1210,126 1260,118" fill="none" stroke="#4fd18b" stroke-width="2.4"/>
+  <polyline points="560,262 640,240 720,248 800,226 880,180 960,196 1040,176 1120,120 1210,150 1260,98" fill="none" stroke="#ff6b5e" stroke-width="1.6" stroke-dasharray="5 5" opacity="0.8"/>
+  <rect width="1280" height="320" fill="url(#fade)"/>
+  <text x="64" y="128" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="68" font-weight="700" fill="#ffffff" letter-spacing="1">SwitchSLAM</text>
+  <text x="66" y="170" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="26" fill="#cfd8ee">LiDAR-visual-inertial fusion under LiDAR degeneracy</text>
+  <text x="66" y="210" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="18" fill="#8fa0c4">A-LOAM + VINS-Mono, weighted per direction by the scan-matching Hessian</text>
+  <g font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="15">
+    <rect x="66" y="238" width="116" height="30" rx="15" fill="#ffffff" fill-opacity="0.10"/><text x="124" y="258" text-anchor="middle" fill="#e8eaed">ground truth</text>
+    <rect x="194" y="238" width="86" height="30" rx="15" fill="#4fd18b" fill-opacity="0.18"/><text x="237" y="258" text-anchor="middle" fill="#4fd18b">fused</text>
+    <rect x="292" y="238" width="132" height="30" rx="15" fill="#ff6b5e" fill-opacity="0.18"/><text x="358" y="258" text-anchor="middle" fill="#ff8a80">VINS-Mono alone</text>
+  </g>
+</svg>
