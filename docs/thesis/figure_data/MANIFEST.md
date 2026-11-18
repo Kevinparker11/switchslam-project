@@ -6,6 +6,7 @@ Everything `docs/thesis/scripts/render_final.py` and `render_aloam_alone.py` nee
 cd docs/thesis/scripts
 FIG_OUT=/tmp/regen python3 render_final.py MF LC C02 CAVE GEODE FARM     # the six F35 images (pixel-identical to ../figures_final/)
 FIG_OUT=/tmp/regen python3 render_aloam_alone.py LC ../figure_data/data/for_claude7/*.csv.gz   # A-LOAM alone, Long Corridor
+FIG_OUT=/tmp/regen python3 render_final_stock.py MF LC C02 CAVE GEODE            # F35 with the stock A-LOAM line
 ```
 
 **Names.** The repo calls the final version `F26` (tag `F26_kf_run1`); the thesis report calls it F35. Same runs, same numbers (see `docs/thesis/Report_Corrections_Log.md`, A10).
@@ -34,3 +35,8 @@ A new run recorded on your own machine (including the stock A-LOAM runs of `fusi
 | `f24cave/MF_switching_log_v2_F26_kf_run1.csv.gz` | run log | Multi Floor, F35 live run 1 (repo tag F26_kf_run1) | 1.0x | 2191819 | `d507e63101d588248f210a2c33472291e59c640f70f706c1a6baf17b0d2097cc` |
 | `f26z/farm_f26/gt_f26.txt` | ground truth | Farm L route, Gazebo, F35 live run (tag F26_fwdrgb_live1, forward RGB camera) | live | 619030 | `80237da9d965d42b231c233ff6ee27ee3f715c8c5aa5b8d5b2cf8b1b81e09390` |
 | `f26z/farm_f26/switching_log_v2_F26_fwdrgb_live1.csv.gz` | run log | Farm L route, Gazebo, F35 live run (tag F26_fwdrgb_live1, forward RGB camera) | live | 1971426 | `534722f1bee9f5f5e8b11ec12c5ecd3fd82d4496d1e31e51e3c1b81553114cca` |
+| `stock/MF_stock.csv.gz` | run log | MF, stock A-LOAM run 1 (`run_stock_aloam.sh`, `aft_` columns = stock A-LOAM pose) | 1.0x | 1422488 | `26d08e065f6c1a5f811cc803ecb6df9bc79e8d348b11a8eb13b8f0da281536a5` |
+| `stock/LC_stock.csv.gz` | run log | LC, stock A-LOAM run 1 (`run_stock_aloam.sh`, `aft_` columns = stock A-LOAM pose) | 1.0x | 1158957 | `0bfde9147f8c594cb05a14f199a1407fa972a59a07cc47c39e0c8c809f7a3dfe` |
+| `stock/C02_stock.csv.gz` | run log | C02, stock A-LOAM run 1 (`run_stock_aloam.sh`, `aft_` columns = stock A-LOAM pose) | 0.33x | 3570137 | `76a2080f28b4c0a069b80f1a59f10ca47c7527f3cb035d03db85eca1da85ad27` |
+| `stock/CAVE_stock.csv.gz` | run log | CAVE, stock A-LOAM run 1 (`run_stock_aloam.sh`, `aft_` columns = stock A-LOAM pose) | 0.5x | 3920382 | `0c36a85b9ed4bfd66035cb102ead34ef10c2c3ad1e1b1b7f1795feed048bc357` |
+| `stock/GEODE_stock.csv.gz` | run log | GEODE, stock A-LOAM run 1 (`run_stock_aloam.sh`, `aft_` columns = stock A-LOAM pose) | 0.5x | 1394272 | `bcac1a521dbd426c7a908365399ca548453741d4153a79d68ed3bc33d1b320e3` |

@@ -15,7 +15,7 @@
 ### News
 
 - **Nov 18, 2026**: project page rebuilt; the logs, keyframe maps and ground truth behind the figures are in [`docs/thesis/figure_data/`](docs/thesis/figure_data/MANIFEST.md), so the RViz-style images redraw without bags or ROS.
-- **Nov 2026**: stock A-LOAM runner added ([`fusion_v4/stock_aloam/`](fusion_v4/stock_aloam/README.md)); first Long Corridor run done.
+- **Nov 2026**: stock A-LOAM runner added ([`fusion_v4/stock_aloam/`](fusion_v4/stock_aloam/README.md)); one run each on five sequences, logs in `figure_data/stock/`.
 - **Nov 16, 2026**: thesis report v3 with extended introduction, literature review and flowcharts ([`docs/thesis/`](docs/thesis/README.md)).
 - **Nov 11, 2026**: final version F35 (repo tag `F26`) tested on all six sequences; per-sequence renders and videos added.
 - **Oct 2026**: structure-anchored heading, GenZ-LIO front-end variants, orientation-tensor channel, fault-injection tests.
@@ -203,7 +203,7 @@ All live runs were made on one laptop (Ryzen 5 5600H, GTX 1650 with 4 GB, 16 GB 
 
 - One to three live runs per cell, so single runs support no claim; all six sequences were used while developing F35, so none is a held-out test.
 - Front end only: no loop closure in any number above. The comparison with Switch-SLAM is not like for like (A-LOAM without IMU, per-direction weights instead of switching, one to four runs against the authors' three-run mean).
-- Stock A-LOAM views for the figures: one Long Corridor run is done (13.25 / 24.29 m); Multi Floor, Corridor02, Cave02, GEODE and the farm are still to run.
+- Stock A-LOAM (one run each, RMSE / max in m): Multi Floor 5.22 / 9.51, Long Corridor 13.25 / 24.29, Corridor02 7.64 / 11.56, Cave02 6.62 / 12.73, GEODE 3.58 / 9.54; the farm run is still to do. On GEODE the stock run is below the F35 mean (5.04 m) and on Cave02 it is level with F35 (6.23 m); one run each, so neither is a claim.
 - A-LOAM alone on Cave02 and GEODE is not in the thesis tables; the paper keeps one GEODE run (7.98 / 22.09 m) from another machine.
 
 ## 8. Acknowledgments
