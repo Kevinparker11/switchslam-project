@@ -39,6 +39,11 @@ fi
 mkdir -p "$OUT_STOCK"
 
 # 2. stock launch = the sequence's launch without the remap line; the original is kept in the container and put back on exit
+#    (the containers must be running to copy into them; run_fusion_study.sh restarts them again before every run, which keeps the files)
+for c in $GPU_C vinsmono_test; do
+  [ "$(docker inspect -f '{{.State.Running}}' $c 2>/dev/null)" = "true" ] || { echo "starting container $c"; docker start $c > /dev/null || exit 1; }
+done
+sleep 3
 BACKUP=/root/thr/$(basename "$CONT_LAUNCH").orig_before_stock
 docker exec $GPU_C bash -c "mkdir -p /root/thr; [ -f $BACKUP ] || cp $CONT_LAUNCH $BACKUP" || exit 1
 restore() { docker exec $GPU_C bash -c "[ -f $BACKUP ] && cp $BACKUP $CONT_LAUNCH" && echo "original launch restored: $CONT_LAUNCH"; }
