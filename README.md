@@ -212,4 +212,4 @@ This work builds on [A-LOAM](https://github.com/HKUST-Aerial-Robotics/A-LOAM) an
 
 ## 9. License
 
-The repository has no license file yet; until one is added, all rights stay with the author. A-LOAM, VINS-Mono, GenZ-LIO and iG-LIO keep their own licenses. For questions or problems, open an issue on this repository.
+The code of this repository is released under the [MIT License](LICENSE). The files in [`patches/`](patches/) are modifications of A-LOAM (BSD-3-Clause) and VINS-Mono (GPL-3.0) and stay under the licenses of those projects; GenZ-LIO and iG-LIO also keep their own. The thesis report and the figures are not covered by the MIT License. For questions or problems, open an issue on this repository.
