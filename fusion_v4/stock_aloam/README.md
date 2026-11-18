@@ -9,4 +9,4 @@ The unmodified A-LOAM on a bag, through the same pipeline as every other run (sa
 
 Commands per sequence and replay rates: [`docs/setup/REPRODUCE.md`](../../docs/setup/REPRODUCE.md). Draw a result with `docs/thesis/scripts/render_aloam_alone.py`.
 
-Difference to "A-LOAM alone (F5)" in the thesis: F5 runs through the fusion node, which hands A-LOAM its own last pose as the guess of each scan (no motion model). Stock A-LOAM uses the scan-to-scan odometry. Done so far: Long Corridor, one run, 13.25 / 24.29 m (RMSE / max).
+Difference to "A-LOAM alone (F5)" in the thesis: F5 runs through the fusion node, which hands A-LOAM its own last pose as the guess of each scan (no motion model). Stock A-LOAM uses the scan-to-scan odometry. Done so far, one run each (RMSE / max, m): Multi Floor 5.22 / 9.51, Long Corridor 13.25 / 24.29, Corridor02 7.64 / 11.56, Cave02 6.62 / 12.73, GEODE 3.58 / 9.54. Logs: `docs/thesis/figure_data/stock/`; images: `docs/thesis/scripts/render_final_stock.py`. Farm (Gazebo) not run yet.
