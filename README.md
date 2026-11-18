@@ -1,35 +1,46 @@
-<p align="center"><img src="docs/assets/banner.svg" alt="SwitchSLAM: LiDAR-visual-inertial fusion under LiDAR degeneracy" width="100%"></p>
+<p align="center"><img src="docs/assets/banner.svg" alt="SwitchSLAM" width="100%"></p>
 
-<p align="center">
-  <img alt="ROS Noetic" src="https://img.shields.io/badge/ROS-Noetic-22314e?logo=ros&logoColor=white">
-  <img alt="Docker" src="https://img.shields.io/badge/Docker-2_containers-2496ed?logo=docker&logoColor=white">
-  <img alt="Python" src="https://img.shields.io/badge/Python-3-3776ab?logo=python&logoColor=white">
-  <img alt="Branch" src="https://img.shields.io/badge/branch-f22--handover-4fd18b">
-  <img alt="Thesis" src="https://img.shields.io/badge/M.Tech_thesis-CB.EN.P2MFA25004-8957e5">
+# SwitchSLAM
+## LiDAR-visual-inertial fusion under LiDAR degeneracy
+
+<p>
+  <img alt="ROS" src="https://img.shields.io/badge/ROS-Noetic%20%2B%20Kinetic-22314e?logo=ros&logoColor=white">
+  <img alt="Docker" src="https://img.shields.io/badge/Docker-2%20containers-2496ed?logo=docker&logoColor=white">
+  <img alt="Python" src="https://img.shields.io/badge/Python-3.10-3776ab?logo=python&logoColor=white">
+  <img alt="Thesis" src="https://img.shields.io/badge/M.Tech%20thesis-CB.EN.P2MFA25004-8957e5">
 </p>
 
-<p align="center">
-  <a href="#results">Results</a> ·
-  <a href="#how-it-works">How it works</a> ·
-  <a href="#quick-start">Quick start</a> ·
-  <a href="#repository-map">Repository map</a> ·
-  <a href="#versions-and-names">Versions</a> ·
-  <a href="#limits-and-status">Limits</a> ·
-  <a href="docs/README.md">Docs</a> ·
-  <a href="docs/thesis/README.md">Thesis</a>
-</p>
+[1 Introduction](#1-introduction) · [2 Prerequisites](#2-prerequisites) · [3 Setup](#3-setup) · [4 Run](#4-run-the-package) · [5 Repository map](#5-repository-map) · [6 Experimental setup](#6-experimental-setup) · [7 Limits and status](#7-limits-and-status) · [8 Acknowledgments](#8-acknowledgments) · [Docs](docs/README.md)
 
----
+### News
 
-## What this is
+- **Nov 18, 2026**: project page rebuilt; the logs, keyframe maps and ground truth behind the figures are in [`docs/thesis/figure_data/`](docs/thesis/figure_data/MANIFEST.md), so the RViz-style images redraw without bags or ROS.
+- **Nov 2026**: stock A-LOAM runner added ([`fusion_v4/stock_aloam/`](fusion_v4/stock_aloam/README.md)); first Long Corridor run done.
+- **Nov 16, 2026**: thesis report v3 with extended introduction, literature review and flowcharts ([`docs/thesis/`](docs/thesis/README.md)).
+- **Nov 11, 2026**: final version F35 (repo tag `F26`) tested on all six sequences; per-sequence renders and videos added.
+- **Oct 2026**: structure-anchored heading, GenZ-LIO front-end variants, orientation-tensor channel, fault-injection tests.
 
-A LiDAR scan taken in a corridor or a stairwell does not constrain the motion along the axis, so LiDAR odometry slides. VINS-Mono does not have that problem but drifts in scale and heading. This project fuses the two **per direction**: rotation comes from VINS-Mono; translation comes from A-LOAM along the directions its scan matching constrains (read from the Schur complement of its Hessian) and from VINS-Mono along the others. Where VINS-Mono is unusable (warm-up, loss, a failed trust check) the LiDAR carries the whole step. The final version, **F35 in the thesis (tag `F26` in the repo)**, also chooses A-LOAM's starting guess from the degeneracy status and adds safeguards: a VIO-trust check, an anchored hand-over and a mapping-guess guard.
+## 1. Introduction
 
-It is compared with the published Switch-SLAM on SubT-MRS Multi Floor and Long Corridor and a Gazebo farm route, and tested on Corridor02, Cave02 and GEODE stairs, where no Switch-SLAM value is published. Front end only, no loop closure.
+A LiDAR scan taken in a corridor or a stairwell does not constrain the motion along the axis, so LiDAR odometry slides. VINS-Mono does not have that problem but drifts in scale and heading. This work fuses the two **per direction**: rotation comes from VINS-Mono; translation comes from A-LOAM along the directions its scan matching constrains (read from the Schur complement of its Hessian) and from VINS-Mono along the others. Where VINS-Mono is unusable (warm-up, loss, a failed trust check) the LiDAR carries the whole step. The final version, **F35 in the thesis (tag `F26` in the repo)**, also chooses A-LOAM's starting guess from the degeneracy status and adds three safeguards: a VIO-trust check, an anchored hand-over and a mapping-guess guard.
 
-M.Tech thesis of Kavinkumar S (CB.EN.P2MFA25004), advisor Dr. G. Sivasankar. Everything needed to redraw the figures and rebuild the report is in this repository.
+<p align="center"><a href="docs/thesis/figures_final/flowcharts/perscan.png"><img src="docs/thesis/figures_final/flowcharts/perscan.png" alt="Processing of one LiDAR scan in the fusion node" width="70%"></a></p>
+<p align="center"><sub>Processing of one LiDAR scan in the fusion node (<code>fusion_v4/fusion_node_v2.py</code>).</sub></p>
 
-## Results
+### 1.1 Thesis and citation
+
+M.Tech thesis of Kavinkumar S (CB.EN.P2MFA25004), advisor Dr. G. Sivasankar. The report, its correction log and the build scripts are in [`docs/thesis/`](docs/thesis/README.md); the 8-page paper is in [`docs/paper/`](docs/paper/). If you use this work, please cite:
+
+```bibtex
+@mastersthesis{kavinkumar2026switchslam,
+  author = {Kavinkumar S},
+  title  = {LiDAR-visual-inertial fusion under LiDAR degeneracy},
+  year   = {2026},
+  note   = {M.Tech thesis, CB.EN.P2MFA25004; advisor Dr. G. Sivasankar}
+}
+```
+
+### 1.2 Results
 
 ATE RMSE in metres (Umeyama SE(3) alignment, no scale), full span, live runs. Mean over the runs of each cell; `n` is the number of F35 runs.
 
@@ -59,52 +70,116 @@ F35 had the lowest mean error of the three on every sequence where all three wer
 
 <sub>White: ground truth. Green: F35. Orange: the A-LOAM output of the same run, which F35 feeds back (it is not stock A-LOAM). Red: VINS-Mono alone from the same run, where it stays on the plot. Per-bag trajectory videos: [`docs/thesis/videos_final/`](docs/thesis/videos_final/).</sub>
 
-## How it works
+### 1.3 Related videos
 
-<p align="center"><img src="docs/thesis/figures_final/flowcharts/perscan.png" alt="Processing of one LiDAR scan in the fusion node" width="78%"></p>
+One trajectory video per sequence (top-down map, paths against ground truth, error panel, fusion mode strip), from the same live runs as the images above: [Multi Floor](docs/thesis/videos_final/MF_F35_final.mp4) · [Long Corridor](docs/thesis/videos_final/LC_F35_final.mp4) · [Corridor02](docs/thesis/videos_final/C02_F35_final.mp4) · [Cave02](docs/thesis/videos_final/CAVE_F35_final.mp4) · [GEODE stairs](docs/thesis/videos_final/GEODE_F35_final.mp4) · [Farm](docs/thesis/videos_final/FARM_F35_final.mp4).
 
-For every LiDAR scan the node `fusion_v4/fusion_node_v2.py` receives A-LOAM's scan-to-map pose and Hessian and VINS-Mono's pose, weights the translation per direction, checks that VINS-Mono can be trusted, and publishes the fused pose, which becomes A-LOAM's initial guess for the next scan. Method chapter: [`docs/thesis/`](docs/thesis/README.md); every design step and test rule: [`docs/results/`](docs/README.md).
+## 2. Prerequisites
 
-## Quick start
+### 2.1 Host
 
-Three levels, from nothing to everything.
+Linux with Docker, about 60 GB of free disk (bags are 4 to 23 GB each) and 16 GB of RAM; the thesis runs were made on a laptop with a Ryzen 5 5600H, a GTX 1650 and Ubuntu. The slower replays (0.33x to 0.5x) exist because A-LOAM, VINS-Mono and the fusion node together need that headroom.
 
-**1. Redraw the figures** (Python only, no bags, no ROS, about a minute):
+### 2.2 Containers
+
+| Container | Base | Holds |
+|---|---|---|
+| `switchslam_gpu_v2` | ROS Noetic | A-LOAM (patched), GenZ-LIO, the fusion node and the scorers |
+| `vinsmono_test` | ROS Kinetic | VINS-Mono (patched): feature tracker and estimator |
+| `ros:noetic` (per run) | ROS Noetic | `rosbag play --clock` of the bag |
+
+Revisions, patches and the captured environment: [`docs/setup/ENVIRONMENT.md`](docs/setup/ENVIRONMENT.md), [`patches/aloam_vins/`](patches/aloam_vins/).
+
+### 2.3 Python
+
 ```bash
-pip install -r requirements.txt
+pip install -r requirements.txt        # numpy, scipy, pandas, matplotlib, scikit-learn, pyyaml, gtsam
+```
+
+### 2.4 Datasets
+
+| Sequence | Source | Role in the thesis |
+|---|---|---|
+| Multi Floor (SubT-MRS, legged robot) | SubT-MRS / SuperLoc | tuning sequence, compared with Switch-SLAM |
+| Long Corridor (SubT-MRS Corridor01, wheeled RC) | SubT-MRS | development, compared with Switch-SLAM |
+| Corridor02 (SuperLoc Hawkins, RC) | SuperLoc | development |
+| Cave02 (SuperLoc Laurel Cavern, handheld) | SuperLoc | control, then used in development |
+| GEODE stairs, device alpha | [GEODE](https://thisparticle.github.io/geode/) | development |
+| Farm L route | Gazebo, Clearpath Husky | compared with Switch-SLAM |
+
+Download links, folder layout and topics: [`docs/setup/DATASETS.md`](docs/setup/DATASETS.md). The bags are not in the repository.
+
+## 3. Setup
+
+```bash
+git clone -b f22-handover https://github.com/Kevinparker11/switchslam-project.git
+cd switchslam-project
+bash fusion_v4/clean_restart.sh              # restarts both containers, no leftover ROS processes
+```
+
+Containers: move them from a working machine with `tools/export_images.sh` and `tools/import_images.sh`, or rebuild from source (section 2B of [`docs/setup/INSTALL.md`](docs/setup/INSTALL.md)). Sequence settings are written by `fusion_v4/setup_sequence.sh` into `~/runs_<name>/seq.env`.
+
+## 4. Run the package
+
+### 4.1 Important parameters
+
+Set as environment variables of `fusion_v4/run_fusion_study.sh`:
+
+- **`FRONT=aloam`**: the A-LOAM stack of the thesis (`genz` is the default and selects the GenZ-LIO variants).
+- **`SEQ_ENV=~/runs_<name>/seq.env`**: a sequence other than Multi Floor.
+- **`REPEAT=n`**: n live repeats per configuration (tags `<cfg>_run<k>`).
+- **`PLAY_RATE=r`**: replay the bag at r times real time; the thesis uses 1.0 (Multi Floor, Long Corridor), 0.33 (Corridor02) and 0.5 (Cave02, GEODE).
+- **`RECORD_KF=1`**: also save the keyframe scans (`.npz`), needed for the map in the renders.
+- **`SMOKE=1`**: short run without scoring.
+
+The configurations are the first argument (`F0` VINS-Mono alone, `F5` A-LOAM alone, `F8`, `F16`, `F24`, `F26` final). Every variable and its default: [`docs/setup/REPRODUCE.md`](docs/setup/REPRODUCE.md).
+
+### 4.2 One run of the final version
+
+```bash
+cd fusion_v4
+FRONT=aloam REPEAT=1 PLAY_RATE=1.0 ./run_fusion_study.sh F26       # Multi Floor; the log and the ATE go to the run folder
+```
+
+### 4.3 Stock A-LOAM
+
+The unmodified A-LOAM on the same bag, for the A-LOAM line in the figures:
+
+```bash
+REPEAT=1 PLAY_RATE=1.0 ./stock_aloam/run_stock_aloam.sh mf -                               # Multi Floor
+REPEAT=1 PLAY_RATE=1.0 ./stock_aloam/run_stock_aloam.sh lc ~/runs_corridor/seq.env         # Long Corridor
+```
+
+### 4.4 Redraw the figures (no bags, no ROS)
+
+```bash
 cd docs/thesis/scripts
-FIG_OUT=/tmp/regen python3 render_final.py MF LC C02 CAVE GEODE FARM       # pixel-identical to docs/thesis/figures_final/
+FIG_OUT=/tmp/regen python3 render_final.py MF LC C02 CAVE GEODE FARM        # identical to docs/thesis/figures_final/
 FIG_OUT=/tmp/regen python3 render_aloam_alone.py LC ../figure_data/data/for_claude7/*.csv.gz
 ```
-The inputs (run logs, keyframe maps, ground truth, SHA-256 manifest) are in [`docs/thesis/figure_data/`](docs/thesis/figure_data/MANIFEST.md).
 
-**2. Rerun the experiments** (needs the bags and Docker; the thesis runs were made on a laptop with 16 GB of RAM): [`docs/setup/INSTALL.md`](docs/setup/INSTALL.md) → [`DATASETS.md`](docs/setup/DATASETS.md) → [`REPRODUCE.md`](docs/setup/REPRODUCE.md). One run is one command, for example
+### 4.5 Rebuild the report
+
 ```bash
-cd fusion_v4 && FRONT=aloam REPEAT=1 PLAY_RATE=1.0 ./run_fusion_study.sh F26      # final version, Multi Floor
-REPEAT=1 PLAY_RATE=1.0 ./stock_aloam/run_stock_aloam.sh mf -          # stock A-LOAM on the same bag
+bash docs/thesis/scripts/v3_rewrite/setup_workdir.sh && cd /tmp/w/v3 && bash pipe.sh
 ```
 
-**3. Rebuild the report**: `bash docs/thesis/scripts/v3_rewrite/setup_workdir.sh && cd /tmp/w/v3 && bash pipe.sh` (steps in [`docs/thesis/README.md`](docs/thesis/README.md)).
-
-## Repository map
+## 5. Repository map
 
 | Folder | What is in it |
 |---|---|
-| [`fusion_v4/`](fusion_v4/) | **the system and its studies**: fusion node, scoring, batch scripts (`batches/`), stock A-LOAM runner (`stock_aloam/`), Gazebo worlds and screen (`gazebo/`), fault injection (`faults/`), GEODE and handheld setups |
-| [`docs/thesis/`](docs/thesis/README.md) | the report (all versions), correction log, figures, videos, `figure_data/`, build scripts |
-| [`docs/results/`](docs/README.md) | one document per version and study, F0 to F35, with the rules written before each test |
+| [`fusion_v4/`](fusion_v4/) | the system and its studies: fusion node, scoring, batch scripts, stock A-LOAM runner, Gazebo worlds, fault injection |
+| [`docs/thesis/`](docs/thesis/README.md) | the report (all versions), correction log, figures, videos, figure inputs, build scripts |
+| [`docs/results/`](docs/README.md) | one document per version and study, with the rules written before each test |
 | [`docs/protocols/`](docs/README.md), [`docs/planning/`](docs/README.md), [`docs/research/`](docs/research/) | test protocols, plans, literature and derivations |
 | [`docs/setup/`](docs/setup/) | install, datasets, environment capture, reproduction commands |
-| [`docs/paper/`](docs/paper/) | the 8-page paper (`main.tex`) and its figure scripts |
-| `fusion_v2/`, `fusion_v3/` | earlier generations of the fusion node, kept self-contained |
+| [`docs/paper/`](docs/paper/) | the paper (`main.tex`) and its figure scripts |
+| `fusion_v2/`, `fusion_v3/` | earlier generations of the fusion node, each self-contained |
 | `sah/`, `analysis/`, `threshold_study/`, `channelT_test/` | development harnesses: structure-anchored heading, replays and statistics, threshold screening, channel-T tests |
-| `patches/`, `configs/`, `tools/`, `scripts/` | changes to A-LOAM and VINS-Mono, per-sequence container configs, environment capture, helpers |
-| `switchslam_v1/` | generation 1 (Sep 2026): the original switching nodes |
-| `results_data/` | raw logs of the early studies (22 to 27 Oct) |
+| `patches/`, `configs/`, `tools/`, `scripts/` | changes to A-LOAM and VINS-Mono, per-sequence configs, environment capture, helpers |
+| `switchslam_v1/`, `results_data/` | generation 1 (Sep 2026) and the raw logs of the early studies |
 
-Bags (`.bag`) and run folders are not stored (see `.gitignore`); the keyframe maps used by the figures are the one exception.
-
-## Versions and names
+### Versions and names
 
 | Name in the thesis | Tag in the repo | What it is |
 |---|---|---|
@@ -116,15 +191,25 @@ Bags (`.bag`) and run folders are not stored (see `.gitignore`); the keyframe ma
 | F26 (channels only) | `F35` | the same, with the status decided by our own channels |
 | G0 to G20 | `G*` | the GenZ-LIO front-end variants of October (`FRONT=genz`) |
 
-The report and the repo use swapped names for the last two rows; the map is entry A10 of [`docs/thesis/Report_Corrections_Log.md`](docs/thesis/Report_Corrections_Log.md). Definitions of the early configurations: [`docs/results/Configurations_Explained_and_Results_To_Date.md`](docs/results/Configurations_Explained_and_Results_To_Date.md).
+The report and the repo use swapped names for the last two rows; the map is entry A10 of [`docs/thesis/Report_Corrections_Log.md`](docs/thesis/Report_Corrections_Log.md). Early configurations: [`docs/results/Configurations_Explained_and_Results_To_Date.md`](docs/results/Configurations_Explained_and_Results_To_Date.md).
 
-## Limits and status
+## 6. Experimental setup
+
+All live runs were made on one laptop (Ryzen 5 5600H, GTX 1650 with 4 GB, 16 GB RAM, Ubuntu, Docker). The sequences come from different platforms: a legged robot (Multi Floor), wheeled RC robots (Long Corridor, Corridor02), a handheld rig (Cave02), the GEODE alpha device (stairs) and a simulated Clearpath Husky in a Gazebo agriculture world (farm L route, 80 m).
+
+<p align="center"><a href="docs/thesis/figures_final/gaz_husky.jpg"><img src="docs/thesis/figures_final/gaz_husky.jpg" alt="Husky robot model used in the Gazebo agriculture world" width="42%"></a> <a href="docs/thesis/figures_final/gaz_world.png"><img src="docs/thesis/figures_final/gaz_world.png" alt="Gazebo agriculture world" width="42%"></a></p>
+
+## 7. Limits and status
 
 - One to three live runs per cell, so single runs support no claim; all six sequences were used while developing F35, so none is a held-out test.
 - Front end only: no loop closure in any number above. The comparison with Switch-SLAM is not like for like (A-LOAM without IMU, per-direction weights instead of switching, one to four runs against the authors' three-run mean).
-- Stock A-LOAM views for the figures: one Long Corridor run is done (13.25 / 24.29 m); Multi Floor, Corridor02, Cave02, GEODE and the farm are still to run with [`fusion_v4/stock_aloam/`](fusion_v4/stock_aloam/README.md).
-- GEODE and Cave02 values for A-LOAM alone are not in the thesis tables; the paper keeps one GEODE run (7.98 / 22.09 m) from another machine.
+- Stock A-LOAM views for the figures: one Long Corridor run is done (13.25 / 24.29 m); Multi Floor, Corridor02, Cave02, GEODE and the farm are still to run.
+- A-LOAM alone on Cave02 and GEODE is not in the thesis tables; the paper keeps one GEODE run (7.98 / 22.09 m) from another machine.
 
-## Cite
+## 8. Acknowledgments
 
-See [`CITATION.cff`](CITATION.cff). Active branch: `f22-handover`; `main` holds the earlier state.
+This work builds on [A-LOAM](https://github.com/HKUST-Aerial-Robotics/A-LOAM) and [VINS-Mono](https://github.com/HKUST-Aerial-Robotics/VINS-Mono) (HKUST Aerial Robotics Group), GenZ-LIO and iG-LIO as alternative front ends, and the Switch-SLAM paper whose structure and published values are the reference. Data: SubT-MRS and SuperLoc (Multi Floor, Corridor, Cave), [GEODE](https://thisparticle.github.io/geode/). Trajectories are aligned with the Umeyama method.
+
+## 9. License
+
+The repository has no license file yet; until one is added, all rights stay with the author. A-LOAM, VINS-Mono, GenZ-LIO and iG-LIO keep their own licenses. For questions or problems, open an issue on this repository.
