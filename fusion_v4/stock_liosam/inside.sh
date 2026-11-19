@@ -69,6 +69,6 @@ rosbag play --clock -q -r "$RATE" $BAGPATHS --topics "$IMU_TOPIC" "$PLAY_LIDAR" 
 sleep 12   # let LIO-SAM finish the queued scans
 
 pkill -INT -f record_odom.py; sleep 3
-grep -c "process has died" liosam.log > crashes.txt 2>/dev/null || echo 0 > crashes.txt
-pkill -INT -f roslaunch; sleep 2
+pkill -INT -f roslaunch; sleep 4   # roslaunch writes its "process has died" lines to the file only when it flushes, so count after it stops
+{ grep -c "process has died" liosam.log || true; } > crashes.txt
 echo "poses recorded: $(wc -l < "$OUT/odom.tum")"
