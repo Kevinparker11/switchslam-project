@@ -142,9 +142,23 @@ class Imu(unittest.TestCase):
     def test_missing_zero_quaternion(self):
         self.assertEqual(li.orientation_verdict(np.zeros((50, 4)), np.zeros(50), np.zeros((50, 3)))["status"], "missing")
 
-    def test_missing_flagged_by_covariance(self):
-        q = self.quats(50)
-        self.assertEqual(li.orientation_verdict(q, -np.ones(50), self.acc_for(q))["status"], "missing")
+    def test_flag_alone_does_not_decide(self):
+        q = self.quats(100, tilt=0.5)
+        r = li.orientation_verdict(q, -np.ones(100), self.acc_for(q))      # flagged absent, but quaternion is consistent
+        self.assertEqual((r["status"], r["flagged_absent"]), ("ok", True))
+
+    def test_flagged_and_inconsistent_is_missing(self):
+        q = self.quats(100, tilt=0.5)
+        r = li.orientation_verdict(q, -np.ones(100), np.tile([0, 0, 9.8], (100, 1)))
+        self.assertEqual(r["status"], "missing")
+
+    def test_long_corridor_first_sample(self):
+        q = np.tile([0.04069450231152133, -0.001823118722903819, 0.9969624278864727, 0.06638185823287553], (50, 1))
+        q = q + np.linspace(0, 0.01, 50)[:, None] * np.array([1, 0, 0, 0])      # make it change a little
+        a = np.tile([1.6804717779159546, -0.45160946249961853, 10.448631286621094], (50, 1))
+        r = li.orientation_verdict(q, -np.ones(50), a)
+        self.assertEqual(r["status"], "ok")
+        self.assertLess(r["gravity_err_deg"], 10)
 
     def test_constant_identity(self):
         q = np.tile([0, 0, 0, 1.0], (50, 1))

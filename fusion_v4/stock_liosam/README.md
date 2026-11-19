@@ -22,7 +22,7 @@ LIO-SAM only works with a 9-axis IMU (roll, pitch and yaw in `sensor_msgs/Imu.or
 
 | Key | Meaning | If not ok |
 |---|---|---|
-| `ORIENTATION` | quaternion present, unit norm, changing over time | `missing` or `constant`: **not run**, `NOT_APPLICABLE.txt` says why |
+| `ORIENTATION` | judged on the quaternion itself: unit norm, changing over time, gravity along +z. A driver flag `orientation_covariance[0] = -1` is reported but does not decide (LIO-SAM never reads the covariance), unless the quaternion also fails the gravity check | `missing` or `constant`: **not run**, `NOT_APPLICABLE.txt` says why |
 | `RING` | `ring` field, uint16 | missing: not run |
 | `TIME` | per-point time, float32, offsets from 0 | `negative` (relative to scan end, as in GEODE): the adapter shifts it; missing: not run |
 | `DENSE` | `is_dense` flag and NaN points | `no`: the adapter drops NaN points and sets the flag |

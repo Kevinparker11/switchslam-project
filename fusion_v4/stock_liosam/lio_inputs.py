@@ -82,22 +82,28 @@ def _quat_to_R(q):
     return R
 
 
-def orientation_verdict(quat_xyzw, cov0, acc, n_static=200):
+def orientation_verdict(quat_xyzw, cov0, acc, n_static=200, flagged_gravity_max_deg=20.0):
     """quat_xyzw (N,4), cov0 (N,) orientation_covariance[0], acc (N,3) linear acceleration, all in time order.
-    status: ok | missing (zero quaternion or covariance[0] == -1) | constant (valid but never changes)
-    gravity_err_deg: angle between the world-frame acceleration of the first n_static samples and +z (info; a large value
-    means the orientation is not a z-up world attitude of the same body frame as the accelerometer)."""
+    The quaternion itself decides, not the driver's covariance flag (LIO-SAM never reads the covariance):
+      missing   zero or non-unit quaternion, or covariance[0] == -1 (REP-145 'not provided') together with a quaternion
+                that does not put gravity along +z within flagged_gravity_max_deg
+      constant  unit quaternion that never changes
+      ok        unit quaternion that changes over time (if the driver flagged it absent, flagged_absent is True and the
+                gravity check had to pass)
+    gravity_err_deg: angle between the world-frame acceleration of the first n_static samples and +z."""
     q = np.asarray(quat_xyzw, float)
-    out = {"n": int(len(q)), "status": "missing", "gravity_err_deg": float("nan")}
+    out = {"n": int(len(q)), "status": "missing", "gravity_err_deg": float("nan"), "flagged_absent": False}
     if len(q) == 0:
         return out
     nrm = np.linalg.norm(q, axis=1)
-    flagged_absent = bool(np.all(np.asarray(cov0) == -1.0))
-    if flagged_absent or np.mean(np.abs(nrm - 1.0) < 0.02) < 0.95:
+    out["flagged_absent"] = bool(np.all(np.asarray(cov0) == -1.0))
+    if np.mean(np.abs(nrm - 1.0) < 0.02) < 0.95:
         return out
-    out["status"] = "constant" if float(np.max(np.std(q, axis=0))) < 1e-4 else "ok"
     k = min(n_static, len(q))
     R = _quat_to_R(q[:k])
     a = np.mean(np.einsum("nij,nj->ni", R, np.asarray(acc, float)[:k]), axis=0)
     out["gravity_err_deg"] = float(np.degrees(np.arccos(np.clip(a[2] / (np.linalg.norm(a) + 1e-12), -1, 1))))
+    if out["flagged_absent"] and out["gravity_err_deg"] > flagged_gravity_max_deg:
+        return out
+    out["status"] = "constant" if float(np.max(np.std(q, axis=0))) < 1e-4 else "ok"
     return out
