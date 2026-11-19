@@ -9,7 +9,7 @@ The original [LIO-SAM](https://github.com/TixiaoShan/LIO-SAM) (Shan et al., IROS
 | What | Change | Why |
 |---|---|---|
 | `CMakeLists.txt` | `-std=c++11` to `-std=c++14` | PCL 1.10 on Ubuntu 20.04 needs C++14 |
-| `include/utility.h` | `<opencv/cv.h>` to `<opencv2/opencv.hpp>` | the old header does not exist in OpenCV 4 |
+| `include/utility.h` | `<opencv/cv.h>` replaced by `<opencv2/opencv.hpp>`, placed after the PCL includes | the old header does not exist in OpenCV 4; included before PCL's FLANN header it breaks the FLANN build (`unordered_map ... no member named serialize`) |
 | `config/params.yaml` | six keys only: `pointCloudTopic`, `imuTopic`, `extrinsicRot`, `extrinsicRPY`, `extrinsicTrans`, `loopClosureEnableFlag: false` | topics and extrinsics of the sequence; no loop closure, as in the Switch-SLAM table |
 
 Everything else in `params.yaml` (IMU noise, voxel sizes, thresholds, `N_SCAN 16`, `Horizon_SCAN 1800`) stays at the upstream default. The first two rows are the file `liosam_noetic_build.patch`, applied by the Dockerfile; no algorithm file is touched. `make_params.py` prints the changed keys of every run into `params_changes.txt`.
