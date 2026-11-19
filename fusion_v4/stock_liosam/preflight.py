@@ -4,7 +4,8 @@
 
 usage: preflight.py --imu TOPIC (--points TOPIC | --packets TOPIC) BAG [BAG ...]
 Prints KEY=value lines (the runner reads these) and a short human summary.
-  ORIENTATION  ok | missing | constant      missing/constant: stock LIO-SAM is not applicable (9-axis IMU required)
+  ORIENTATION  ok | missing | constant      judged on the quaternion (unit norm, changing, gravity along +z); a driver flag
+               covariance[0] = -1 alone does not decide. missing/constant: stock LIO-SAM is not applicable
   RING         ok | missing | wrongtype     missing: not applicable
   TIME         ok | negative | missing | empty | wrongtype
   DENSE        yes | no                     no: the node would shut down; the adapter drops NaN points and sets the flag
@@ -57,6 +58,7 @@ def main():
     ov = li.orientation_verdict(q, c, acc)
     res["ORIENTATION"] = ov["status"]
     res["ORIENT_GRAVITY_ERR_DEG"] = "%.1f" % ov["gravity_err_deg"]
+    res["ORIENT_FLAGGED_ABSENT_BY_DRIVER"] = int(ov["flagged_absent"])
     res["IMU_SAMPLES"] = ov["n"]
     res["ADAPT_NAN"] = 0
     res["ADAPT_TIME"] = 0
@@ -89,6 +91,11 @@ def main():
     if res["TIME"] in ("missing", "empty", "wrongtype") or str(res["TIME"]).startswith("wrongtype"):
         bad.append("per-point time %s (deskew would be off)" % res["TIME"])
     print("VERDICT=%s" % ("NOT_APPLICABLE: " + "; ".join(bad) if bad else "OK"))
+    if res["ORIENT_FLAGGED_ABSENT_BY_DRIVER"] and res["ORIENTATION"] == "ok":
+        print("NOTE=the driver sets orientation_covariance[0] = -1 (orientation not provided), but the quaternion is a unit "
+              "quaternion that changes and puts gravity along +z (error %s deg). LIO-SAM ignores the covariance and reads the "
+              "quaternion, so it is used as it is; how it is produced (e.g. a 6-axis filter with free yaw) is not stated by the bag."
+              % res["ORIENT_GRAVITY_ERR_DEG"])
     if not bad and float(res["ORIENT_GRAVITY_ERR_DEG"]) > 15:
         print("NOTE=orientation does not put gravity along +z (error %s deg): check the orientation convention of this IMU"
               % res["ORIENT_GRAVITY_ERR_DEG"])
