@@ -3,7 +3,8 @@
 #   docker build -t liosam_stock fusion_v4/stock_liosam
 # The upstream code targets Ubuntu 16/18 (Kinetic/Melodic). On Noetic it needs exactly two build fixes, kept as a
 # patch file (liosam_noetic_build.patch): C++14 instead of C++11 (PCL 1.10) and <opencv2/opencv.hpp> instead of the
-# removed <opencv/cv.h>. No algorithm file is changed.
+# removed <opencv/cv.h>, included after the PCL headers (OpenCV first breaks FLANN's serialization). No algorithm file
+# is changed.
 FROM ros:noetic
 ARG LIOSAM_COMMIT=0be1fbe6275fb8366d5b800af4fc8c76a885c869
 ENV DEBIAN_FRONTEND=noninteractive
