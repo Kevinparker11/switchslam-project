@@ -95,5 +95,7 @@ REPEAT=1 PLAY_RATE=0.5  ./stock_aloam/run_stock_aloam.sh geode ~/runs_geode/seq.
 ```
 Logs go to `~/runs_stock_<name>/`; the script prints the A-LOAM (`aft_`) ATE of each log. Use the replay rate of the F35 runs. Draw the result with `docs/thesis/scripts/render_aloam_alone.py`.
 
+**Stock LIO-SAM** (original repository, pinned commit, separate image; the first of the Switch-SLAM-table baselines): see [`fusion_v4/stock_liosam/README.md`](../../fusion_v4/stock_liosam/README.md). `docker build -t liosam_stock fusion_v4/stock_liosam`, then `REPEAT=3 ./stock_liosam/run_liosam.sh <mf|lc|c02|cave02|geode>` from `fusion_v4/`. A preflight checks the bag's IMU orientation and point fields first; a sequence LIO-SAM cannot run on is reported as not applicable.
+
 **Rebuild the report**: see [`docs/thesis/README.md`](../thesis/README.md), section "Rebuild the v3 report".
 
