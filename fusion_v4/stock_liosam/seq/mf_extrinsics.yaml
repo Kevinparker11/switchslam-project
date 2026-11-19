@@ -1,0 +1,10 @@
+%YAML 1.2
+---
+# SubT-MRS Multi Floor 'laser_to_imu' (T_imu<-lidar), the same matrix as the default in fusion_v4/fusion_node_v2.py.
+laser_to_imu:
+  rows: 4
+  cols: 4
+  data: [ 0.999945562,  0.009074807,  0.005149763, 0.080,
+         -0.009060897,  0.999955255, -0.002718066, 0.029,
+         -0.005174199,  0.002671256,  0.999983046, 0.030,
+          0.0,          0.0,          0.0,         1.0]
