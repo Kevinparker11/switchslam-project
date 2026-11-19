@@ -36,7 +36,7 @@ For the two sequences recorded as `velodyne_packets` (Multi Floor, Long Corridor
 
 ```
 cd ~/switchslam-project/fusion_v4            # a clone of this repository
-docker build -t liosam_stock stock_liosam     # first time only, about 20 to 40 min (builds LIO-SAM; GTSAM from the PPA, or from source if the PPA has no package)
+docker build --network host -t liosam_stock stock_liosam     # first time only, about 20 to 40 min (builds LIO-SAM; GTSAM from the PPA, or from source if the PPA has no package)
 REPEAT=1 ./stock_liosam/run_liosam.sh geode   # shortest sequence first
 ```
 Sequences: `mf`, `lc`, `c02`, `cave02`, `geode` (settings in `seq/<name>.env`; bag folders and ground truth default to the paths used by the other runs, override with `BAGS_ROOT=`, `BAG_DIR=`, `GT=`). Replay rates are those of the stock A-LOAM runs (1.0, 1.0, 0.33, 0.5, 0.5); LIO-SAM runs on the bag clock, so a slow replay does not change its input. `REPEAT=3` makes three runs (`RUN_START=2 REPEAT=2` adds runs 2 and 3 later). Results go to `~/runs_liosam/<name>/run<k>/`:

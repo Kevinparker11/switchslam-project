@@ -16,7 +16,7 @@ OUT=${OUT_ROOT:-$HOME/runs_liosam}/$NAME; mkdir -p "$OUT"
 [ -f "$GT" ] || { echo "ground truth not found: $GT"; exit 1; }
 BAGS=$(cd "$BAG_DIR" && ls -1 *.bag 2>/dev/null | sort | tr '\n' ' ')
 [ -n "$BAGS" ] || { echo "no .bag in $BAG_DIR"; exit 1; }
-docker image inspect "$IMAGE" > /dev/null 2>&1 || { echo "building image $IMAGE (first time only)"; docker build -t "$IMAGE" "$HERE" || exit 1; }
+docker image inspect "$IMAGE" > /dev/null 2>&1 || { echo "building image $IMAGE (first time only)"; docker build --network host -t "$IMAGE" "$HERE" || exit 1; }
 dr() { docker run --rm -v "$BAG_DIR":/bags:ro -v "$REPO":/repo:ro "$@"; }
 
 echo "== preflight $NAME ($BAG_DIR)"
