@@ -17,11 +17,12 @@ GREEN, ORANGE, RED = R.FUS_C, RS.STOCK_C, R.VINS_C
 
 
 def on_grid(t, ts, x):
-    """linear interpolation of a series given at ts onto t (NaN outside the series)"""
+    """linear interpolation of a series given at ts onto t; the two logs start and end within one scan (0.1 s) of each other,
+    so the first and last value are held at the edges"""
     x = np.asarray(x, float)
     if x.ndim == 1:
-        return np.interp(t, ts, x, left=np.nan, right=np.nan)
-    return np.stack([np.interp(t, ts, x[:, c], left=np.nan, right=np.nan) for c in range(x.shape[1])], 1)
+        return np.interp(t, ts, x)
+    return np.stack([np.interp(t, ts, x[:, c]) for c in range(x.shape[1])], 1)
 
 
 def run(seq):
