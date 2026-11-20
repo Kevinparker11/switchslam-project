@@ -29,25 +29,25 @@ def run(seq):
     ts = stock.time.values.astype(float)
     qs, es = V.aligned(R.P3(stock, "aft_"), V.gt_on(ts, gt_t, gt_p)); rs = R.stat(es)
     qf, ef = V.aligned(R.P3(d, "fused_"), G); rf = R.stat(ef)
-    paths = [("Stock A-LOAM, separate run: RMSE %.2f / max %.2f m" % rs, STOCK_C, qs)]
+    paths = [("A-LOAM: RMSE %.2f / max %.2f m" % rs, STOCK_C, qs)]
     vp = R.P3(d, "v_p"); good = np.isfinite(vp).all(1) & (np.abs(vp).max(1) < 1e5)
     vtxt = ""
     vp2 = vp.copy(); vp2[~good] = np.nan
     if seq != "GEODE" and good.sum() > 100:
         qv, ev = V.aligned(vp2, G); rv = R.stat(ev)
         if rv[0] < 25:
-            paths.append(("VINS-Mono alone, F35 run: RMSE %.2f / max %.2f m" % rv, R.VINS_C, qv))
+            paths.append(("VINS-Mono: RMSE %.2f / max %.2f m" % rv, R.VINS_C, qv))
         else:
             vtxt = " VINS-Mono alone (RMSE %.1f m) is off the plot." % rv[0]
     else:
         _, ev = V.aligned(vp2, G); vtxt = " VINS-Mono alone (RMSE %.0f m) is off the plot." % R.stat(ev)[0]
-    paths.append(("F35 (final version): RMSE %.2f / max %.2f m" % rf, R.FUS_C, qf))
-    foot = ("Each path aligned to the ground truth on its own (Umeyama SE(3), no scale); front end only, no loop closure. Stock A-LOAM is the "
+    paths.append(("F35: RMSE %.2f / max %.2f m" % rf, R.FUS_C, qf))
+    foot = ("Each path aligned to the ground truth on its own (Umeyama SE(3), no scale); front end only, no loop closure. A-LOAM is the "
             "unmodified A-LOAM, run separately on the same bag at the same replay rate; VINS-Mono alone is taken from the F35 run, since it "
             "takes no input from the fusion." + vtxt + " " + R.PUB.get(seq, R.NOPUB) + " Map: keyframe scans of the F35 run, coloured by height.")
-    R.render(os.path.join(R.OUT, "%s_stock.png" % seq), "%s: F35 live run and stock A-LOAM, front end only" % name,
+    R.render(os.path.join(R.OUT, "%s_stock.png" % seq), "%s: F35 and A-LOAM, front end only" % name,
              "RViz-style render: ground truth white, 10 m grid, map coloured by height", M, G, paths, view, foot)
-    print(seq, "F35 %.2f / %.2f | stock A-LOAM %.2f / %.2f" % (rf + rs), flush=True)
+    print(seq, "F35 %.2f / %.2f | A-LOAM %.2f / %.2f" % (rf + rs), flush=True)
 
 
 if __name__ == "__main__":
