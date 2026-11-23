@@ -1,0 +1,74 @@
+diff --git a/src/visual_odometry/visual_estimator/initial/initial_alignment.h b/src/visual_odometry/visual_estimator/initial/initial_alignment.h
+index 8e57aa7..7d53655 100644
+--- a/src/visual_odometry/visual_estimator/initial/initial_alignment.h
++++ b/src/visual_odometry/visual_estimator/initial/initial_alignment.h
+@@ -82,7 +82,8 @@ public:
+     odometryRegister(ros::NodeHandle n_in):
+     n(n_in)
+     {
+-        q_lidar_to_cam = tf::Quaternion(0, 1, 0, 0); // rotate orientation // mark: camera - lidar
++        Eigen::Quaterniond q_li(R_LIDAR_IMU); q_li.normalize();
++        q_lidar_to_cam = tf::Quaternion(q_li.x(), q_li.y(), q_li.z(), q_li.w()); // rotation of the IMU frame in the LiDAR frame
+         q_lidar_to_cam_eigen = Eigen::Quaterniond(0, 0, 0, 1); // rotate position by pi, (w, x, y, z) // mark: camera - lidar
+         // pub_latest_odometry = n.advertise<nav_msgs::Odometry>("odometry/test", 1000);
+     }
+diff --git a/src/visual_odometry/visual_estimator/parameters.cpp b/src/visual_odometry/visual_estimator/parameters.cpp
+index c5c7144..0559448 100644
+--- a/src/visual_odometry/visual_estimator/parameters.cpp
++++ b/src/visual_odometry/visual_estimator/parameters.cpp
+@@ -26,6 +26,8 @@ double TD, TR;
+ 
+ int USE_LIDAR;
+ int ALIGN_CAMERA_LIDAR_COORDINATE;
++Eigen::Matrix3d R_LIDAR_IMU = Eigen::Matrix3d::Identity();
++Eigen::Matrix3d R_IMU_CAMROS = Eigen::Matrix3d::Identity();
+ 
+ 
+ void readParameters(ros::NodeHandle &n)
+@@ -45,6 +47,18 @@ void readParameters(ros::NodeHandle &n)
+ 
+     fsSettings["use_lidar"] >> USE_LIDAR;
+     fsSettings["align_camera_lidar_estimation"] >> ALIGN_CAMERA_LIDAR_COORDINATE;
++    {
++        cv::Mat cv_li, cv_ic;
++        fsSettings["lidar_imu_rotation"] >> cv_li;
++        fsSettings["imu_camros_rotation"] >> cv_ic;
++        if (cv_li.rows != 3 || cv_li.cols != 3 || cv_ic.rows != 3 || cv_ic.cols != 3)
++            ROS_ERROR("lidar_imu_rotation / imu_camros_rotation missing in the VINS config");
++        else
++        {
++            cv::cv2eigen(cv_li, R_LIDAR_IMU);
++            cv::cv2eigen(cv_ic, R_IMU_CAMROS);
++        }
++    }
+ 
+     SOLVER_TIME = fsSettings["max_solver_time"];
+     NUM_ITERATIONS = fsSettings["max_num_iterations"];
+diff --git a/src/visual_odometry/visual_estimator/parameters.h b/src/visual_odometry/visual_estimator/parameters.h
+index d922ebb..1d62089 100644
+--- a/src/visual_odometry/visual_estimator/parameters.h
++++ b/src/visual_odometry/visual_estimator/parameters.h
+@@ -87,6 +87,9 @@ extern double ROW, COL;
+ 
+ extern int USE_LIDAR;
+ extern int ALIGN_CAMERA_LIDAR_COORDINATE;
++// fixed rotations of the rig, read from the VINS config (upstream hard-codes a 180 deg turn about y for its own rig)
++extern Eigen::Matrix3d R_LIDAR_IMU;    // orientation of the IMU frame in the LiDAR frame
++extern Eigen::Matrix3d R_IMU_CAMROS;   // orientation of the camera (ROS axes: x forward, y left, z up) in the IMU frame
+ 
+ void readParameters(ros::NodeHandle &n);
+ 
+diff --git a/src/visual_odometry/visual_estimator/utility/visualization.cpp b/src/visual_odometry/visual_estimator/utility/visualization.cpp
+index f6c31cd..043c85f 100644
+--- a/src/visual_odometry/visual_estimator/utility/visualization.cpp
++++ b/src/visual_odometry/visual_estimator/utility/visualization.cpp
+@@ -82,7 +82,8 @@ void pubLatestOdometry(const Eigen::Vector3d &P, const Eigen::Quaterniond &Q, co
+     odometry.pose.covariance[0] = double(failureId); // notify lidar odometry failure
+ 
+     tf::Quaternion q_odom_cam(Q.x(), Q.y(), Q.z(), Q.w());
+-    tf::Quaternion q_cam_to_lidar(0, 1, 0, 0); // mark: camera - lidar
++    Eigen::Quaterniond q_ic(R_IMU_CAMROS); q_ic.normalize();
++    tf::Quaternion q_cam_to_lidar(q_ic.x(), q_ic.y(), q_ic.z(), q_ic.w()); // camera (ROS axes) in the IMU frame
+     tf::Quaternion q_odom_ros = q_odom_cam * q_cam_to_lidar;
+     tf::quaternionTFToMsg(q_odom_ros, odometry.pose.pose.orientation);
+     pub_latest_odometry_ros.publish(odometry);

@@ -1,0 +1,174 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 10d7ef0..5461b65 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -5,7 +5,7 @@ project(lvi_sam)
+ ### Cmake flags
+ ######################
+ set(CMAKE_BUILD_TYPE "Release")
+-set(CMAKE_CXX_FLAGS "-std=c++11")
++set(CMAKE_CXX_FLAGS "-std=c++14")
+ set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g -pthread")
+ 
+ ######################
+diff --git a/src/lidar_odometry/utility.h b/src/lidar_odometry/utility.h
+index a393490..74103f0 100644
+--- a/src/lidar_odometry/utility.h
++++ b/src/lidar_odometry/utility.h
+@@ -14,7 +14,6 @@
+ #include <visualization_msgs/Marker.h>
+ #include <visualization_msgs/MarkerArray.h>
+ 
+-#include <opencv/cv.h>
+ 
+ #include <pcl/point_cloud.h>
+ #include <pcl/point_types.h>
+@@ -30,6 +29,7 @@
+ #include <pcl/filters/voxel_grid.h>
+ #include <pcl/filters/crop_box.h> 
+ #include <pcl_conversions/pcl_conversions.h>
++#include <opencv2/opencv.hpp>
+ 
+ #include <tf/LinearMath/Quaternion.h>
+ #include <tf/transform_listener.h>
+diff --git a/src/visual_odometry/visual_feature/feature_tracker_node.cpp b/src/visual_odometry/visual_feature/feature_tracker_node.cpp
+index 0ecd61c..a011b67 100644
+--- a/src/visual_odometry/visual_feature/feature_tracker_node.cpp
++++ b/src/visual_odometry/visual_feature/feature_tracker_node.cpp
+@@ -194,7 +194,7 @@ void img_callback(const sensor_msgs::ImageConstPtr &img_msg)
+             for (int i = 0; i < NUM_OF_CAM; i++)
+             {
+                 cv::Mat tmp_img = stereo_img.rowRange(i * ROW, (i + 1) * ROW);
+-                cv::cvtColor(show_img, tmp_img, CV_GRAY2RGB);
++                cv::cvtColor(show_img, tmp_img, cv::COLOR_GRAY2RGB);
+ 
+                 for (unsigned int j = 0; j < trackerData[i].cur_pts.size(); j++)
+                 {
+diff --git a/src/visual_odometry/visual_feature/parameters.h b/src/visual_odometry/visual_feature/parameters.h
+index 5a7d261..7b24042 100644
+--- a/src/visual_odometry/visual_feature/parameters.h
++++ b/src/visual_odometry/visual_feature/parameters.h
+@@ -13,7 +13,6 @@
+ #include <sensor_msgs/image_encodings.h>
+ #include <nav_msgs/Odometry.h>
+ 
+-#include <opencv/cv.h>
+ #include <cv_bridge/cv_bridge.h>
+ 
+ #include <pcl/point_cloud.h>
+@@ -28,6 +27,7 @@
+ #include <pcl/filters/voxel_grid.h>
+ #include <pcl/filters/crop_box.h> 
+ #include <pcl_conversions/pcl_conversions.h>
++#include <opencv2/opencv.hpp>
+ 
+ #include <tf/LinearMath/Quaternion.h>
+ #include <tf/transform_listener.h>
+diff --git a/src/visual_odometry/visual_loop/ThirdParty/DVision/BRIEF.cpp b/src/visual_odometry/visual_loop/ThirdParty/DVision/BRIEF.cpp
+index 6af73c4..49940d1 100644
+--- a/src/visual_odometry/visual_loop/ThirdParty/DVision/BRIEF.cpp
++++ b/src/visual_odometry/visual_loop/ThirdParty/DVision/BRIEF.cpp
+@@ -50,7 +50,7 @@ void BRIEF::compute(const cv::Mat &image,
+     cv::Mat aux;
+     if(image.depth() == 3)
+     {
+-      cv::cvtColor(image, aux, CV_RGB2GRAY);
++      cv::cvtColor(image, aux, cv::COLOR_RGB2GRAY);
+     }
+     else
+     {
+diff --git a/src/visual_odometry/visual_loop/keyframe.cpp b/src/visual_odometry/visual_loop/keyframe.cpp
+index 0f3f6b8..2df187b 100644
+--- a/src/visual_odometry/visual_loop/keyframe.cpp
++++ b/src/visual_odometry/visual_loop/keyframe.cpp
+@@ -212,7 +212,7 @@ bool KeyFrame::findConnection(KeyFrame* old_kf)
+                 cv::Mat old_img = old_kf->thumbnail;
+                 cv::hconcat(thumbnail, gap_image, gap_image);
+                 cv::hconcat(gap_image, old_img, gray_img);
+-                cvtColor(gray_img, loop_match_img, CV_GRAY2RGB);
++                cvtColor(gray_img, loop_match_img, cv::COLOR_GRAY2RGB);
+                 // plot features in current frame
+                 for(int i = 0; i< (int)matched_2d_cur.size(); i++)
+                 {
+@@ -237,10 +237,10 @@ bool KeyFrame::findConnection(KeyFrame* old_kf)
+                 int banner_height = (double)100 * MATCH_IMAGE_SCALE;
+                 cv::Mat notation(banner_height, thumbnail.size().width + gap + thumbnail.size().width, CV_8UC3, cv::Scalar(255, 255, 255));
+                 putText(notation, "current frame: " + to_string(index), 
+-                        cv::Point2f(5, banner_height - 5), CV_FONT_HERSHEY_SIMPLEX, 
++                        cv::Point2f(5, banner_height - 5), cv::FONT_HERSHEY_SIMPLEX, 
+                         MATCH_IMAGE_SCALE*2, cv::Scalar(255), 2);
+                 putText(notation, "previous frame: " + to_string(old_kf->index), 
+-                        cv::Point2f(5 + thumbnail.size().width + gap, banner_height - 5), CV_FONT_HERSHEY_SIMPLEX, 
++                        cv::Point2f(5 + thumbnail.size().width + gap, banner_height - 5), cv::FONT_HERSHEY_SIMPLEX, 
+                         MATCH_IMAGE_SCALE*2, cv::Scalar(255), 2);
+                 cv::vconcat(notation, loop_match_img, loop_match_img);
+                 // publish matched image
+diff --git a/src/visual_odometry/visual_loop/loop_detection.cpp b/src/visual_odometry/visual_loop/loop_detection.cpp
+index 4abb176..d3d06f8 100644
+--- a/src/visual_odometry/visual_loop/loop_detection.cpp
++++ b/src/visual_odometry/visual_loop/loop_detection.cpp
+@@ -61,7 +61,7 @@ int LoopDetector::detectLoop(KeyFrame* keyframe, int frame_index)
+     {
+         int feature_num = keyframe->keypoints.size();
+         cv::resize(keyframe->image, compressed_image, cv::Size(376, 240));
+-        putText(compressed_image, "feature_num:" + to_string(feature_num), cv::Point2f(10, 10), CV_FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(255));
++        putText(compressed_image, "feature_num:" + to_string(feature_num), cv::Point2f(10, 10), cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(255));
+         image_pool[frame_index] = compressed_image;
+     }
+     //first query; then add this frame into database!
+@@ -79,7 +79,7 @@ int LoopDetector::detectLoop(KeyFrame* keyframe, int frame_index)
+     {
+         loop_result = compressed_image.clone();
+         if (ret.size() > 0)
+-            putText(loop_result, "neighbour score:" + to_string(ret[0].Score), cv::Point2f(10, 50), CV_FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255));
++            putText(loop_result, "neighbour score:" + to_string(ret[0].Score), cv::Point2f(10, 50), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255));
+     }
+     // visual loop result 
+     if (DEBUG_IMAGE)
+@@ -89,7 +89,7 @@ int LoopDetector::detectLoop(KeyFrame* keyframe, int frame_index)
+             int tmp_index = ret[i].Id;
+             auto it = image_pool.find(tmp_index);
+             cv::Mat tmp_image = (it->second).clone();
+-            putText(tmp_image, "index:  " + to_string(tmp_index) + "loop score:" + to_string(ret[i].Score), cv::Point2f(10, 50), CV_FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255));
++            putText(tmp_image, "index:  " + to_string(tmp_index) + "loop score:" + to_string(ret[i].Score), cv::Point2f(10, 50), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255));
+             cv::hconcat(loop_result, tmp_image, loop_result);
+         }
+     }
+@@ -109,7 +109,7 @@ int LoopDetector::detectLoop(KeyFrame* keyframe, int frame_index)
+                     int tmp_index = ret[i].Id;
+                     auto it = image_pool.find(tmp_index);
+                     cv::Mat tmp_image = (it->second).clone();
+-                    putText(tmp_image, "loop score:" + to_string(ret[i].Score), cv::Point2f(10, 50), CV_FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(255));
++                    putText(tmp_image, "loop score:" + to_string(ret[i].Score), cv::Point2f(10, 50), cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(255));
+                     cv::hconcat(loop_result, tmp_image, loop_result);
+                 }
+             }
+@@ -146,7 +146,7 @@ void LoopDetector::addKeyFrameIntoVoc(KeyFrame* keyframe)
+     {
+         int feature_num = keyframe->keypoints.size();
+         cv::resize(keyframe->image, compressed_image, cv::Size(376, 240));
+-        putText(compressed_image, "feature_num:" + to_string(feature_num), cv::Point2f(10, 10), CV_FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(255));
++        putText(compressed_image, "feature_num:" + to_string(feature_num), cv::Point2f(10, 10), cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(255));
+         image_pool[keyframe->index] = compressed_image;
+     }
+ 
+diff --git a/src/visual_odometry/visual_loop/parameters.h b/src/visual_odometry/visual_loop/parameters.h
+index aad1fa7..9d30f96 100644
+--- a/src/visual_odometry/visual_loop/parameters.h
++++ b/src/visual_odometry/visual_loop/parameters.h
+@@ -20,7 +20,6 @@
+ #include <visualization_msgs/Marker.h>
+ #include <visualization_msgs/MarkerArray.h>
+ 
+-#include <opencv/cv.h>
+ #include <cv_bridge/cv_bridge.h>
+ 
+ #include <pcl/point_cloud.h>
+@@ -35,6 +34,7 @@
+ #include <pcl/filters/voxel_grid.h>
+ #include <pcl/filters/crop_box.h> 
+ #include <pcl_conversions/pcl_conversions.h>
++#include <opencv2/opencv.hpp>
+ 
+ #include <tf/LinearMath/Quaternion.h>
+ #include <tf/transform_listener.h>

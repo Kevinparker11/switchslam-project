@@ -10,3 +10,11 @@ Used by every `fusion_v4/stock_<method>/run_<method>.sh`.
 Run the tests with `python3 test_common.py` from this folder (needs a tmpfs at `/dev/shm`, as on any Ubuntu).
 
 The lock is a plain `flock` on `$HOME/.replay.lock`. Any other runner, in any language, that takes `flock` on the same file is serialised with these. `REPLAY_LOCK=` points it elsewhere (tests only).
+
+| File | What it does |
+|---|---|
+| `check_isa.sh` | scans compiled binaries for AVX-512 (neither the laptop's Ryzen 5 5600H nor the desktop's i7-12700 has it); prints the count of AVX/AVX2 instructions too, 0 means a plain x86-64 build |
+| `save_image.sh` | desktop: `docker save` to `<drive>/docker_images/<image>_<commit8>.tar.gz` with `.sha256`, `.size`, `.commit` |
+| `load_image.sh` | laptop: loads from the drive, a given file or `ssh://user@desktop`; checks the checksum, refuses when the free disk space is smaller than the image, checks the tag and the commit label. Never builds |
+| `make_slice.py`, `prep_pc_transfer.sh` | slices of the bags for the desktop, transfer folder on the drive |
+| `test_tools.py` | offline tests of `check_isa.sh` and `load_image.sh` |
