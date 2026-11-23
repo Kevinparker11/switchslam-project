@@ -13,15 +13,19 @@ ARG R3LIVE_COMMIT=6143a38537f28cb36eb24e9bbe2e39c8f7967157
 ARG LIVOX_DRIVER_COMMIT=3d240d5666129e1a3052e78ee8487a04b08fdda3
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-      build-essential cmake git ca-certificates procps binutils \
+# Three install steps, each with retries: a dropped download then only repeats that step, not all 580 packages.
+RUN apt-get update && apt-get install -y --no-install-recommends -o Acquire::Retries=10 --fix-missing \
+      build-essential cmake git ca-certificates procps binutils libpcl-dev libopencv-dev \
+ && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends -o Acquire::Retries=10 --fix-missing \
+      libboost-all-dev libeigen3-dev libcgal-dev libtbb-dev xvfb x11-utils \
       python3-numpy python3-yaml python3-scipy python3-opencv \
-      xvfb x11-utils \
+ && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends -o Acquire::Retries=10 --fix-missing \
       ros-noetic-tf ros-noetic-cv-bridge ros-noetic-pcl-conversions ros-noetic-pcl-ros \
       ros-noetic-common-msgs ros-noetic-message-generation ros-noetic-message-runtime \
       ros-noetic-rosbag ros-noetic-image-transport ros-noetic-compressed-image-transport \
       ros-noetic-rospy ros-noetic-roslaunch ros-noetic-rostopic ros-noetic-rosnode ros-noetic-velodyne-pointcloud ros-noetic-nodelet \
-      libpcl-dev libopencv-dev libboost-all-dev libeigen3-dev libcgal-dev libtbb-dev \
  && rm -rf /var/lib/apt/lists/*
 
 COPY livox_msgs_CMakeLists.txt livox_msgs_package.xml r3live_rig.patch /tmp/
