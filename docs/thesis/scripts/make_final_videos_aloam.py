@@ -1,9 +1,10 @@
 """Trajectory videos in the layout of make_final_videos.py (vidlib.make), with three lines: A-LOAM, VINS-Mono and F35.
 A-LOAM is the unmodified A-LOAM run separately on the same bag (figure_data/stock/<SEQ>_stock.csv.gz, aft_ columns), the same
 data as render_final_stock.py.  F35 and VINS-Mono alone come from the F35 live run.  Each path is aligned to the ground truth on
-its own (Umeyama SE(3), no scale).  VINS-Mono is drawn only where it stays on the plot.  The Farm route has no separate A-LOAM run
-yet, so it is not included.
-usage: python3 make_final_videos_aloam.py MF LC C02 CAVE GEODE        (FIG_DATA as in vidlib; videos go to $FIG_OUT or $FIG_DATA/vid_final,
+its own (Umeyama SE(3), no scale).  VINS-Mono is drawn only where it stays on the plot.  The Farm route uses the live Gazebo run of
+fusion_v4/stock_aloam/farm_stock.sh (the time span of the F35 log, see render_final_stock.py); its two runs have separate clocks, so A-LOAM is placed on
+the F35 time axis by the time since the start of each run.
+usage: python3 make_final_videos_aloam.py MF LC C02 CAVE GEODE FARM       (FIG_DATA as in vidlib; videos go to $FIG_OUT or $FIG_DATA/vid_final,
 file <SEQ>_F35_ALOAM.mp4 and <SEQ>_F35_ALOAM_last.png)"""
 import os, sys
 import numpy as np
@@ -25,7 +26,26 @@ def on_grid(t, ts, x):
     return np.stack([np.interp(t, ts, x[:, c]) for c in range(x.shape[1])], 1)
 
 
+def run_farm():
+    d, t, G, ts, qs, es = RS.farm_inputs(); rs = R.stat(es)
+    mode = d["mode"].astype(str).values
+    rel, rels = t - t[0], ts - ts[0]
+    qf, ef = V.aligned(R.P3(d, "fused_"), G); rf = R.stat(ef)
+    paths = [("A-LOAM", ORANGE, on_grid(rel, rels, qs), on_grid(rel, rels, es))]
+    vp = R.P3(d, "v_p"); good = np.isfinite(vp).all(1) & (np.abs(vp).max(1) < 1e5)
+    vp2 = vp.copy(); vp2[~good] = np.nan
+    qv, ev = V.aligned(vp2, G); rv = R.stat(ev)
+    paths.append(("VINS-Mono", RED, qv, ev))
+    paths.append(("F35", GREEN, qf, ef))
+    foot = ("Paths aligned to the ground truth, each on its own (Umeyama SE(3), no scale); front end only; first " + ("%.0f" % (t[-1] - t[0])) + " s. A-LOAM: unmodified A-LOAM, separate run, same route. VINS-Mono: from the F35 run.")
+    title = "Farm L route (Gazebo, Husky): F35 and A-LOAM, front end only: F35 RMSE %.2f / max %.2f m, A-LOAM RMSE %.2f / max %.2f m" % (rf + rs)
+    print("FARM", "F35 %.2f / %.2f | A-LOAM %.2f / %.2f" % (rf + rs), flush=True)
+    V.make(os.path.join(OUT, "FARM_F35_ALOAM.mp4"), title, "Top-down view (the Gazebo world itself was not recorded)", t, mode, G, paths, foot, None, None, pad=8.0)
+
+
 def run(seq):
+    if seq == "FARM":
+        return run_farm()
     name, gt_rel, _ = RS.CFG[seq]
     d = R.rcsv("%s/%s_switching_log_v2_F26_kf_run1.csv" % (R.K, seq))
     stock = R.rcsv("%s/stock/%s_stock.csv" % (R.S, seq))
@@ -58,7 +78,7 @@ def run(seq):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2 or any(s not in RS.CFG for s in sys.argv[1:]):
+    if len(sys.argv) < 2 or any(s not in RS.CFG and s != "FARM" for s in sys.argv[1:]):
         sys.exit(__doc__)
     for s in sys.argv[1:]:
         run(s)
