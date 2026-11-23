@@ -1,0 +1,39 @@
+diff --git a/r3live/src/loam/include/common_lib.h b/r3live/src/loam/include/common_lib.h
+index 4ee294f..bf5f680 100644
+--- a/r3live/src/loam/include/common_lib.h
++++ b/r3live/src/loam/include/common_lib.h
+@@ -58,7 +58,9 @@ static const Eigen::Matrix3f Eye3f(Eigen::Matrix3f::Identity());
+ static const Eigen::Vector3d Zero3d(0, 0, 0);
+ static const Eigen::Vector3f Zero3f(0, 0, 0);
+ // Eigen::Vector3d Lidar_offset_to_IMU(0.05512, 0.02226, 0.0297); // Horizon
+-static const Eigen::Vector3d Lidar_offset_to_IMU(0.04165, 0.02326, -0.0284); // Avia
++// Upstream: static const Eigen::Vector3d Lidar_offset_to_IMU(0.04165, 0.02326, -0.0284); // Avia (the authors' rig)
++// Now one variable for all files, set from the ROS parameter r3live_lio/lidar_offset_to_imu (defined in r3live.cpp, default = the upstream value)
++extern Eigen::Vector3d Lidar_offset_to_IMU;
+ 
+ struct Pose6D
+ {
+diff --git a/r3live/src/r3live.cpp b/r3live/src/r3live.cpp
+index a8015f9..f917cd9 100644
+--- a/r3live/src/r3live.cpp
++++ b/r3live/src/r3live.cpp
+@@ -88,6 +88,7 @@ Camera_Lidar_queue g_camera_lidar_queue;
+ MeasureGroup Measures;
+ StatesGroup g_lio_state;
+ std::string data_dump_dir = std::string("/mnt/0B3B134F0B3B134F/color_temp_r3live/");
++Eigen::Vector3d Lidar_offset_to_IMU(0.04165, 0.02326, -0.0284);
+ 
+ int main(int argc, char **argv)
+ {
+@@ -95,6 +96,11 @@ int main(int argc, char **argv)
+     Common_tools::printf_software_version();
+     Eigen::initParallel();
+     ros::init(argc, argv, "R3LIVE_main");
++    {
++        std::vector<double> lidar_offset_to_imu;
++        if (ros::param::get("r3live_lio/lidar_offset_to_imu", lidar_offset_to_imu) && lidar_offset_to_imu.size() == 3)
++            Lidar_offset_to_IMU = Eigen::Vector3d(lidar_offset_to_imu[0], lidar_offset_to_imu[1], lidar_offset_to_imu[2]);
++    }
+     R3LIVE * fast_lio_instance = new R3LIVE();
+     ros::Rate rate(5000);
+     bool status = ros::ok();

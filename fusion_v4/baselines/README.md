@@ -18,3 +18,7 @@ The lock is a plain `flock` on `$HOME/.replay.lock`. Any other runner, in any la
 | `load_image.sh` | laptop: loads from the drive, a given file or `ssh://user@desktop`; checks the checksum, refuses when the free disk space is smaller than the image, checks the tag and the commit label. Never builds |
 | `make_slice.py`, `prep_pc_transfer.sh` | slices of the bags for the desktop, transfer folder on the drive |
 | `test_tools.py` | offline tests of `check_isa.sh` and `load_image.sh` |
+
+## Camera rectification (MEI to pinhole)
+
+`mei_model.py` (projection of the camodocal MEI model, rectification maps), `mei_rectify.py` (ROS node, used inside the R3LIVE image, reusable for R2LIVE and FAST-LIVO) and `test_rectify.py`. The output image has the size and principal point of the input and no distortion, so the camera-IMU extrinsic of the original camera is also the extrinsic of the rectified one.
