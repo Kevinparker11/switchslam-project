@@ -6,7 +6,7 @@ Everything `docs/thesis/scripts/render_final.py` and `render_aloam_alone.py` nee
 cd docs/thesis/scripts
 FIG_OUT=/tmp/regen python3 render_final.py MF LC C02 CAVE GEODE FARM     # the six F35 images (pixel-identical to ../figures_final/)
 FIG_OUT=/tmp/regen python3 render_aloam_alone.py LC ../figure_data/data/for_claude7/*.csv.gz   # A-LOAM alone, Long Corridor
-FIG_OUT=/tmp/regen python3 render_final_stock.py MF LC C02 CAVE GEODE            # F35 with the stock A-LOAM line
+FIG_OUT=/tmp/regen python3 render_final_stock.py MF LC C02 CAVE GEODE FARM       # F35 with the stock A-LOAM line
 ```
 
 **Names.** The repo calls the final version `F26` (tag `F26_kf_run1`); the thesis report calls it F35. Same runs, same numbers (see `docs/thesis/Report_Corrections_Log.md`, A10).
@@ -40,3 +40,5 @@ A new run recorded on your own machine (including the stock A-LOAM runs of `fusi
 | `stock/C02_stock.csv.gz` | run log | C02, stock A-LOAM run 1 (`run_stock_aloam.sh`, `aft_` columns = stock A-LOAM pose) | 0.33x | 3570137 | `76a2080f28b4c0a069b80f1a59f10ca47c7527f3cb035d03db85eca1da85ad27` |
 | `stock/CAVE_stock.csv.gz` | run log | CAVE, stock A-LOAM run 1 (`run_stock_aloam.sh`, `aft_` columns = stock A-LOAM pose) | 0.5x | 3920382 | `0c36a85b9ed4bfd66035cb102ead34ef10c2c3ad1e1b1b7f1795feed048bc357` |
 | `stock/GEODE_stock.csv.gz` | run log | GEODE, stock A-LOAM run 1 (`run_stock_aloam.sh`, `aft_` columns = stock A-LOAM pose) | 0.5x | 1394272 | `bcac1a521dbd426c7a908365399ca548453741d4153a79d68ed3bc33d1b320e3` |
+| `stock/FARM_stock_aft.txt.gz` | run log | FARM, unmodified A-LOAM scan-to-map output (`/aft_mapped_to_init`), live Gazebo run, `fusion_v4/stock_aloam/farm_stock.sh`, TUM text | live | 127343 | `52c0586c8f65e949c179be6cc78074d7aef417731c9079da3caaa502dd2505d7` |
+| `stock/FARM_stock_gt.txt.gz` | ground truth | FARM, Gazebo ground truth of that run, TUM text | live | 161605 | `0b787f1581b9006f23a330cbad65aac77488567228780a8295a2518e756e2dd6` |
