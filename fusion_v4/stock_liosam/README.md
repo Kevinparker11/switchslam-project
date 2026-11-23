@@ -48,6 +48,8 @@ Sequences: `mf`, `lc`, `c02`, `cave02`, `geode` (settings in `seq/<name>.env`; b
 | `liosam.log`, `crashes.txt` | node output; number of respawns (a respawn restarts the map, so a run with one is reported as a failure) |
 | `preflight.txt`, `adapter_used.txt`, `cloud_fields.txt` | what the bag provides and what was done to it |
 
+Two guards from `../baselines/common.sh` run before anything else. If `BAGS_ROOT` is unset, the runner looks for `laptop_bags` on a mounted drive under `/media/$USER` ("One Touch2", then "One Touch1", then any other), and it refuses to start unless the bag folder sits on a mounted drive (`mountpoint -q` on a parent other than `/`). An unplugged drive would otherwise give the container an empty folder made by `docker -v`. `ALLOW_LOCAL_BAGS=1` accepts bags on the internal disk. The preflight and every run hold `flock ~/.replay.lock` (the same file the F35 runner locks), so a second replay started from another terminal waits and prints that it is waiting.
+
 The score is full-span ATE RMSE and max, Umeyama SE(3) without scale, from the same loader and alignment as the other runs (`score_tum.py`; the host script prints it).
 
 ## Rules fixed before the first run (change them before running, not after)
