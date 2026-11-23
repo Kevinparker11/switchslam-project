@@ -29,9 +29,10 @@ for n in mf lc c02 cave02 geode; do
   ( source "$REPO/fusion_v4/stock_liosam/seq/$n.env"
     for b in "$BAG_DIR"/*.bag; do
       out="$T/rosbag_info/${n}_$(basename "$b" .bag).txt"
-      [ -s "$out" ] && { echo "have $out"; continue; }
+      grep -q '^path:' "$out" 2>/dev/null && { echo "have $out"; continue; }     # a real rosbag info starts with "path:"
       docker run --rm -v "$BAG_DIR":/bags:ro --entrypoint bash liosam_stock \
-        -c "source /opt/ros/noetic/setup.bash; rosbag info /bags/$(basename "$b")" > "$out" 2>&1 && echo "wrote $out"
+        -c "source /opt/ros/noetic/setup.bash; rosbag info /bags/$(basename "$b")" > "$out" 2>&1
+      if grep -q '^path:' "$out"; then echo "wrote $out"; else echo "FAILED, content of $out:"; cat "$out"; fi
     done )
 done
 
