@@ -17,7 +17,9 @@ set -u
 C=switchslam_gpu_v2
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd); FUSION=$(cd "$HERE/.." && pwd); REPO=$(cd "$FUSION/.." && pwd)
 ROS="source /opt/ros/noetic/setup.bash && source /root/catkin_ws/devel/setup.bash"
-IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $C 2>/dev/null)
+# the container sits on two networks; ROS uses the default bridge (172.17.x), as in the earlier live runs
+gpu_ip() { local all; all=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}' $C 2>/dev/null | tr ' ' '\n' | grep .); echo "$all" | grep '^172\.17\.' | head -1 || true; [ -n "$(echo "$all" | grep '^172\.17\.')" ] || echo "$all" | head -1; }
+IP=$(gpu_ip)
 STEP=${1:-}
 need_ip() { [ -n "$IP" ] || { echo "the container $C is not running or has no IP: run step 1 (setup) first"; exit 1; }; }
 
@@ -25,7 +27,7 @@ case "$STEP" in
 1|setup)
   docker restart $C >/dev/null || exit 1
   sleep 15
-  IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $C)
+  IP=$(gpu_ip)
   echo "container IP: $IP"
   LEFT=$(docker exec $C bash -c "ps -eo pid,etime,args | grep -E 'ros|gz|alaser|ascan|fusion|logger|driver' | grep -v grep")
   [ -z "$LEFT" ] && echo "no leftover ROS processes (good)" || { echo "LEFTOVERS, stop here:"; echo "$LEFT"; exit 1; }
