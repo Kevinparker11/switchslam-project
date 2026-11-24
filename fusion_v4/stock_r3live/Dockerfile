@@ -26,6 +26,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends -o Acquire::Ret
       ros-noetic-common-msgs ros-noetic-message-generation ros-noetic-message-runtime \
       ros-noetic-rosbag ros-noetic-image-transport ros-noetic-compressed-image-transport \
       ros-noetic-rospy ros-noetic-roslaunch ros-noetic-rostopic ros-noetic-rosnode ros-noetic-velodyne-pointcloud ros-noetic-nodelet \
+      ros-noetic-eigen-conversions \
  && rm -rf /var/lib/apt/lists/*
 
 COPY livox_msgs_CMakeLists.txt livox_msgs_package.xml r3live_rig.patch /tmp/
