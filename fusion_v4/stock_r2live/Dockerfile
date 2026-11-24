@@ -34,18 +34,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends -o Acquire::Ret
 
 COPY livox_msgs_CMakeLists.txt livox_msgs_package.xml r2live_noetic_build.patch r2live_rig.patch /tmp/
 SHELL ["/bin/bash", "-c"]
-RUN mkdir -p /root/r2_ws/src && cd /root/r2_ws/src \
+# livox_ros_driver (messages only) in its own workspace: r2live's package.xml does not declare it as a dependency, so in one workspace catkin may
+# configure r2live before the messages exist. r2_ws is built on top of this workspace and its setup.bash chains to it at run time.
+RUN mkdir -p /root/livox_ws/src/livox_ros_driver/msg && cd /root/livox_ws/src \
  && git clone https://github.com/Livox-SDK/livox_ros_driver.git /tmp/livox_up && git -C /tmp/livox_up checkout ${LIVOX_DRIVER_COMMIT} \
- && mkdir -p livox_ros_driver/msg && cp /tmp/livox_up/livox_ros_driver/msg/CustomPoint.msg /tmp/livox_up/livox_ros_driver/msg/CustomMsg.msg livox_ros_driver/msg/ \
+ && cp /tmp/livox_up/livox_ros_driver/msg/CustomPoint.msg /tmp/livox_up/livox_ros_driver/msg/CustomMsg.msg livox_ros_driver/msg/ \
  && cp /tmp/livox_msgs_CMakeLists.txt livox_ros_driver/CMakeLists.txt && cp /tmp/livox_msgs_package.xml livox_ros_driver/package.xml \
  && rm -rf /tmp/livox_up \
+ && cd /root/livox_ws && source /opt/ros/noetic/setup.bash && catkin_make -DCMAKE_BUILD_TYPE=Release
+RUN mkdir -p /root/r2_ws/src && cd /root/r2_ws/src \
  && git clone https://github.com/hku-mars/r2live.git && cd r2live && git checkout ${R2LIVE_COMMIT} \
  && git apply /tmp/r2live_noetic_build.patch && git apply /tmp/r2live_rig.patch \
  && git rev-parse HEAD > /root/r2_ws/COMMIT && git status --short >> /root/r2_ws/COMMIT \
- && cd /root/r2_ws && source /opt/ros/noetic/setup.bash \
- && catkin_make --pkg livox_ros_driver camera_model -DCMAKE_BUILD_TYPE=Release \
- && source devel/setup.bash \
- && catkin_make --pkg feature_tracker r2live -DCMAKE_BUILD_TYPE=Release -j2
+ && cd /root/r2_ws && source /root/livox_ws/devel/setup.bash \
+ && catkin_make --pkg camera_model feature_tracker r2live -DCMAKE_BUILD_TYPE=Release -j2
 
 LABEL baseline.method="r2live" baseline.upstream_commit="e719ca266ab53ca8915ca4e1416152993f2a55d7"
 WORKDIR /root/r2_ws
