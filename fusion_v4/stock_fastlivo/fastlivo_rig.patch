@@ -1,0 +1,13 @@
+diff --git a/src/laserMapping.cpp b/src/laserMapping.cpp
+index b4f7f6b..59ef70c 100755
+--- a/src/laserMapping.cpp
++++ b/src/laserMapping.cpp
+@@ -916,7 +916,7 @@ void publish_odometry(const ros::Publisher & pubOdomAftMapped)
+ {
+     odomAftMapped.header.frame_id = "camera_init";
+     odomAftMapped.child_frame_id = "aft_mapped";
+-    odomAftMapped.header.stamp = ros::Time::now();//.ros::Time()fromSec(last_timestamp_lidar);
++    odomAftMapped.header.stamp = ros::Time().fromSec(LidarMeasures.last_update_time);   // rig patch: time of the published state (was ros::Time::now(), the clock at publication)
+     set_posestamp(odomAftMapped.pose.pose);
+     // odomAftMapped.twist.twist.linear.x = state_point.vel(0);
+ // odomAftMapped.twist.twist.linear.y = state_point.vel(1);

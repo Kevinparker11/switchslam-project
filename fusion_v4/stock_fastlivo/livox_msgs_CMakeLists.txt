@@ -1,0 +1,8 @@
+# Message-only build of livox_ros_driver (the two .msg files of the pinned upstream commit). R3LIVE needs the package at build time
+# because its front end includes livox_ros_driver/CustomMsg.h; the Livox driver itself (and the Livox SDK) is not built, no Livox hardware is used.
+cmake_minimum_required(VERSION 3.0.2)
+project(livox_ros_driver)
+find_package(catkin REQUIRED COMPONENTS roscpp rospy std_msgs sensor_msgs message_generation)
+add_message_files(FILES CustomPoint.msg CustomMsg.msg)
+generate_messages(DEPENDENCIES std_msgs)
+catkin_package(CATKIN_DEPENDS roscpp rospy std_msgs message_runtime)

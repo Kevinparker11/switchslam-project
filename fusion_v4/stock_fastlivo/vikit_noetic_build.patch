@@ -1,0 +1,48 @@
+diff --git a/vikit_common/src/homography.cpp b/vikit_common/src/homography.cpp
+index b4926ab..1598035 100644
+--- a/vikit_common/src/homography.cpp
++++ b/vikit_common/src/homography.cpp
+@@ -45,7 +45,7 @@ calcFromMatches()
+   }
+ 
+   // TODO: replace this function to remove dependency from opencv!
+-  cv::Mat cvH = cv::findHomography(src_pts, dst_pts, CV_RANSAC, 2./error_multiplier2);
++  cv::Mat cvH = cv::findHomography(src_pts, dst_pts, cv::RANSAC, 2./error_multiplier2);
+   H_c2_from_c1(0,0) = cvH.at<double>(0,0);
+   H_c2_from_c1(0,1) = cvH.at<double>(0,1);
+   H_c2_from_c1(0,2) = cvH.at<double>(0,2);
+diff --git a/vikit_common/src/img_align.cpp b/vikit_common/src/img_align.cpp
+index 3fcd8b5..cb126ca 100644
+--- a/vikit_common/src/img_align.cpp
++++ b/vikit_common/src/img_align.cpp
+@@ -234,7 +234,7 @@ finishIteration()
+ 
+   if(display_)
+   {
+-    cv::namedWindow("residuals", CV_WINDOW_AUTOSIZE);
++    cv::namedWindow("residuals", cv::WINDOW_AUTOSIZE);
+     cv::imshow("residuals", resimg_*3);
+     cv::waitKey(0);
+   }
+@@ -434,7 +434,7 @@ finishIteration()
+ 
+   if(display_)
+   {
+-    cv::namedWindow("residuals", CV_WINDOW_AUTOSIZE);
++    cv::namedWindow("residuals", cv::WINDOW_AUTOSIZE);
+     cv::imshow("residuals", resimg_*3);
+     cv::waitKey(0);
+   }
+diff --git a/vikit_common/src/pinhole_camera.cpp b/vikit_common/src/pinhole_camera.cpp
+index a620bce..406c796 100644
+--- a/vikit_common/src/pinhole_camera.cpp
++++ b/vikit_common/src/pinhole_camera.cpp
+@@ -109,7 +109,7 @@ void PinholeCamera::
+ undistortImage(const cv::Mat& raw, cv::Mat& rectified)
+ {
+   if(distortion_)
+-    cv::remap(raw, rectified, undist_map1_, undist_map2_, CV_INTER_LINEAR);
++    cv::remap(raw, rectified, undist_map1_, undist_map2_, cv::INTER_LINEAR);
+   else
+     rectified = raw.clone();
+ }
