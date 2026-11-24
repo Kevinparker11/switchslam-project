@@ -170,6 +170,85 @@ class Imu(unittest.TestCase):
         self.assertGreater(r["gravity_err_deg"], 20)
 
 
+VOX = """
+  # voxel filter paprams
+  odometrySurfLeafSize: 0.4                     # default: 0.4 - outdoor, 0.2 - indoor
+  mappingCornerLeafSize: 0.2                    # default: 0.2 - outdoor, 0.1 - indoor
+  mappingSurfLeafSize: 0.4                      # default: 0.4 - outdoor, 0.2 - indoor
+  surroundingkeyframeAddingDistThreshold: 1.0   # meters, regulate keyframe adding threshold
+  loopClosureEnableFlag: true
+"""
+
+
+class Profile(unittest.TestCase):
+    def base(self):
+        return BASE.replace("  loopClosureEnableFlag: true\n", "") + VOX if "loopClosureEnableFlag" in BASE else BASE + VOX
+
+    def test_upstream_profile_leaves_voxels(self):
+        text, ch = mp.make(self.base(), np.eye(3), np.zeros(3), "/p", "/i")
+        y = yaml.safe_load(text)["lio_sam"]
+        self.assertEqual((y["odometrySurfLeafSize"], y["mappingCornerLeafSize"], y["mappingSurfLeafSize"]), (0.4, 0.2, 0.4))
+        self.assertNotIn("mappingSurfLeafSize", [c[0] for c in ch])
+
+    def test_indoor_profile_takes_the_values_from_the_comments(self):
+        text, ch = mp.make(self.base(), np.eye(3), np.zeros(3), "/p", "/i", "indoor")
+        y = yaml.safe_load(text)["lio_sam"]
+        self.assertEqual((y["odometrySurfLeafSize"], y["mappingCornerLeafSize"], y["mappingSurfLeafSize"]), (0.2, 0.1, 0.2))
+        self.assertEqual(y["surroundingkeyframeAddingDistThreshold"], 1.0)
+        changed = {c[0]: (c[1], c[2]) for c in ch}
+        self.assertEqual(changed["mappingCornerLeafSize"], ("0.2", "0.1"))
+        self.assertIn("# default: 0.4 - outdoor, 0.2 - indoor", text)      # the comment stays
+
+    def test_indoor_without_documented_values_is_an_error(self):
+        with self.assertRaises(ValueError):
+            mp.make(BASE, np.eye(3), np.zeros(3), "/p", "/i", "indoor")
+        with self.assertRaises(ValueError):
+            mp.make(self.base(), np.eye(3), np.zeros(3), "/p", "/i", "outdoorish")
+
+    def test_real_upstream_file_if_present(self):
+        p = os.environ.get("LIOSAM_PARAMS", "/root/lio_ws/src/LIO-SAM/config/params.yaml")
+        if not os.path.exists(p):
+            self.skipTest("upstream params.yaml not here")
+        with open(p) as f:
+            txt = f.read()
+        self.assertEqual(mp.documented_indoor(txt),
+                         {"odometrySurfLeafSize": "0.2", "mappingCornerLeafSize": "0.1", "mappingSurfLeafSize": "0.2"})
+
+
+class PacketTime(unittest.TestCase):
+    def test_header_is_first_packet(self):
+        f = np.zeros(50)
+        l = np.full(50, 0.0993)
+        r = li.packet_time_report(f, l)
+        self.assertEqual((r["header_is"], r["time"]), ("first", "ok"))
+
+    def test_header_is_last_packet(self):
+        r = li.packet_time_report(np.full(50, -0.0993), np.zeros(50))
+        self.assertEqual((r["header_is"], r["time"]), ("last", "negative"))
+        self.assertAlmostEqual(r["time_min"], -0.0993, places=4)
+
+    def test_no_packets(self):
+        self.assertEqual(li.packet_time_report([], [])["time"], "empty")
+
+
+class Stamps(unittest.TestCase):
+    def test_regular(self):
+        r = li.stamp_report(100.0 + np.arange(2000) * 0.005)
+        self.assertAlmostEqual(r["rate_hz"], 200.0, places=3)
+        self.assertEqual((r["nonincreasing"], r["gaps_over_3x"]), (0, 0))
+
+    def test_backwards_duplicate_and_gap(self):
+        t = list(100.0 + np.arange(1000) * 0.005)
+        t[100] = t[99]                 # duplicate
+        t[200] = t[198]                # goes back
+        t = np.array(t)
+        t[500:] += 0.2                 # 200 ms gap
+        r = li.stamp_report(t)
+        self.assertEqual(r["nonincreasing"], 2)
+        self.assertGreaterEqual(r["gaps_over_3x"], 1)
+        self.assertGreater(r["dt_max_ms"], 200.0)
+
+
 class Scorer(unittest.TestCase):
     def test_rigid_offset_gives_zero_error(self):
         t = np.arange(0, 60, 0.1)

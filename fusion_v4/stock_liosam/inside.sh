@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Runs INSIDE the liosam_stock container (started by run_liosam.sh): one stock LIO-SAM run on one sequence.
 # Input through the environment: IMU_TOPIC, PACKETS_TOPIC or POINTS_TOPIC, RATE, BAGS (names, in play order),
-# EXTR (laser_to_imu yaml), ADAPT_NAN, ADAPT_TIME (0/1). Output files go to /out.
+# EXTR (laser_to_imu yaml), ADAPT_NAN, ADAPT_TIME (0/1), PROFILE (upstream | indoor, see make_params.py). Output files go to /out.
 # the ROS setup scripts read unset variables (ROS_MASTER_URI), so nounset is switched on only after sourcing
 set +u
 source /opt/ros/noetic/setup.bash
@@ -50,7 +50,8 @@ else
 fi
 
 python3 $S/make_params.py --base /root/lio_ws/src/LIO-SAM/config/params.yaml --extrinsics "$(realpath "$EXTR")" \
-  --points-topic "$CLOUD" --imu-topic "$IMU_TOPIC" --out "$OUT/params.yaml" > params_changes.txt || exit 1
+  --points-topic "$CLOUD" --imu-topic "$IMU_TOPIC" --out "$OUT/params.yaml" --profile "${PROFILE:-upstream}" > params_changes.txt || exit 1
+echo "${PROFILE:-upstream}" > profile.txt
 cat > run.launch <<EOF
 <launch>
   <rosparam file="$OUT/params.yaml" command="load"/>
