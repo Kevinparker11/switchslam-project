@@ -35,6 +35,7 @@ Scored output: the pose R3LIVE sends on `/tf` (`world` to `/aft_mapped`, the IMU
 
 ## Build notes
 
+- `r3live_noetic_build.patch` (one line): `pcl_filters` added to the link libraries of `r3live_mapping`. The upstream link line lists only `pcl_common` and `pcl_io`, and on Noetic (PCL 1.10) the link fails with an undefined `pcl::VoxelGrid<PointXYZINormal>::applyFilter`. Found by the first desktop build.
 - `livox_ros_driver`: the two `.msg` files of upstream commit `3d240d5666129e1a3052e78ee8487a04b08fdda3` in a message-only package (`livox_msgs_*`), built first. The Livox driver and SDK are not built.
 - Built targets: `r3live_LiDAR_front_end` and `r3live_mapping`. Not built: `r3live_meshing` (needs OpenMVS, not used) and the calibration tools. CGAL (`libcgal-dev`) is required by the configure step.
 - No `-march` flag. r3live's CMake uses `-O3 -msse2 -msse3`, available on every x86-64 CPU here. `../baselines/check_isa.sh` fails on any AVX-512 instruction. The base is `ros@sha256:72b8bc59...` (the digest of the laptop's `ros:noetic`).

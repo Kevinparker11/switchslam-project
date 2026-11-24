@@ -206,8 +206,16 @@ class Build(unittest.TestCase):
             self.assertIn(needle, s)
         self.assertNotIn("-march", s)
 
+    def test_dockerfile_applies_both_patches_in_order(self):
+        a = self.df.index("git apply /tmp/r3live_noetic_build.patch")
+        b = self.df.index("git apply /tmp/r3live_rig.patch")
+        self.assertLess(a, b)
+        self.assertIn("r3live_noetic_build.patch r3live_rig.patch /tmp/", self.df)
+
     @unittest.skipUnless(os.path.isdir(os.path.join(UPSTREAM_SRC, "r3live")), "no upstream clone")
     def test_patch_applies_to_the_pinned_source(self):
+        r = subprocess.run(["git", "-C", UPSTREAM_SRC, "apply", "--check", os.path.join(HERE, "r3live_noetic_build.patch")], capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
         r = subprocess.run(["git", "-C", UPSTREAM_SRC, "apply", "--check", os.path.join(HERE, "r3live_rig.patch")], capture_output=True, text=True)
         self.assertEqual(r.returncode, 0, r.stderr)
         r = subprocess.run(["git", "-C", UPSTREAM_SRC, "rev-parse", "HEAD"], capture_output=True, text=True)
