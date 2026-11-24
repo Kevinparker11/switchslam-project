@@ -49,8 +49,9 @@ RUN mkdir -p /root/r2_ws/src && cd /root/r2_ws/src \
  && git apply /tmp/r2live_noetic_build.patch && git apply /tmp/r2live_rig.patch \
  && git rev-parse HEAD > /root/r2_ws/COMMIT && git status --short >> /root/r2_ws/COMMIT \
  && cd /root/r2_ws && source /root/livox_ws/devel/setup.bash \
- && catkin_make --pkg camera_model feature_tracker r2live -DCMAKE_BUILD_TYPE=Release --make-args r2live_generate_messages \
- && catkin_make --pkg camera_model feature_tracker r2live -DCMAKE_BUILD_TYPE=Release -j2
+ && catkin_make --pkg camera_model feature_tracker -DCMAKE_BUILD_TYPE=Release -j2 \
+ && catkin_make --pkg r2live -DCMAKE_BUILD_TYPE=Release --make-args r2live_generate_messages \
+ && catkin_make --pkg r2live -DCMAKE_BUILD_TYPE=Release -j2
 
 LABEL baseline.method="r2live" baseline.upstream_commit="e719ca266ab53ca8915ca4e1416152993f2a55d7"
 WORKDIR /root/r2_ws
