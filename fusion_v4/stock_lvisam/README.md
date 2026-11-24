@@ -51,9 +51,9 @@ LiDAR side as for LIO-SAM: ring, per-point `time`, `is_dense`; the same `preflig
 
 No `-march` flag anywhere: LVI-SAM's `CMakeLists.txt` has none, Ceres is Ubuntu's `libceres-dev` (1.14), GTSAM is the borglab PPA package or a source build with `GTSAM_BUILD_WITH_MARCH_NATIVE=OFF`. The base is `ros@sha256:72b8bc59...` (the digest of the laptop's `ros:noetic`), so loading the image on the laptop adds only the new layers. Both machines (i7-12700 and Ryzen 5 5600H) have AVX2, FMA and BMI2 and neither has AVX-512; `../baselines/check_isa.sh` fails on any AVX-512 instruction in the built binaries.
 
-## Rule fixed before the first run (per-method failure rule, not yet agreed)
+## Rule fixed before the first run (per-method failure rule, agreed 24 Nov 2026)
 
-LVI-SAM maps at most every 0.15 s (`mappingProcessInterval`), the same as LIO-SAM, so at 10 Hz about one pose per two scans. Proposal, same as for LIO-SAM: a run is **failed** if a node died or respawned, or fewer than 40% of the LiDAR scans produced a pose (80% of the documented maximum), or the maximum error exceeds 100 m. VINS estimator reboots are counted and reported, not a failure by themselves. Scans are counted as the LiDAR messages of the bag. Not applicable if the preflight says so. Three runs per sequence. **Waiting for the owner's OK before the first scored run.**
+LVI-SAM maps at most every 0.15 s (`mappingProcessInterval`), the same as LIO-SAM, so at 10 Hz about one pose per two scans. Rule, same as for LIO-SAM: a run is **failed** if a node died or respawned, or fewer than 40% of the LiDAR scans produced a pose (80% of the documented maximum), or the maximum error exceeds 100 m. VINS estimator reboots are counted and reported, not a failure by themselves. Scans are counted as the LiDAR messages of the bag. Not applicable if the preflight says so. Three runs per sequence. **Agreed by the owner on 24 Nov 2026, before the first scored run.**
 
 ## Desktop: build and smoke test (never scored)
 

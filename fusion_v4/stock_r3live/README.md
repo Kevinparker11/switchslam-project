@@ -41,9 +41,9 @@ Scored output: the pose R3LIVE sends on `/tf` (`world` to `/aft_mapped`, the IMU
 - No `-march` flag. r3live's CMake uses `-O3 -msse2 -msse3`, available on every x86-64 CPU here. `../baselines/check_isa.sh` fails on any AVX-512 instruction. The base is `ros@sha256:72b8bc59...` (the digest of the laptop's `ros:noetic`).
 - Upstream warns that OpenCV at build and at run time must be the same version. Both are the image's OpenCV 4.2.
 
-## Rule fixed before the first run (per-method failure rule, not yet agreed)
+## Rule fixed before the first run (per-method failure rule, agreed 24 Nov 2026)
 
-R3LIVE runs one LIO update per LiDAR scan (no throttle), so the documented rate is the scan rate. Proposal: a run is **failed** if a node died (both nodes are `required`, so one death stops the other), or fewer than 80% of the LiDAR scans produced a pose, or the maximum error exceeds 100 m. Scans are counted as the LiDAR messages of the bag. VIO messages "Remove_outlier_using_ransac_pnp error" and "Catching a cv exception" are R3LIVE's own log lines when too few points are tracked; it catches them and continues, so they are counted in `vio_pnp_errors.txt` and reported, not a failure by themselves. Not applicable if the preflight says so (no per-point time, no camera topic). Three runs per sequence. **Waiting for the owner's OK before the first scored run.**
+R3LIVE runs one LIO update per LiDAR scan (no throttle), so the documented rate is the scan rate. Rule: a run is **failed** if a node died (both nodes are `required`, so one death stops the other), or fewer than 80% of the LiDAR scans produced a pose, or the maximum error exceeds 100 m. Scans are counted as the LiDAR messages of the bag. VIO messages "Remove_outlier_using_ransac_pnp error" and "Catching a cv exception" are R3LIVE's own log lines when too few points are tracked; it catches them and continues, so they are counted in `vio_pnp_errors.txt` and reported, not a failure by themselves. Not applicable if the preflight says so (no per-point time, no camera topic). Three runs per sequence. **Agreed by the owner on 24 Nov 2026, before the first scored run.**
 
 ## Desktop: build and smoke test (never scored)
 
