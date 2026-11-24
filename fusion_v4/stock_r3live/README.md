@@ -43,7 +43,7 @@ Scored output: the pose R3LIVE sends on `/tf` (`world` to `/aft_mapped`, the IMU
 
 ## Rule fixed before the first run (per-method failure rule, not yet agreed)
 
-R3LIVE runs one LIO update per LiDAR scan (no throttle), so the documented rate is the scan rate. Proposal: a run is **failed** if a node died (both nodes are `required`, so one death stops the other), or fewer than 80% of the LiDAR scans produced a pose, or the maximum error exceeds 100 m. Scans are counted as the LiDAR messages of the bag. Not applicable if the preflight says so (no per-point time, no camera topic). Three runs per sequence. **Waiting for the owner's OK before the first scored run.**
+R3LIVE runs one LIO update per LiDAR scan (no throttle), so the documented rate is the scan rate. Proposal: a run is **failed** if a node died (both nodes are `required`, so one death stops the other), or fewer than 80% of the LiDAR scans produced a pose, or the maximum error exceeds 100 m. Scans are counted as the LiDAR messages of the bag. VIO messages "Remove_outlier_using_ransac_pnp error" and "Catching a cv exception" are R3LIVE's own log lines when too few points are tracked; it catches them and continues, so they are counted in `vio_pnp_errors.txt` and reported, not a failure by themselves. Not applicable if the preflight says so (no per-point time, no camera topic). Three runs per sequence. **Waiting for the owner's OK before the first scored run.**
 
 ## Desktop: build and smoke test (never scored)
 
@@ -65,7 +65,7 @@ SMOKE=1 ./stock_r3live/run_r3live.sh geode                                # 60 s
 for n in lc mf c02 cave02 geode; do REPEAT=3 ./stock_r3live/run_r3live.sh $n; done 2>&1 | tee ~/r3live_run123.log
 ```
 
-Results go to `~/runs_r3live/<name>/run<k>/`: `odom.tum`, `r3live_config.yaml`, `params_changes.txt`, `r3live_commit.txt`, `r3live.log`, `crashes.txt`, `preflight.txt`, `adapter_used.txt`, `camera_used.txt`, `cloud_fields.txt`.
+Results go to `~/runs_r3live/<name>/run<k>/`: `odom.tum`, `r3live_config.yaml`, `params_changes.txt`, `r3live_commit.txt`, `r3live.log`, `crashes.txt`, `vio_pnp_errors.txt`, `preflight.txt`, `adapter_used.txt`, `camera_used.txt`, `cloud_fields.txt`.
 
 ## Offline tests
 
