@@ -71,6 +71,47 @@ def adapt_cloud(fields, point_step, data, shift_time, big_endian=False):
     return arr.tobytes(), int(arr.size), tmin
 
 
+def packet_time_report(first_off, last_off):
+    """Per-point time that velodyne_pointcloud will write for velodyne_packets, read from the packets alone.
+    The converter (velodyne_pointcloud 1.6/1.7, rawdata.cc) sets time = packet stamp - scan header stamp + firing offset
+    (0 .. 1.33 ms), so the sign is decided by which packet the recorded scan header carries:
+      first_off, last_off   per scan: first packet stamp - header stamp, last packet stamp - header stamp (seconds)
+    header = first packet  -> times 0 .. ~0.1 s, what LIO-SAM expects (TIME ok)
+    header = last packet   -> times ~-0.1 .. 0 s, relative to the scan END (TIME negative: LIO-SAM finds no IMU before
+                              the scan start, so its deskew gives every point the rotation 0, i.e. deskew is off)
+    Returns dict: header_is ('first' | 'last' | 'other'), time ('ok' | 'negative'), time_min, time_max (s, medians)."""
+    f = np.asarray(first_off, float)
+    l = np.asarray(last_off, float)
+    out = {"n": int(f.size), "header_is": "other", "time": "ok", "time_min": float("nan"), "time_max": float("nan")}
+    if f.size == 0:
+        out["time"] = "empty"
+        return out
+    fm, lm = float(np.median(f)), float(np.median(l))
+    out["time_min"], out["time_max"] = fm, lm + 0.00133
+    if abs(fm) < 0.002 and lm > 0.02:
+        out["header_is"] = "first"
+    elif abs(lm) < 0.002 and fm < -0.02:
+        out["header_is"] = "last"
+    out["time"] = "negative" if fm < -0.001 else "ok"
+    return out
+
+
+def stamp_report(t):
+    """IMU header stamps in arrival (bag) order -> rate, gaps and stamps that do not increase (LIO-SAM integrates with
+    dt = t_k - t_(k-1); dt <= 0 or a long gap breaks the preintegration)."""
+    t = np.asarray(t, float)
+    out = {"n": int(t.size)}
+    if t.size < 3:
+        return out
+    dt = np.diff(t)
+    pos = dt[dt > 0]
+    med = float(np.median(pos)) if pos.size else float("nan")
+    out.update({"rate_hz": 1.0 / med if med > 0 else float("nan"), "dt_median_ms": 1000 * med,
+                "dt_max_ms": 1000 * float(dt.max()), "nonincreasing": int((dt <= 0).sum()),
+                "gaps_over_3x": int((dt > 3 * med).sum()) if med > 0 else 0})
+    return out
+
+
 def _quat_to_R(q):
     """q rows x, y, z, w -> (N, 3, 3) rotation matrices (body to world)."""
     q = q / np.linalg.norm(q, axis=1, keepdims=True)

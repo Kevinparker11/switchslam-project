@@ -22,6 +22,9 @@ import sys
 
 import numpy as np
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import lio_inputs as li  # noqa: E402
+
 
 def _windows(t_rel, window, span):
     n = int(np.ceil(span / window))
@@ -80,7 +83,7 @@ def gt_windows(gt_t, gt_p, window=5.0, span=150.0):
 
 def read_bag(bags, imu_topic, lidar_topic, span):
     import rosbag
-    imu_t, g, ac, q, li_t, li_n = [], [], [], [], [], []
+    imu_t, g, ac, q, li_t, li_n, f_off, l_off, cov0 = [], [], [], [], [], [], [], [], []
     start = None
     for path in bags:
         b = rosbag.Bag(path)
@@ -94,11 +97,16 @@ def read_bag(bags, imu_topic, lidar_topic, span):
                 g.append([m.angular_velocity.x, m.angular_velocity.y, m.angular_velocity.z])
                 ac.append([m.linear_acceleration.x, m.linear_acceleration.y, m.linear_acceleration.z])
                 q.append([m.orientation.x, m.orientation.y, m.orientation.z, m.orientation.w])
+                cov0.append(m.orientation_covariance[0])
             else:
                 li_t.append(m.header.stamp.to_sec())
                 li_n.append(len(m.packets) if hasattr(m, "packets") else int(m.width) * int(m.height))
+                if hasattr(m, "packets") and m.packets:
+                    f_off.append(m.packets[0].stamp.to_sec() - li_t[-1])
+                    l_off.append(m.packets[-1].stamp.to_sec() - li_t[-1])
         b.close()
-    return (np.array(imu_t), np.array(g), np.array(ac), np.array(q), np.array(li_t), np.array(li_n, dtype=int))
+    return (np.array(imu_t), np.array(g), np.array(ac), np.array(q), np.array(li_t), np.array(li_n, dtype=int),
+            np.array(f_off), np.array(l_off), np.array(cov0))
 
 
 def main():
@@ -113,12 +121,26 @@ def main():
     if a.bags:
         if not (a.imu and a.lidar):
             ap.error("--imu and --lidar are needed with a bag")
-        it, g, ac, q, lt, ln = read_bag(a.bags, a.imu, a.lidar, a.span)
+        it, g, ac, q, lt, ln, fo, lo, c0 = read_bag(a.bags, a.imu, a.lidar, a.span)
         if len(lt) == 0 or len(it) < 2:
             print("no messages read: imu %d, lidar %d" % (len(it), len(lt)))
             return 1
         t0 = float(lt.min())
         print("t0 = first LiDAR header stamp %.2f; IMU messages read %d, LiDAR messages read %d" % (t0, len(it), len(lt)))
+        st = li.stamp_report(it)
+        print("IMU stamps: rate %.1f Hz, dt median %.2f ms, max %.1f ms, non-increasing %d, gaps over 3x median %d" % (
+            st.get("rate_hz", float("nan")), st.get("dt_median_ms", float("nan")), st.get("dt_max_ms", float("nan")),
+            st.get("nonincreasing", -1), st.get("gaps_over_3x", -1)))
+        k = min(400, len(it))
+        an = np.linalg.norm(ac[:k], axis=1)
+        ov = li.orientation_verdict(q, c0, ac)
+        print("IMU first %d samples: |acc| median %.3f m/s^2 (LIO-SAM imuGravity 9.80511), orientation %s, gravity from the "
+              "orientation vs from the accelerometer differ by %.2f deg" % (k, float(np.median(an)), ov["status"], ov["gravity_err_deg"]))
+        if len(fo):
+            pt = li.packet_time_report(fo, lo)
+            print("scan header = %s packet over %d scans; per-point time from velodyne_pointcloud %.4f..%.4f s -> %s" % (
+                pt["header_is"], pt["n"], pt["time_min"], pt["time_max"],
+                "LIO-SAM deskew works" if pt["time"] == "ok" else "NEGATIVE: LIO-SAM deskew is off unless the time is shifted"))
         ir = imu_windows(it, g, ac, q, t0, a.window, a.span)
         lr = lidar_windows(lt, ln, t0, a.window, a.span)
         print("%7s | %5s %8s %9s %7s %7s %9s | %5s %5s %5s" % ("t_rel_s", "imu_n", "gap_ms", "gyro_max", "acc_min", "acc_max", "ori_deg", "scans", "smin", "smax"))

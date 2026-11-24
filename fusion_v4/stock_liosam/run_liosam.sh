@@ -2,6 +2,8 @@
 # Stock LIO-SAM (original repository, pinned commit) on one of our bag sequences, in its own container.
 #   fusion_v4/stock_liosam/run_liosam.sh <mf|lc|c02|cave02|geode>
 # environment: REPEAT=1  RUN_START=1  PLAY_RATE=<sequence default, same as the stock A-LOAM run>  FORCE=0
+#              PROFILE=upstream|indoor (indoor: upstream's documented indoor voxel values, see make_params.py; not the
+#              pre-registered setting, so every run made with it carries PROFILE.txt and the summary marks it)
 #              ADAPT=auto|off  OUT_ROOT=$HOME/runs_liosam  IMAGE=liosam_stock  BAGS_ROOT=... BAG_DIR=... GT=... (see seq/*.env)
 #              ALLOW_LOCAL_BAGS=0  REPLAY_LOCK=$HOME/.replay.lock
 # BAGS_ROOT, if unset, is the laptop_bags folder of the mounted drive ("One Touch2" or "One Touch1"). The run refuses to
@@ -17,6 +19,8 @@ source "$FUSION/baselines/common.sh"
 source "$HERE/seq/$NAME.env"
 bl_require_mounted "$BAG_DIR"
 IMAGE=${IMAGE:-liosam_stock}; REPEAT=${REPEAT:-1}; RUN_START=${RUN_START:-1}; FORCE=${FORCE:-0}; ADAPT=${ADAPT:-auto}
+PROFILE=${PROFILE:-upstream}
+case "$PROFILE" in upstream|indoor) ;; *) echo "PROFILE must be upstream or indoor"; exit 1 ;; esac
 OUT=${OUT_ROOT:-$HOME/runs_liosam}/$NAME; mkdir -p "$OUT"
 [ -d "$BAG_DIR" ] || { echo "bag folder not found: $BAG_DIR"; exit 1; }
 [ -f "$GT" ] || { echo "ground truth not found: $GT"; exit 1; }
@@ -42,13 +46,14 @@ fi
 
 for k in $(seq "$RUN_START" $((RUN_START + REPEAT - 1))); do
   RD="$OUT/run$k"; mkdir -p "$RD"; rm -f "$RD"/*
-  echo "== $NAME run$k  rate ${PLAY_RATE}  adapter: nan=${AN:-0} time=${AT:-0}  ($(date +%H:%M:%S))"
+  echo "== $NAME run$k  rate ${PLAY_RATE}  adapter: nan=${AN:-0} time=${AT:-0}  profile $PROFILE  ($(date +%H:%M:%S))"
   bl_lock
   dr -v "$RD":/out -e IMU_TOPIC="$IMU_TOPIC" -e PACKETS_TOPIC="${PACKETS_TOPIC:-}" -e POINTS_TOPIC="${POINTS_TOPIC:-}" \
-     -e RATE="$PLAY_RATE" -e BAGS="$BAGS" -e EXTR="/repo/fusion_v4/stock_liosam/seq/$EXTRINSICS" -e ADAPT_NAN="${AN:-0}" -e ADAPT_TIME="${AT:-0}" \
+     -e RATE="$PLAY_RATE" -e PROFILE="$PROFILE" -e BAGS="$BAGS" -e EXTR="/repo/fusion_v4/stock_liosam/seq/$EXTRINSICS" -e ADAPT_NAN="${AN:-0}" -e ADAPT_TIME="${AT:-0}" \
      --entrypoint bash "$IMAGE" /repo/fusion_v4/stock_liosam/inside.sh
   bl_unlock
   [ "$VERDICT" != "OK" ] && echo "FORCED RUN: $VERDICT" > "$RD/FORCED.txt"
+  [ "$PROFILE" != upstream ] && echo "profile $PROFILE: not the pre-registered upstream setting" > "$RD/PROFILE.txt"
 done
 
 echo; echo "stock LIO-SAM, $NAME, against $GT"
@@ -56,5 +61,6 @@ for k in $(seq "$RUN_START" $((RUN_START + REPEAT - 1))); do
   RD="$OUT/run$k"
   printf "run%s  crashes(respawns)=%s  " "$k" "$(cat "$RD/crashes.txt" 2>/dev/null || echo ?)"
   [ -f "$RD/FORCED.txt" ] && printf "[FORCED] "
+  [ -f "$RD/PROFILE.txt" ] && printf "[PROFILE %s] " "$(cat "$RD/profile.txt" 2>/dev/null)"
   (cd "$FUSION" && python3 stock_liosam/score_tum.py --gt "$GT" --est "$RD/odom.tum" | tail -1)
 done

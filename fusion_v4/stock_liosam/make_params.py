@@ -7,12 +7,18 @@ The ORIGINAL config/params.yaml of the pinned LIO-SAM commit is copied and exact
   loopClosureEnableFlag                false (the Switch-SLAM table is without loop closure; same as every other run here)
 Every other value (noise, voxel sizes, thresholds, N_SCAN 16, Horizon_SCAN 1800, ...) stays at the upstream default.
 
+--profile indoor (opt-in, off unless asked for): the upstream file documents two defaults for its voxel filters in the comments,
+  e.g. "odometrySurfLeafSize: 0.4   # default: 0.4 - outdoor, 0.2 - indoor". The active values are the outdoor ones. With
+  --profile indoor every active key whose comment has that form gets its indoor value, read from the comment itself (nothing
+  is typed in here), so the result is upstream's own indoor setting. Default --profile upstream changes nothing.
+
 Extrinsic convention (LIO-SAM include/utility.h): acc_lidar = extRot * acc_imu, q_lidar = q_imu * inverse(extRPY),
 and the IMU position in the LiDAR frame is extTrans. Our files give T_imu<-lidar = [R t], i.e. p_imu = R p_lidar + t, so
   extrinsicRot = extrinsicRPY = R^T,   extrinsicTrans = -R^T t.
 R is projected to the nearest rotation (SVD) first, as fusion_node_v2.py does.
 
 usage: make_params.py --base params.yaml --extrinsics laser_to_imu.yaml --points-topic T --imu-topic T --out params_run.yaml
+                      [--profile upstream|indoor]
 """
 import argparse
 import re
@@ -65,10 +71,27 @@ def _sub_once(text, key, value_text, changes):
     return pat.sub(lambda mm: mm.group(1) + value_text + mm.group(2), text, count=1)
 
 
-def make(base_text, R_il, t_il, points_topic, imu_topic):
+_PROFILE_COMMENT = re.compile(r"^\s*([A-Za-z_]+):\s*([0-9.eE+-]+)\s*#\s*default:\s*([0-9.eE+-]+)\s*-\s*outdoor,\s*([0-9.eE+-]+)\s*-\s*indoor",
+                              re.M)
+
+
+def documented_indoor(base_text):
+    """{key: indoor value text} for every active key whose upstream comment reads 'default: A - outdoor, B - indoor'."""
+    return {m.group(1): m.group(4) for m in _PROFILE_COMMENT.finditer(base_text)}
+
+
+def make(base_text, R_il, t_il, points_topic, imu_topic, profile="upstream"):
     rot, rpy, tr = liosam_extrinsics(R_il, t_il)
     changes = []
     out = base_text
+    if profile == "indoor":
+        indoor = documented_indoor(base_text)
+        if not indoor:
+            raise ValueError("profile indoor: no key in the base params.yaml documents an indoor default")
+        for k, v in indoor.items():
+            out = _sub_once(out, k, v, changes)
+    elif profile != "upstream":
+        raise ValueError("unknown profile %s (upstream | indoor)" % profile)
     out = _sub_once(out, "pointCloudTopic", '"%s"' % points_topic, changes)
     out = _sub_once(out, "imuTopic", '"%s"' % imu_topic, changes)
     out = _sub_once(out, "extrinsicTrans", _fmt_vec(tr), changes)
@@ -85,13 +108,14 @@ def main():
     ap.add_argument("--points-topic", required=True)
     ap.add_argument("--imu-topic", required=True)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--profile", default="upstream", choices=["upstream", "indoor"])
     a = ap.parse_args()
     R, t = load_laser_to_imu(a.extrinsics)
-    text, changes = make(open(a.base).read(), R, t, a.points_topic, a.imu_topic)
+    text, changes = make(open(a.base).read(), R, t, a.points_topic, a.imu_topic, a.profile)
     yaml.safe_load(text)  # must still parse
     with open(a.out, "w") as f:
         f.write(text)
-    print("params written: %s (keys changed from the upstream file):" % a.out)
+    print("params written: %s, profile %s (keys changed from the upstream file):" % (a.out, a.profile))
     for k, o, n in changes:
         print("  %-22s %s  ->  %s" % (k, o, n))
     return 0

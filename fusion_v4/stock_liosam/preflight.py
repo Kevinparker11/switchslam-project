@@ -77,9 +77,24 @@ def main():
             res["ADAPT_TIME"] = int(r["time"] == "negative")
             break
     else:
-        res["RING"] = "ok"      # velodyne_pointcloud with model VLP16 writes ring and time; inside.sh logs the converted fields
-        res["TIME"] = "ok"
+        # velodyne_pointcloud with model VLP16 writes ring and time (inside.sh logs the converted fields). The SIGN of the
+        # time depends on which packet stamp the recorded scan header carries (lio_inputs.packet_time_report), so it is
+        # read from the packets of the first 50 scans instead of assumed.
+        f_off, l_off = [], []
+        for _, m, _ in rosbag.Bag(a.bags[0]).read_messages(topics=[a.packets]):
+            if m.packets:
+                h = m.header.stamp.to_sec()
+                f_off.append(m.packets[0].stamp.to_sec() - h)
+                l_off.append(m.packets[-1].stamp.to_sec() - h)
+            if len(f_off) >= 50:
+                break
+        pt = li.packet_time_report(f_off, l_off)
+        res["RING"] = "ok"
+        res["TIME"] = pt["time"]
+        res["TIME_RANGE_S"] = "%.4f..%.4f" % (pt["time_min"], pt["time_max"])
+        res["SCAN_HEADER_IS_PACKET"] = pt["header_is"]
         res["DENSE"] = "yes"
+        res["ADAPT_TIME"] = int(pt["time"] == "negative")
         res["CONVERTED_FROM_PACKETS"] = a.packets
     for k, v in res.items():
         print("%s=%s" % (k, v))

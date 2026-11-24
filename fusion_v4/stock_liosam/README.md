@@ -32,6 +32,12 @@ LIO-SAM only works with a 9-axis IMU (roll, pitch and yaw in `sensor_msgs/Imu.or
 
 For the two sequences recorded as `velodyne_packets` (Multi Floor, Long Corridor) the packets are converted inside the container with `velodyne_pointcloud` and `model: VLP16`, so `ring` and `time` exist (same ranges 0.4 to 130 m as the rest of the project). The first converted cloud's field list is saved as `cloud_fields.txt` to confirm.
 
+**Per-point time of the packet sequences (fixed 25 Nov 2026).** `velodyne_pointcloud` writes `time = packet stamp - scan header stamp + firing offset`. If the recorded scan header carries the stamp of the last packet, every point gets a time between about -0.1 s and 0, relative to the scan end, as in GEODE. LIO-SAM then finds no IMU sample before the scan start and gives every point the rotation 0, which switches deskew off without any message. Until this date the preflight assumed `TIME=ok` for packet sequences without looking. It now reads the first 50 scans and compares the header with the first and last packet stamps. It prints `SCAN_HEADER_IS_PACKET` (`first` / `last`) and sets `TIME=negative` and `ADAPT_TIME=1` when the times are negative, so the existing adapter shifts them to start at 0 (the rule already used for GEODE). Runs of mf and lc made before this check carry no such shift: if the check finds negative times there, those runs had deskew off. That is a setup error, so they are void and are run again.
+
+**Voxel profile (opt-in, owner's decision pending).** Upstream `params.yaml` documents two defaults for its three voxel filters in the comments: `0.4 / 0.2 / 0.4` outdoor (the active values) and `0.2 / 0.1 / 0.2` indoor. `PROFILE=indoor` takes the indoor values from those comments (nothing typed in by us) and labels every run made with it (`PROFILE.txt`, `[PROFILE indoor]` in the summary). The pre-registered setting stays `PROFILE=upstream` unless the owner decides otherwise, before scored runs and for every sequence alike.
+
+**Unscored diagnosis.** `diag_auto.sh lc` (or `mf`) runs, as one background job, the input checks of `diag_inputs_window.py`, the ground-truth motion table, and one LIO-SAM run per variant (`timefix`, `indoor`, `both`), each followed by `diag_error_time.py`. Everything goes to `~/runs_liosam_diag/<seq>_<date>/` with a `summary.txt`. It never writes into `~/runs_liosam`, and none of it is a table number.
+
 ## Run
 
 ```
