@@ -1,0 +1,36 @@
+diff --git a/r2live/src/estimator_node.cpp b/r2live/src/estimator_node.cpp
+index ac5537e..6236059 100755
+--- a/r2live/src/estimator_node.cpp
++++ b/r2live/src/estimator_node.cpp
+@@ -831,9 +831,16 @@ void process()
+     }
+ }
+ 
++Eigen::Vector3d Lidar_offset_to_IMU(0.04165, 0.02326, -0.0284);
++
+ int main(int argc, char **argv)
+ {
+     ros::init(argc, argv, "vins_estimator");
++    {
++        std::vector<double> lidar_offset_to_imu;
++        if (ros::param::get("/r2live_lio/lidar_offset_to_imu", lidar_offset_to_imu) && lidar_offset_to_imu.size() == 3)
++            Lidar_offset_to_IMU = Eigen::Vector3d(lidar_offset_to_imu[0], lidar_offset_to_imu[1], lidar_offset_to_imu[2]);
++    }
+     ros::NodeHandle nh("~");
+     ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info);
+     // ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug);
+diff --git a/r2live/src/fast_lio/include/common_lib.h b/r2live/src/fast_lio/include/common_lib.h
+index 731e240..e7fa2ee 100755
+--- a/r2live/src/fast_lio/include/common_lib.h
++++ b/r2live/src/fast_lio/include/common_lib.h
+@@ -55,7 +55,9 @@ static const Eigen::Matrix3f Eye3f(Eigen::Matrix3f::Identity());
+ static const Eigen::Vector3d Zero3d(0, 0, 0);
+ static const Eigen::Vector3f Zero3f(0, 0, 0);
+ // Eigen::Vector3d Lidar_offset_to_IMU(0.05512, 0.02226, 0.0297); // Horizon
+-static const Eigen::Vector3d Lidar_offset_to_IMU(0.04165, 0.02326, -0.0284); // Avia
++// Upstream: static const Eigen::Vector3d Lidar_offset_to_IMU(0.04165, 0.02326, -0.0284); // Avia (the authors' rig)
++// Now one variable for all files, set from the ROS parameter /r2live_lio/lidar_offset_to_imu (defined in estimator_node.cpp, default = the upstream value)
++extern Eigen::Vector3d Lidar_offset_to_IMU;
+ 
+ template <typename T>
+ T get_ros_parameter(ros::NodeHandle &nh, const std::string parameter_name, T &parameter, T default_val)
