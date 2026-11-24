@@ -1,0 +1,14 @@
+diff --git a/r3live/CMakeLists.txt b/r3live/CMakeLists.txt
+index 851d17a..3e42c0c 100755
+--- a/r3live/CMakeLists.txt
++++ b/r3live/CMakeLists.txt
+@@ -120,7 +120,8 @@ target_link_libraries(r3live_mapping
+                           ${OpenCV_LIBRARIES}
+                           # ${OpenMVS_LIBRARIES}
+                           pcl_common 
+-                          pcl_io) 
++                          pcl_io
++                          pcl_filters) 
+ 
+ FIND_PACKAGE(CGAL REQUIRED)
+ if(CGAL_FOUND)

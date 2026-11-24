@@ -6,6 +6,7 @@
 # v1 plus SSE3, present on every CPU used here); check_isa.sh checks the finished binaries.
 # Changes to upstream, all listed in the README:
 #   livox_ros_driver: message definitions only (livox_msgs_*), at the commit r3live's README points to
+#   r3live_noetic_build.patch: link r3live_mapping against pcl_filters (the upstream link line lacks it; PCL 1.10 on Noetic fails with an undefined VoxelGrid reference)
 #   r3live_rig.patch: the LiDAR-to-IMU offset (compiled in for the authors' Livox Avia) becomes a parameter, default = the upstream value
 # Not built: r3live_meshing (needs OpenMVS, not used), the calibration tools.
 FROM ros@sha256:72b8bc59035dc0a5b8e07aae28c16caa84192971d72d207c72ed734fb1d5e97d
@@ -29,7 +30,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends -o Acquire::Ret
       ros-noetic-eigen-conversions \
  && rm -rf /var/lib/apt/lists/*
 
-COPY livox_msgs_CMakeLists.txt livox_msgs_package.xml r3live_rig.patch /tmp/
+COPY livox_msgs_CMakeLists.txt livox_msgs_package.xml r3live_noetic_build.patch r3live_rig.patch /tmp/
 SHELL ["/bin/bash", "-c"]
 RUN mkdir -p /root/r3_ws/src && cd /root/r3_ws/src \
  && git clone https://github.com/Livox-SDK/livox_ros_driver.git /tmp/livox_up && git -C /tmp/livox_up checkout ${LIVOX_DRIVER_COMMIT} \
@@ -37,7 +38,7 @@ RUN mkdir -p /root/r3_ws/src && cd /root/r3_ws/src \
  && cp /tmp/livox_msgs_CMakeLists.txt livox_ros_driver/CMakeLists.txt && cp /tmp/livox_msgs_package.xml livox_ros_driver/package.xml \
  && rm -rf /tmp/livox_up \
  && git clone https://github.com/hku-mars/r3live.git && cd r3live && git checkout ${R3LIVE_COMMIT} \
- && git apply /tmp/r3live_rig.patch \
+ && git apply /tmp/r3live_noetic_build.patch && git apply /tmp/r3live_rig.patch \
  && git rev-parse HEAD > /root/r3_ws/COMMIT && git status --short >> /root/r3_ws/COMMIT \
  && cd /root/r3_ws && source /opt/ros/noetic/setup.bash \
  && catkin_make --pkg livox_ros_driver -DCMAKE_BUILD_TYPE=Release \
