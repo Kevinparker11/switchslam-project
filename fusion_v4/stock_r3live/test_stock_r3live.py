@@ -198,6 +198,21 @@ class Build(unittest.TestCase):
         self.assertIn("libcgal-dev", code)
         self.assertNotIn("r3live_meshing", code.replace("make-args r3live_LiDAR_front_end r3live_mapping", ""))
 
+    def test_every_script_the_runner_and_container_call_exists(self):
+        fusion = os.path.abspath(os.path.join(HERE, ".."))
+        dirs = {"$S": "stock_r3live", "$L": "stock_liosam", "$B": "baselines"}
+        missing = []
+        for f in ("run_r3live.sh", "inside.sh"):
+            with open(os.path.join(HERE, f)) as fh:
+                txt = fh.read()
+            for m in re.finditer(r"/repo/fusion_v4/([\w./-]+\.(?:py|sh))", txt):
+                if not os.path.exists(os.path.join(fusion, m.group(1))):
+                    missing.append((f, m.group(1)))
+            for m in re.finditer(r"(\$[SLB])/([\w.-]+\.(?:py|sh))", txt):
+                if not os.path.exists(os.path.join(fusion, dirs[m.group(1)], m.group(2))):
+                    missing.append((f, dirs[m.group(1)] + "/" + m.group(2)))
+        self.assertEqual(missing, [])
+
     def test_launch_in_inside_sh_is_upstreams(self):
         with open(os.path.join(HERE, "inside.sh")) as f:
             s = f.read()
