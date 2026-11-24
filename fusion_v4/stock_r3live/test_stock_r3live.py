@@ -220,6 +220,7 @@ class Build(unittest.TestCase):
                        'required="true"', "/laser_cloud_flat", "Xvfb :99", "/os_cloud_node/points"):
             self.assertIn(needle, s)
         self.assertNotIn("-march", s)
+        self.assertIn("vio_pnp_errors.txt", s)
 
     def test_dockerfile_applies_both_patches_in_order(self):
         a = self.df.index("git apply /tmp/r3live_noetic_build.patch")

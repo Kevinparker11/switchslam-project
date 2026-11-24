@@ -101,4 +101,6 @@ sleep 12   # let R3LIVE finish the queued scans
 pkill -INT -f record_tf.py; sleep 3
 pkill -INT -f roslaunch; sleep 4
 { grep -c "process has died" r3live.log || true; } > crashes.txt
+# R3LIVE logs these itself when its PnP step has too few tracked points; it catches them and goes on. Counted and reported, not a failure by themselves.
+{ echo "ransac_pnp_errors=$(grep -c "Remove_outlier_using_ransac_pnp error" r3live.log || true)"; echo "cv_exceptions=$(grep -c "Catching a cv exception" r3live.log || true)"; } > vio_pnp_errors.txt
 echo "poses recorded: $(wc -l < "$OUT/odom.tum")"
