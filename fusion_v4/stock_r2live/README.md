@@ -23,6 +23,7 @@ Scored output: `/tf` `world` to `/aft_mapped` (the LIO pose, stamped with the sc
 
 ## Build notes
 
+- Build order: the message target `r2live_generate_messages` is built before the rest, because the r2live executables include `r2live/States.h` without declaring the dependency (parallel build raced, first desktop build).
 - `r2live_noetic_build.patch`: the `Calibration` tool of `camera_model` and its two sources are not built (OpenCV 3 constants, unused by the estimator); `CV_GRAY2RGB` becomes `cv::COLOR_GRAY2RGB`; `<opencv/cv.h>` becomes `<opencv2/opencv.hpp>` in three files; `${PCL_LIBRARIES}` is added to the `r2live` link line (the same missing `pcl_filters` symbol as R3LIVE, expected from the source, not yet confirmed by a build).
 - `livox_ros_driver`: message definitions only, same commit as for R3LIVE, built in its own workspace (`/root/livox_ws`) first. R2LIVE's package.xml does not declare it as a dependency, so in one workspace catkin configured r2live before the messages existed (first desktop build).
 - Ceres is Ubuntu's `libceres-dev` (1.14), the version R2LIVE's own docker file builds. No `-march` flag; `../baselines/check_isa.sh` fails on any AVX-512 instruction. The first three apt steps are the same text as the R3LIVE image, so the layers are shared when both images are on one machine.

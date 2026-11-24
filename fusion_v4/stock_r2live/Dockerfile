@@ -34,6 +34,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends -o Acquire::Ret
 
 COPY livox_msgs_CMakeLists.txt livox_msgs_package.xml r2live_noetic_build.patch r2live_rig.patch /tmp/
 SHELL ["/bin/bash", "-c"]
+# The r2live executables include their own generated message headers (States.h) without declaring the dependency, so the message target is built
+# first (a parallel build otherwise races and fails with 'r2live/States.h: No such file').
 # livox_ros_driver (messages only) in its own workspace: r2live's package.xml does not declare it as a dependency, so in one workspace catkin may
 # configure r2live before the messages exist. r2_ws is built on top of this workspace and its setup.bash chains to it at run time.
 RUN mkdir -p /root/livox_ws/src/livox_ros_driver/msg && cd /root/livox_ws/src \
@@ -47,6 +49,7 @@ RUN mkdir -p /root/r2_ws/src && cd /root/r2_ws/src \
  && git apply /tmp/r2live_noetic_build.patch && git apply /tmp/r2live_rig.patch \
  && git rev-parse HEAD > /root/r2_ws/COMMIT && git status --short >> /root/r2_ws/COMMIT \
  && cd /root/r2_ws && source /root/livox_ws/devel/setup.bash \
+ && catkin_make --pkg camera_model feature_tracker r2live -DCMAKE_BUILD_TYPE=Release --make-args r2live_generate_messages \
  && catkin_make --pkg camera_model feature_tracker r2live -DCMAKE_BUILD_TYPE=Release -j2
 
 LABEL baseline.method="r2live" baseline.upstream_commit="e719ca266ab53ca8915ca4e1416152993f2a55d7"
