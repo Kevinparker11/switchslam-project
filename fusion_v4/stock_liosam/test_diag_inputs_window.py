@@ -54,6 +54,18 @@ class Windows(unittest.TestCase):
         self.assertEqual(rows[2][2], 20)
         self.assertEqual(rows[0][2], 75)
 
+    def test_spike_samples_are_listed_in_time_order(self):
+        t, g, a, q = imu()
+        a[1500, 2] = 120.0
+        a[1501, 2] = 80.0
+        a[900, 0] = 50.0
+        rows, total = dw.spike_samples(t, a, g, 500.0, 40.0)
+        self.assertEqual(total, 3)
+        self.assertEqual([round(r[0], 3) for r in rows], [9.0, 15.0, 15.01])
+        self.assertAlmostEqual(rows[1][1], 120.0, delta=0.01)
+        self.assertEqual(len(dw.spike_samples(t, a, g, 500.0, 40.0, limit=2)[0]), 2)
+        self.assertEqual(dw.spike_samples(t, a, g, 500.0, 200.0)[1], 0)
+
     def test_empty_window_is_reported_not_dropped(self):
         t, g, a, q = imu(n=500)                      # 5 s of IMU, windows to 30 s
         rows = dw.imu_windows(t, g, a, q, 500.0, 5.0, 30.0)

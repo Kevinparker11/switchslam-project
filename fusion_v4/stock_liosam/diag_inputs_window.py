@@ -55,6 +55,15 @@ def imu_windows(t, gyro, acc, quat, t0, window=5.0, span=150.0):
     return rows
 
 
+def spike_samples(t, acc, gyro, t0, thresh, limit=40):
+    """IMU samples whose |acc| is above thresh (m/s^2), in time order: (t_rel, |acc|, |gyro|), at most limit rows; also returns the total count."""
+    o = np.argsort(t)
+    t, acc, gyro = t[o], acc[o], gyro[o]
+    an = np.linalg.norm(acc, axis=1)
+    idx = np.where(an > thresh)[0]
+    return [(float(t[i] - t0), float(an[i]), float(np.linalg.norm(gyro[i]))) for i in idx[:limit]], int(len(idx))
+
+
 def lidar_windows(t, size, t0, window=5.0, span=150.0):
     """rows (t_rel, scans, smallest size, largest size)"""
     rows = []
@@ -117,6 +126,7 @@ def main():
     ap.add_argument("--gt", default="")
     ap.add_argument("--span", type=float, default=150.0)
     ap.add_argument("--window", type=float, default=5.0)
+    ap.add_argument("--spikes", type=float, default=0.0, help="also list the IMU samples with |acc| above this many m/s^2 (e.g. 40)")
     a = ap.parse_args()
     if a.bags:
         if not (a.imu and a.lidar):
@@ -146,6 +156,11 @@ def main():
         print("%7s | %5s %8s %9s %7s %7s %9s | %5s %5s %5s" % ("t_rel_s", "imu_n", "gap_ms", "gyro_max", "acc_min", "acc_max", "ori_deg", "scans", "smin", "smax"))
         for x, y in zip(ir, lr):
             print("%7.0f | %5d %8.1f %9.2f %7.2f %7.2f %9.3f | %5d %5d %5d" % (x[0], x[1], x[2], x[3], x[4], x[5], x[6], y[1], y[2], y[3]))
+        if a.spikes > 0:
+            rows, total = spike_samples(it, ac, g, t0, a.spikes)
+            print("IMU samples with |acc| above %.0f m/s^2: %d (first %d shown); t_rel from the first LiDAR stamp" % (a.spikes, total, len(rows)))
+            for r in rows:
+                print("   t_rel %8.3f s   |acc| %7.1f m/s^2   |gyro| %5.2f rad/s" % r)
     if a.gt:
         sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
         import v2_tools as vt
